@@ -37,7 +37,7 @@ sdk = mercadopago.SDK(mp_access_token)
 
 @app.route("/")
 def home():
-    return "Smart Audio EQ API is running with SQLite"
+    return "Smart Audio EQ API is running with SQLite (v1.2 - 20k Price)"
 
 @app.route("/create-payment", methods=["POST"])
 def create_payment():
@@ -49,13 +49,18 @@ def create_payment():
 
     frontend_url = os.getenv("FRONTEND_URL", "https://example.com")
 
+    # FORCE 20000 to ensure it covers minimums in COP/ARS etc
+    price = 20000 
+    
+    print(f"Creating preference for {email} with price {price}")
+
     preference_data = {
         "items": [
             {
                 "title": data.get("item", "Smart Audio EQ Premium"),
                 "quantity": 1,
-                # "currency_id": "USD", # Commented out to use default account currency
-                "unit_price": 5000, # Increased to 5000 to be safe for COP (min is often ~1000-2000 depending on method)
+                # "currency_id": "USD", 
+                "unit_price": price, 
             }
         ],
         "payer": {

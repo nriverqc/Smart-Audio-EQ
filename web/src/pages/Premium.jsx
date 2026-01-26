@@ -127,6 +127,9 @@ export default function Premium({ lang }) {
     paymentMethods: {
       creditCard: "all",
       debitCard: "all",
+      ticket: "all",
+      bankTransfer: "all",
+      mercadoPago: "all",
     },
   }), []);
 

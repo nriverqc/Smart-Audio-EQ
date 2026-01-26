@@ -32,8 +32,17 @@ export function initAudio(stream) {
   gainNode.gain.value = 1.0;
   last.connect(gainNode);
 
+  // Compressor to prevent saturation (Limiter)
+  const compressor = audioCtx.createDynamicsCompressor();
+  compressor.threshold.value = -10; // Start compressing at -10dB
+  compressor.knee.value = 10; // Smooth transition
+  compressor.ratio.value = 20; // High ratio (limiter style)
+  compressor.attack.value = 0.005; // Fast attack
+  compressor.release.value = 0.1; // Fast release
+  gainNode.connect(compressor);
+
   // Output to speakers
-  gainNode.connect(audioCtx.destination);
+  compressor.connect(audioCtx.destination);
   
   return true;
 }

@@ -1,4 +1,4 @@
-import { initAudio, setGain } from './audio/processor.js';
+import { initAudio, setGain, setMasterVolume } from './audio/processor.js';
 
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   if (msg.type === 'START_AUDIO_CAPTURE') {
@@ -24,5 +24,9 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   
   if (msg.type === 'SET_GAIN') {
     setGain(msg.index, msg.value);
+  }
+
+  if (msg.type === 'SET_VOLUME') {
+    setMasterVolume(msg.value);
   }
 });

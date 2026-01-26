@@ -78,7 +78,7 @@ export default function Premium({ lang }) {
               setPreferenceId(data.preference_id);
               setShowBrick(true);
           } else {
-              setErrorMsg('Error creating preference: ' + (data.error || 'Unknown error'));
+              setErrorMsg('Error creating preference: ' + (data.error || 'Unknown error') + ' | ' + JSON.stringify(data.details || {}));
           }
       } catch (err) {
           setErrorMsg('Network error: ' + err.message);

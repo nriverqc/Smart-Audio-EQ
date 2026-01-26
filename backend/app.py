@@ -30,7 +30,7 @@ def init_db():
 init_db()
 
 # Initialize MercadoPago
-mp_access_token = os.getenv("MP_ACCESS_TOKEN")
+mp_access_token = os.getenv("MP_ACCESS_TOKEN", "TEST-3131809769096326-011813-bf894f88a6ac332ed7724844fcf95c93-1587079197")
 if not mp_access_token:
     raise RuntimeError("MP_ACCESS_TOKEN is not set")
 sdk = mercadopago.SDK(mp_access_token)
@@ -54,6 +54,7 @@ def create_payment():
             {
                 "title": data.get("item", "Smart Audio EQ Premium"),
                 "quantity": 1,
+                "currency_id": "USD",
                 "unit_price": float(data.get("price", 4.99)),
             }
         ],

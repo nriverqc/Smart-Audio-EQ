@@ -83,13 +83,18 @@ def create_payment():
              }), 500
 
         payment_url = preference_response["response"].get("init_point")
+        preference_id = preference_response["response"].get("id")
+        
         if not payment_url:
              return jsonify({
                  "error": "No init_point in response", 
                  "details": preference_response
              }), 500
              
-        return jsonify({"payment_url": payment_url})
+        return jsonify({
+            "payment_url": payment_url,
+            "preference_id": preference_id
+        })
         
     except Exception as e:
         import traceback

@@ -10,6 +10,8 @@ export default function Premium({ lang }) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [showBrick, setShowBrick] = useState(false);
+  const [preferenceId, setPreferenceId] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const texts = {
     es: {
@@ -29,6 +31,7 @@ export default function Premium({ lang }) {
       ],
       buyLabel: 'Pagar con Tarjeta',
       processingLabel: 'Procesando...',
+      loadingLabel: 'Cargando formulario de pago...',
       emailLabel: 'Ingresa tu email de Google (para activar Premium en la extensión)',
       emailPlaceholder: 'tu.email@gmail.com',
       successMessage: '¡Pago exitoso! Tu licencia Premium ha sido activada.',
@@ -51,6 +54,7 @@ export default function Premium({ lang }) {
       ],
       buyLabel: 'Pay with Card',
       processingLabel: 'Processing...',
+      loadingLabel: 'Loading payment form...',
       emailLabel: 'Enter your Google Email (to activate Premium in the extension)',
       emailPlaceholder: 'your.email@gmail.com',
       successMessage: 'Payment successful! Your Premium license has been activated.',
@@ -59,6 +63,29 @@ export default function Premium({ lang }) {
   };
 
   const t = texts[lang] || texts.es;
+
+  const createPreference = async () => {
+      setLoading(true);
+      setErrorMsg('');
+      try {
+          const res = await fetch(`${API_BASE}/create-payment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: email, price: 4.99, item: 'Smart Audio EQ Premium' })
+          });
+          const data = await res.json();
+          if (data.preference_id) {
+              setPreferenceId(data.preference_id);
+              setShowBrick(true);
+          } else {
+              setErrorMsg('Error creating preference: ' + (data.error || 'Unknown error'));
+          }
+      } catch (err) {
+          setErrorMsg('Network error: ' + err.message);
+      } finally {
+          setLoading(false);
+      }
+  };
 
   const handleBrickSubmit = async ({ formData }) => {
      setLoading(true);
@@ -91,15 +118,7 @@ export default function Premium({ lang }) {
   };
 
   const initialization = {
-    amount: 1000, // Minimized amount for testing (if COP, 1000 is min often. If USD, 1000 is high but valid).
-                  // ideally this comes from backend preference, but for now we set it here.
-    payer: {
-        email: email,
-        entity_type: 'individual',
-        type: 'customer',
-        first_name: 'Test',
-        last_name: 'User'
-    },
+    preferenceId: preferenceId,
   };
 
   const customization = {
@@ -162,19 +181,23 @@ export default function Premium({ lang }) {
           </div>
 
           {!showBrick ? (
-              <button 
-                className="btn-premium" 
-                style={{width: '100%', marginTop: '10px'}}
-                onClick={() => {
-                    if (!email || !email.includes('@')) {
-                        alert(lang === 'es' ? 'Por favor ingresa un email válido.' : 'Please enter a valid email.');
-                        return;
-                    }
-                    setShowBrick(true);
-                }}
-              >
-                {t.buyLabel}
-              </button>
+              <>
+                  {errorMsg && <div style={{color: 'red', marginBottom: '10px'}}>{errorMsg}</div>}
+                  <button 
+                    className="btn-premium" 
+                    style={{width: '100%', marginTop: '10px', opacity: loading ? 0.5 : 1}}
+                    disabled={loading}
+                    onClick={() => {
+                        if (!email || !email.includes('@')) {
+                            alert(lang === 'es' ? 'Por favor ingresa un email válido.' : 'Please enter a valid email.');
+                            return;
+                        }
+                        createPreference();
+                    }}
+                  >
+                    {loading ? t.loadingLabel : t.buyLabel}
+                  </button>
+              </>
           ) : (
               <div style={{background: '#fff', padding: '10px', borderRadius: '5px'}}>
                   {loading && <div style={{color: '#333', marginBottom: '10px'}}>{t.processingLabel}</div>}
@@ -182,7 +205,11 @@ export default function Premium({ lang }) {
                     initialization={initialization}
                     customization={customization}
                     onSubmit={handleBrickSubmit}
-                    onError={(error) => console.error(error)}
+                    onError={(error) => {
+                        console.error(error);
+                        // Show visible error to user if initialization fails
+                        alert("Payment Form Error: " + (error.message || JSON.stringify(error)));
+                    }}
                   />
                   <button 
                     onClick={() => setShowBrick(false)}

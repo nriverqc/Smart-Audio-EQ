@@ -9,9 +9,11 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Initialize MercadoPago
-# Replace with your actual ACCESS TOKEN from .env
-sdk = mercadopago.SDK(os.getenv("MP_ACCESS_TOKEN", "TEST-00000000-0000-0000-0000-000000000000"))
+# Initialize MercadoPago using ACCESS TOKEN from environment (.env / Render)
+mp_access_token = os.getenv("MP_ACCESS_TOKEN")
+if not mp_access_token:
+    raise RuntimeError("MP_ACCESS_TOKEN is not set")
+sdk = mercadopago.SDK(mp_access_token)
 
 @app.route("/")
 def home():
@@ -19,21 +21,21 @@ def home():
 
 @app.route("/create-payment", methods=["POST"])
 def create_payment():
-    data = request.json
-    # In a real app, you would validate the user/email here
-    
+    data = request.json or {}
+    frontend_url = os.getenv("FRONTEND_URL", "https://example.com")
+
     preference_data = {
         "items": [
             {
                 "title": data.get("item", "Smart Audio EQ Premium"),
                 "quantity": 1,
-                "unit_price": float(data.get("price", 9.99)),
+                "unit_price": float(data.get("price", 4.99)),
             }
         ],
         "back_urls": {
-            "success": "https://your-frontend-url.com/success",
-            "failure": "https://your-frontend-url.com/failure",
-            "pending": "https://your-frontend-url.com/pending"
+            "success": f"{frontend_url}/success",
+            "failure": f"{frontend_url}/failure",
+            "pending": f"{frontend_url}/pending",
         },
         "auto_return": "approved",
     }

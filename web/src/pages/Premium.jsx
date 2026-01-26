@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
+import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 
 const API_BASE = 'https://smart-audio-eq-1.onrender.com';
+
+// Initialize with user's Public Key
+initMercadoPago('TEST-b4334d13-d110-4e26-9800-79a643dd69d4');
 
 export default function Premium({ lang }) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
+  const [showBrick, setShowBrick] = useState(false);
 
   const texts = {
     es: {
@@ -22,10 +27,12 @@ export default function Premium({ lang }) {
         '✅ Sync en la nube (próximamente)',
         '✅ Soporte prioritario',
       ],
-      buyLabel: 'Comprar ahora',
+      buyLabel: 'Pagar con Tarjeta',
       processingLabel: 'Procesando...',
       emailLabel: 'Ingresa tu email de Google (para activar Premium en la extensión)',
-      emailPlaceholder: 'tu.email@gmail.com'
+      emailPlaceholder: 'tu.email@gmail.com',
+      successMessage: '¡Pago exitoso! Tu licencia Premium ha sido activada.',
+      errorMessage: 'Hubo un error al procesar el pago.'
     },
     en: {
       title: 'Unlock the full power',
@@ -42,49 +49,61 @@ export default function Premium({ lang }) {
         '✅ Cloud sync (coming soon)',
         '✅ Priority support',
       ],
-      buyLabel: 'Buy now',
+      buyLabel: 'Pay with Card',
       processingLabel: 'Processing...',
       emailLabel: 'Enter your Google Email (to activate Premium in the extension)',
-      emailPlaceholder: 'your.email@gmail.com'
+      emailPlaceholder: 'your.email@gmail.com',
+      successMessage: 'Payment successful! Your Premium license has been activated.',
+      errorMessage: 'There was an error processing the payment.'
     },
   };
 
   const t = texts[lang] || texts.es;
 
-  const handlePayment = async () => {
-    if (!email || !email.includes('@')) {
-        alert(lang === 'es' ? 'Por favor ingresa un email válido.' : 'Please enter a valid email.');
-        return;
-    }
+  const handleBrickSubmit = async ({ formData }) => {
+     setLoading(true);
+     return new Promise((resolve, reject) => {
+         fetch(`${API_BASE}/process_payment`, {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+             },
+             body: JSON.stringify(formData),
+         })
+         .then((response) => response.json())
+         .then((response) => {
+             // Receive the payment result
+             if (response.status === 'approved') {
+                 alert(t.successMessage);
+                 resolve();
+             } else {
+                 alert(t.errorMessage + " Status: " + response.status);
+                 reject();
+             }
+         })
+         .catch((error) => {
+             console.error(error);
+             alert(t.errorMessage);
+             reject();
+         })
+         .finally(() => setLoading(false));
+     });
+  };
 
-    setLoading(true);
-    try {
-      const itemTitle =
-        lang === 'es' ? 'Smart Audio EQ Premium (Pago único)' : 'Smart Audio EQ Premium (One-time)';
+  const initialization = {
+    amount: 4.99,
+    preferenceId: "<PREFERENCE_ID>", // Not used for simple Payment Brick sometimes, but recommended.
+    // For simple brick without preference:
+    payer: {
+        email: email,
+    },
+  };
 
-      const response = await fetch(`${API_BASE}/create-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            item: itemTitle, 
-            price: 4.99,
-            email: email // Send email to backend
-        }),
-      });
-      
-      const data = await response.json();
-      if (data.payment_url) {
-        window.location.href = data.payment_url;
-      } else {
-        alert(lang === 'es' ? 'No se pudo iniciar el pago. Intenta de nuevo.' : 'Payment setup failed. Please try again.');
-        console.error(data);
-      }
-    } catch (error) {
-      console.error(error);
-      alert(lang === 'es' ? 'Error al conectar con el servidor de pagos.' : 'Error connecting to payment server.');
-    } finally {
-      setLoading(false);
-    }
+  const customization = {
+    paymentMethods: {
+      creditCard: "all",
+      debitCard: "all",
+    },
   };
 
   return (
@@ -121,6 +140,7 @@ export default function Premium({ lang }) {
                   placeholder={t.emailPlaceholder}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={showBrick}
                   style={{
                       width: '100%', 
                       padding: '10px', 
@@ -132,14 +152,37 @@ export default function Premium({ lang }) {
               />
           </div>
 
-          <button 
-            className="btn-premium" 
-            style={{width: '100%', marginTop: '10px'}}
-            onClick={handlePayment}
-            disabled={loading}
-          >
-            {loading ? t.processingLabel : t.buyLabel}
-          </button>
+          {!showBrick ? (
+              <button 
+                className="btn-premium" 
+                style={{width: '100%', marginTop: '10px'}}
+                onClick={() => {
+                    if (!email || !email.includes('@')) {
+                        alert(lang === 'es' ? 'Por favor ingresa un email válido.' : 'Please enter a valid email.');
+                        return;
+                    }
+                    setShowBrick(true);
+                }}
+              >
+                {t.buyLabel}
+              </button>
+          ) : (
+              <div style={{background: '#fff', padding: '10px', borderRadius: '5px'}}>
+                  <Payment
+                    initialization={{ amount: 4.99, payer: { email: email } }}
+                    customization={customization}
+                    onSubmit={handleBrickSubmit}
+                    onError={(error) => console.error(error)}
+                  />
+                  <button 
+                    onClick={() => setShowBrick(false)}
+                    style={{marginTop: '10px', background: 'transparent', border: 'none', color: '#333', cursor: 'pointer', textDecoration: 'underline'}}
+                  >
+                    {lang === 'es' ? 'Cancelar' : 'Cancel'}
+                  </button>
+              </div>
+          )}
+
         </div>
       </div>
     </div>

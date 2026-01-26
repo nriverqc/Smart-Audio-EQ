@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://smart-audio-eq-api.onrender.com';
+const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
 export default function Premium({ lang }) {
   const [loading, setLoading] = useState(false);

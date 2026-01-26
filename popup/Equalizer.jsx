@@ -67,8 +67,12 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
           const last = result.lastRedirect || 0;
           
           if (now - last > 30000) { // 30 seconds
-              chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/' });
-              chrome.storage.local.set({ lastRedirect: now });
+              // Get user email to pass to web for profile extraction
+              chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+                  const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
+                  chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/${emailParam}` });
+                  chrome.storage.local.set({ lastRedirect: now });
+              });
           }
       });
   };

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
+import { UserContext } from '../App';
 
 const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
@@ -7,11 +8,18 @@ const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 initMercadoPago('TEST-b4334d13-d110-4e26-9800-79a643dd69d4');
 
 export default function Premium({ lang }) {
+  const { user, refreshUser } = useContext(UserContext);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [showBrick, setShowBrick] = useState(false);
   const [preferenceId, setPreferenceId] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (user.email) {
+        setEmail(user.email);
+    }
+  }, [user.email]);
 
   const texts = {
     es: {
@@ -103,6 +111,7 @@ export default function Premium({ lang }) {
              // Receive the payment result
              if (response.status === 'approved') {
                  alert(t.successMessage);
+                 refreshUser();
                  resolve();
              } else {
                  alert(t.errorMessage + " Status: " + response.status);
@@ -132,6 +141,32 @@ export default function Premium({ lang }) {
       mercadoPago: "all",
     },
   }), []);
+
+  if (user.isPremium) {
+      return (
+          <div style={{textAlign: 'center', padding: '100px 20px'}}>
+              <h1 style={{color: '#ffd700', fontSize: '4rem'}}>Premium 💎</h1>
+              <p style={{fontSize: '1.5rem', marginTop: '20px'}}>
+                  {lang === 'es' ? '¡Gracias por tu compra!' : 'Thank you for your purchase!'}
+              </p>
+              <p style={{color: '#ccc', marginTop: '10px'}}>
+                  {lang === 'es' 
+                    ? `Tu licencia está activa para: ${user.email}` 
+                    : `Your license is active for: ${user.email}`}
+              </p>
+              <div style={{marginTop: '40px', padding: '20px', background: '#222', borderRadius: '10px', display: 'inline-block'}}>
+                  <h3 style={{color: '#00d2ff'}}>
+                      {lang === 'es' ? '¿Qué sigue?' : 'What now?'}
+                  </h3>
+                  <ul style={{textAlign: 'left', marginTop: '15px', color: '#eee'}}>
+                      <li>1. {lang === 'es' ? 'Abre la extensión Smart Audio EQ' : 'Open Smart Audio EQ extension'}</li>
+                      <li>2. {lang === 'es' ? 'Verás el logo Premium activo' : 'You will see the Premium badge active'}</li>
+                      <li>3. {lang === 'es' ? 'Disfruta de presets ilimitados' : 'Enjoy unlimited presets'}</li>
+                  </ul>
+              </div>
+          </div>
+      );
+  }
 
   return (
     <div style={{textAlign: 'center', padding: '50px 0'}}>

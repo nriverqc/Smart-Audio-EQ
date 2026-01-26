@@ -56,7 +56,10 @@ export default function App() {
 
   const handleGoPremium = () => {
     // Open the REAL premium page
-    chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/premium' });
+    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+        const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
+        chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/premium${emailParam}` });
+    });
   };
 
   const handlePresetChange = (e) => {

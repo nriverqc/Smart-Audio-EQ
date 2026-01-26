@@ -45,6 +45,8 @@ def create_payment():
         payment_url = preference_response["response"]["init_point"]
         return jsonify({"payment_url": payment_url})
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/webhook/mercadopago", methods=["POST"])

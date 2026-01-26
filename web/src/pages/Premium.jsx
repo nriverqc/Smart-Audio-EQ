@@ -75,6 +75,7 @@ export default function Premium({ lang }) {
           });
           const data = await res.json();
           if (data.preference_id) {
+              console.log("Preference created:", data.preference_id);
               setPreferenceId(data.preference_id);
               setShowBrick(true);
           } else {
@@ -117,16 +118,16 @@ export default function Premium({ lang }) {
      });
   };
 
-  const initialization = {
+  const initialization = React.useMemo(() => ({
     preferenceId: preferenceId,
-  };
+  }), [preferenceId]);
 
-  const customization = {
+  const customization = React.useMemo(() => ({
     paymentMethods: {
       creditCard: "all",
       debitCard: "all",
     },
-  };
+  }), []);
 
   return (
     <div style={{textAlign: 'center', padding: '50px 0'}}>
@@ -206,9 +207,8 @@ export default function Premium({ lang }) {
                     customization={customization}
                     onSubmit={handleBrickSubmit}
                     onError={(error) => {
-                        console.error(error);
-                        // Show visible error to user if initialization fails
-                        alert("Payment Form Error: " + (error.message || JSON.stringify(error)));
+                        console.error("Brick Error:", error);
+                        alert("Payment Brick Error: " + (error.message || JSON.stringify(error)));
                     }}
                   />
                   <button 

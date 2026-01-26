@@ -20,7 +20,7 @@ export default function Premium({ lang }) {
       freeTitle: 'Gratis',
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPrice: '$1000 / de por vida',
+      premiumPrice: '$5000 / de por vida',
       freeItems: ['✅ Ecualizador de 6 bandas', '✅ Presets básicos (Flat, Vocal, etc.)', '✅ Mejora de volumen'],
       premiumItems: [
         '✅ Todo lo de Gratis',
@@ -43,7 +43,7 @@ export default function Premium({ lang }) {
       freeTitle: 'Free',
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
-      premiumPrice: '$1000 / lifetime',
+      premiumPrice: '$5000 / lifetime',
       freeItems: ['✅ 6-Band EQ', '✅ Basic presets (Flat, Vocal, etc.)', '✅ Volume boost'],
       premiumItems: [
         '✅ Everything in Free',
@@ -71,7 +71,7 @@ export default function Premium({ lang }) {
           const res = await fetch(`${API_BASE}/create-payment`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: email, price: 1000, item: 'Smart Audio EQ Premium' })
+              body: JSON.stringify({ email: email, price: 5000, item: 'Smart Audio EQ Premium' })
           });
           const data = await res.json();
           if (data.preference_id) {
@@ -120,7 +120,7 @@ export default function Premium({ lang }) {
 
   const initialization = React.useMemo(() => ({
     preferenceId: preferenceId,
-    amount: 1000,
+    amount: 5000,
   }), [preferenceId]);
 
   const customization = React.useMemo(() => ({

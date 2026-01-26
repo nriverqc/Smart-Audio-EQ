@@ -1,0 +1,19 @@
+{
+  "name": "smart-audio-eq",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Browser Audio Equalizer",
+  "scripts": {
+    "build": "vite build",
+    "zip": "npm run build && powershell Compress-Archive -Path dist/* -DestinationPath extension.zip -Force"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "vite": "^5.0.0",
+    "vite-plugin-static-copy": "^1.0.0"
+  }
+}

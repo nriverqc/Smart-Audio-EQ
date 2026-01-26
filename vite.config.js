@@ -1,0 +1,32 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
+import { resolve } from 'path';
+
+export default defineConfig({
+  plugins: [
+    react(),
+    viteStaticCopy({
+      targets: [
+        { src: 'manifest.json', dest: '.' },
+        { src: 'premium_landing.html', dest: '.' }
+      ]
+    })
+  ],
+  build: {
+    outDir: 'dist',
+    rollupOptions: {
+      input: {
+        popup: resolve(__dirname, 'popup/index.html'),
+        offscreen: resolve(__dirname, 'offscreen.html'),
+        background: resolve(__dirname, 'background.js'),
+        content: resolve(__dirname, 'content.js')
+      },
+      output: {
+        entryFileNames: '[name].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash].[ext]'
+      }
+    }
+  }
+});

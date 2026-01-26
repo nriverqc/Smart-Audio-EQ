@@ -1,0 +1,6 @@
+Flask
+mercadopago
+python-dotenv
+flask-cors
+gunicorn
+psycopg2-binary

@@ -68,6 +68,10 @@ def create_payment():
             "pending": f"{frontend_url}/pending",
         },
         "auto_return": "approved",
+        "payment_methods": {
+            "excluded_payment_types": [],
+            "installments": 12
+        },
     }
 
     try:

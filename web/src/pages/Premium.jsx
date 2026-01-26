@@ -91,8 +91,8 @@ export default function Premium({ lang }) {
   };
 
   const initialization = {
-    amount: 100, // Changed to 100 to avoid "invalid payment type for this amount" error in Sandbox
-    preferenceId: "<PREFERENCE_ID>", 
+    amount: 1000, // Minimized amount for testing (if COP, 1000 is min often. If USD, 1000 is high but valid).
+                  // ideally this comes from backend preference, but for now we set it here.
     payer: {
         email: email,
         entity_type: 'individual',
@@ -113,6 +113,12 @@ export default function Premium({ lang }) {
     <div style={{textAlign: 'center', padding: '50px 0'}}>
       <h1 style={{color: '#ffd700', fontSize: '3rem'}}>{t.title}</h1>
       <p style={{fontSize: '1.2rem', marginBottom: '40px'}}>{t.subtitle}</p>
+
+      {/* Sandbox Warning */}
+      <div style={{background: '#ffeb3b', color: '#000', padding: '10px', marginBottom: '20px', borderRadius: '5px', display: 'inline-block'}}>
+        <strong>MODO PRUEBA (Sandbox):</strong> Usa tarjetas de prueba. 
+        <br/>Nombre del titular: <b>APRO</b> (para aprobar)
+      </div>
 
       <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
         <div className="feature-card" style={{border: '1px solid #333', textAlign: 'left', minWidth: '300px'}}>
@@ -171,15 +177,17 @@ export default function Premium({ lang }) {
               </button>
           ) : (
               <div style={{background: '#fff', padding: '10px', borderRadius: '5px'}}>
+                  {loading && <div style={{color: '#333', marginBottom: '10px'}}>{t.processingLabel}</div>}
                   <Payment
-                    initialization={{ amount: 4.99, payer: { email: email } }}
+                    initialization={initialization}
                     customization={customization}
                     onSubmit={handleBrickSubmit}
                     onError={(error) => console.error(error)}
                   />
                   <button 
                     onClick={() => setShowBrick(false)}
-                    style={{marginTop: '10px', background: 'transparent', border: 'none', color: '#333', cursor: 'pointer', textDecoration: 'underline'}}
+                    disabled={loading}
+                    style={{marginTop: '10px', background: 'transparent', border: 'none', color: '#333', cursor: 'pointer', textDecoration: 'underline', opacity: loading ? 0.5 : 1}}
                   >
                     {lang === 'es' ? 'Cancelar' : 'Cancel'}
                   </button>

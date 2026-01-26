@@ -30,3 +30,8 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     setMasterVolume(msg.value);
   }
 });
+
+// Keep-alive mechanism
+setInterval(() => {
+  chrome.runtime.sendMessage({ type: 'PING' }).catch(() => {});
+}, 20000);

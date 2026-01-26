@@ -91,11 +91,14 @@ export default function Premium({ lang }) {
   };
 
   const initialization = {
-    amount: 4.99,
-    preferenceId: "<PREFERENCE_ID>", // Not used for simple Payment Brick sometimes, but recommended.
-    // For simple brick without preference:
+    amount: 100, // Changed to 100 to avoid "invalid payment type for this amount" error in Sandbox
+    preferenceId: "<PREFERENCE_ID>", 
     payer: {
         email: email,
+        entity_type: 'individual',
+        type: 'customer',
+        first_name: 'Test',
+        last_name: 'User'
     },
   };
 

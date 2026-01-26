@@ -13,6 +13,7 @@ export default defineConfig({
       ]
     })
   ],
+  base: './', // CRUCIAL para extensiones: usa rutas relativas
   build: {
     outDir: 'dist',
     rollupOptions: {
@@ -24,8 +25,8 @@ export default defineConfig({
       },
       output: {
         entryFileNames: '[name].js',
-        chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash].[ext]'
+        chunkFileNames: '[name].js',
+        assetFileNames: '[name].[ext]'
       }
     }
   }

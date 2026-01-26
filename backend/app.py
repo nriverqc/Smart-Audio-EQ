@@ -96,6 +96,58 @@ def create_payment():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/process_payment", methods=["POST"])
+def process_payment():
+    try:
+        data = request.json
+        print("Processing Brick Payment:", data)
+
+        payment_data = {
+            "transaction_amount": float(data.get("transaction_amount")),
+            "token": data.get("token"),
+            "description": data.get("description", "Smart Audio EQ Premium"),
+            "installments": int(data.get("installments", 1)),
+            "payment_method_id": data.get("payment_method_id"),
+            "payer": {
+                "email": data["payer"]["email"],
+                "identification": {
+                    "type": data["payer"]["identification"]["type"],
+                    "number": data["payer"]["identification"]["number"]
+                }
+            },
+            "external_reference": data["payer"]["email"] # LINK TO EMAIL
+        }
+
+        if data.get("issuer_id"):
+            payment_data["issuer_id"] = int(data["issuer_id"])
+
+        payment_response = sdk.payment().create(payment_data)
+        payment = payment_response["response"]
+        
+        print("Payment Status:", payment.get("status"))
+
+        # If approved immediately, save to DB
+        if payment.get("status") == "approved":
+             email = payment.get("external_reference")
+             payment_id = str(payment.get("id"))
+             
+             with sqlite3.connect(DB_NAME) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO licenses (email, is_premium, payment_id)
+                    VALUES (?, 1, ?)
+                    ON CONFLICT(email) DO UPDATE SET
+                    is_premium=1,
+                    payment_id=excluded.payment_id
+                """, (email, payment_id))
+                conn.commit()
+
+        return jsonify(payment)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/webhook/mercadopago", methods=["POST"])
 def webhook():
     try:

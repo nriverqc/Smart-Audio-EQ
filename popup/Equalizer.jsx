@@ -61,8 +61,16 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
       // 4. Clear pending state
       setPendingChanges(false);
 
-      // 5. Redirect to page (Requested feature)
-      chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/' });
+      // 5. Redirect to page (Requested feature: Throttled to every 30s)
+      chrome.storage.local.get(['lastRedirect'], (result) => {
+          const now = Date.now();
+          const last = result.lastRedirect || 0;
+          
+          if (now - last > 30000) { // 30 seconds
+              chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/' });
+              chrome.storage.local.set({ lastRedirect: now });
+          }
+      });
   };
 
   return (

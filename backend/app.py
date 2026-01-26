@@ -54,8 +54,8 @@ def create_payment():
             {
                 "title": data.get("item", "Smart Audio EQ Premium"),
                 "quantity": 1,
-                "currency_id": "USD",
-                "unit_price": float(data.get("price", 4.99)),
+                # "currency_id": "USD", # Commented out to use default account currency
+                "unit_price": 1000, # Set to 1000 to ensure it meets minimums in any currency (COP, ARS, etc.)
             }
         ],
         "payer": {

@@ -120,7 +120,7 @@ export default function Premium({ lang }) {
 
   const initialization = React.useMemo(() => ({
     preferenceId: preferenceId,
-    amount: 4.99,
+    amount: 1000,
   }), [preferenceId]);
 
   const customization = React.useMemo(() => ({

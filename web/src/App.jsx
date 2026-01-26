@@ -122,7 +122,7 @@ function AppContent() {
           </Routes>
 
           <footer>
-            <p>© 2026 Smart Audio EQ. {lang === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}</p>
+            <p>© 2026 Smart Audio EQ. {lang === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.1</span></p>
           </footer>
         </div>
       </div>

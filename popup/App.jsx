@@ -34,11 +34,8 @@ export default function App() {
   };
 
   const handleGoPremium = () => {
-    // Open the mock premium page
-    chrome.tabs.create({ url: 'premium_landing.html' });
-    
-    // Simulate activation for demo purposes (optional, or remove if you want real payment flow)
-    // chrome.storage.local.set({ isPremium: true }, () => setIsPremium(true));
+    // Open the REAL premium page
+    chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/premium' });
   };
 
   const handlePresetChange = (e) => {

@@ -13,8 +13,29 @@ export default function App() {
       if (result.enabled) setEnabled(true);
       if (result.isPremium) setIsPremium(true);
       if (result.currentPreset) setCurrentPreset(result.currentPreset);
+
+      // Verify premium status with backend if not already premium or periodically
+      verifyPremiumStatus();
     });
   }, []);
+
+  const verifyPremiumStatus = () => {
+    // 1. Get user email from Chrome Identity
+    chrome.identity.getProfileUserInfo((userInfo) => {
+        if (userInfo && userInfo.email) {
+            // 2. Check against backend
+            fetch(`https://smart-audio-eq-1.onrender.com/check-license?email=${userInfo.email}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.premium) {
+                        setIsPremium(true);
+                        chrome.storage.local.set({ isPremium: true });
+                    }
+                })
+                .catch(err => console.error("License check failed", err));
+        }
+    });
+  };
 
   const toggleEq = async () => {
     const newState = !enabled;
@@ -58,6 +79,14 @@ export default function App() {
         // Force update equalizer UI by passing gains down? 
         // Better: Equalizer component should listen to preset changes or we pass key
     }
+  };
+
+  const onUserAdjust = (newGains) => {
+    if (currentPreset !== 'custom') {
+      setCurrentPreset('custom');
+      chrome.storage.local.set({ currentPreset: 'custom' });
+    }
+    chrome.storage.local.set({ customGains: newGains });
   };
 
   return (

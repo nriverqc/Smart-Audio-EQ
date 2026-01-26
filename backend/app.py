@@ -1,4 +1,5 @@
 import os
+import sqlite3
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mercadopago
@@ -9,7 +10,26 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Initialize MercadoPago using ACCESS TOKEN from environment (.env / Render)
+# Database setup
+DB_NAME = "licenses.db"
+
+def init_db():
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS licenses (
+                email TEXT PRIMARY KEY,
+                is_premium BOOLEAN DEFAULT 0,
+                payment_id TEXT,
+                date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+
+# Initialize DB on start
+init_db()
+
+# Initialize MercadoPago
 mp_access_token = os.getenv("MP_ACCESS_TOKEN")
 if not mp_access_token:
     raise RuntimeError("MP_ACCESS_TOKEN is not set")
@@ -17,11 +37,16 @@ sdk = mercadopago.SDK(mp_access_token)
 
 @app.route("/")
 def home():
-    return "Smart Audio EQ API is running"
+    return "Smart Audio EQ API is running with SQLite"
 
 @app.route("/create-payment", methods=["POST"])
 def create_payment():
     data = request.json or {}
+    email = data.get("email")
+    
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
     frontend_url = os.getenv("FRONTEND_URL", "https://example.com")
 
     preference_data = {
@@ -32,6 +57,10 @@ def create_payment():
                 "unit_price": float(data.get("price", 4.99)),
             }
         ],
+        "payer": {
+            "email": email
+        },
+        "external_reference": email, # KEY: We use email as external_reference to link payment
         "back_urls": {
             "success": f"{frontend_url}/success",
             "failure": f"{frontend_url}/failure",
@@ -69,19 +98,64 @@ def create_payment():
 
 @app.route("/webhook/mercadopago", methods=["POST"])
 def webhook():
-    # Here you would receive the payment notification
-    # Verify the payment and update your database (licenses table)
-    data = request.json
-    print("Received webhook:", data)
-    return jsonify({"status": "received"}), 200
+    try:
+        data = request.json
+        print("Received webhook:", data)
+        
+        payment_id = data.get("data", {}).get("id")
+        action = data.get("action")
+        type = data.get("type")
+
+        if action == "payment.created" or type == "payment":
+            # Fetch payment details from MercadoPago to verify status
+            payment_info = sdk.payment().get(payment_id)
+            payment = payment_info.get("response", {})
+            
+            status = payment.get("status")
+            external_reference = payment.get("external_reference") # This is the EMAIL
+            
+            print(f"Payment {payment_id} status: {status} for email: {external_reference}")
+
+            if status == "approved" and external_reference:
+                # Update Database
+                with sqlite3.connect(DB_NAME) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT INTO licenses (email, is_premium, payment_id)
+                        VALUES (?, 1, ?)
+                        ON CONFLICT(email) DO UPDATE SET
+                        is_premium=1,
+                        payment_id=excluded.payment_id
+                    """, (external_reference, payment_id))
+                    conn.commit()
+                print(f"License activated for {external_reference}")
+
+        return jsonify({"status": "received"}), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/check-license", methods=["GET"])
 def check_license():
     email = request.args.get("email")
-    # Mock check - replace with database lookup
-    if email == "demo@premium.com":
-        return jsonify({"premium": True})
-    return jsonify({"premium": False})
+    if not email:
+        return jsonify({"premium": False, "error": "No email provided"})
+        
+    # Check against database
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT is_premium FROM licenses WHERE email = ?", (email,))
+            row = cursor.fetchone()
+            
+            if row and row[0]:
+                return jsonify({"premium": True})
+            else:
+                return jsonify({"premium": False})
+    except Exception as e:
+        print("DB Error:", e)
+        return jsonify({"premium": False, "error": "DB Error"})
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)

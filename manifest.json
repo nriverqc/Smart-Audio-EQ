@@ -10,7 +10,8 @@
     "storage",
     "activeTab",
     "tabCapture",
-    "offscreen"
+    "offscreen",
+    "identity"
   ],
   "background": {
     "service_worker": "background.js",

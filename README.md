@@ -1,0 +1,2 @@
+# Smart-Audio-EQ
+Ecualizador

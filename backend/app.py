@@ -42,8 +42,26 @@ def create_payment():
 
     try:
         preference_response = sdk.preference().create(preference_data)
-        payment_url = preference_response["response"]["init_point"]
+        
+        # Log full response for debugging
+        print("MercadoPago Response:", preference_response)
+
+        # Check if request was successful
+        if preference_response.get("status") not in [200, 201]:
+             return jsonify({
+                 "error": "MercadoPago API Error", 
+                 "details": preference_response.get("response", "No details")
+             }), 500
+
+        payment_url = preference_response["response"].get("init_point")
+        if not payment_url:
+             return jsonify({
+                 "error": "No init_point in response", 
+                 "details": preference_response
+             }), 500
+             
         return jsonify({"payment_url": payment_url})
+        
     except Exception as e:
         import traceback
         traceback.print_exc()

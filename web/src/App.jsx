@@ -21,6 +21,31 @@ function AppContent() {
   });
   const location = useLocation();
 
+  // REPLACE THIS WITH YOUR ACTUAL EXTENSION ID from chrome://extensions
+  // e.g. "abcdefghijklmnop..."
+  const EXTENSION_ID = "YOUR_EXTENSION_ID_HERE"; 
+
+  const syncWithExtension = (userData) => {
+    if (chrome && chrome.runtime && chrome.runtime.sendMessage && EXTENSION_ID !== "YOUR_EXTENSION_ID_HERE") {
+        try {
+            chrome.runtime.sendMessage(EXTENSION_ID, {
+                tipo: "LOGIN_EXITOSO",
+                uid: userData.uid,
+                email: userData.email,
+                isPremium: userData.isPremium
+            }, (response) => {
+                console.log("Extension response:", response);
+                if (response && response.status) {
+                    // Optional: show a small toast or log
+                    console.log("Extension synced successfully!");
+                }
+            });
+        } catch (e) {
+            console.log("Could not sync with extension (maybe not installed or ID mismatch):", e);
+        }
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -29,25 +54,30 @@ function AppContent() {
         fetch(`${API_BASE}/check-license?email=${firebaseUser.email}&uid=${firebaseUser.uid}`)
           .then(res => res.json())
           .then(data => {
-            setUser({ 
+            const updatedUser = { 
               email: firebaseUser.email, 
               uid: firebaseUser.uid,
               displayName: firebaseUser.displayName,
               photoURL: firebaseUser.photoURL,
               isPremium: data.premium, 
               loading: false 
-            });
+            };
+            setUser(updatedUser);
+            // Sync with extension
+            syncWithExtension(updatedUser);
           })
           .catch(err => {
             console.error("Error checking license:", err);
-            setUser({ 
+            const fallbackUser = { 
               email: firebaseUser.email, 
               uid: firebaseUser.uid,
               displayName: firebaseUser.displayName,
               photoURL: firebaseUser.photoURL,
               isPremium: false, 
               loading: false 
-            });
+            };
+            setUser(fallbackUser);
+            syncWithExtension(fallbackUser);
           });
       } else {
         console.log("No hay sesión.");

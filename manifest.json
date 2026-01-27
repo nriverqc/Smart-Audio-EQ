@@ -28,6 +28,12 @@
     "https://*.firebaseio.com/*",
     "https://*.googleapis.com/*"
   ],
+  "externally_connectable": {
+    "matches": [
+      "https://smart-audio-eq.pages.dev/*",
+      "http://localhost:5173/*"
+    ]
+  },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   }

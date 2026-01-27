@@ -94,3 +94,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 });
+
+// Escuchar mensajes desde tu sitio web
+chrome.runtime.onMessageExternal.addListener(
+  function(request, sender, sendResponse) {
+    if (request.tipo === "LOGIN_EXITOSO") {
+      // Guardamos los datos en el almacenamiento de la extensión
+      chrome.storage.local.set({
+        uid: request.uid,
+        email: request.email,
+        isPremium: request.isPremium
+      }, function() {
+        console.log("Datos sincronizados desde la web");
+        sendResponse({status: "OK - Extensión actualizada"});
+      });
+    }
+  }
+);

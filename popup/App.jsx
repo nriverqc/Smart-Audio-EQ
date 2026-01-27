@@ -6,6 +6,7 @@ export default function App() {
   const [enabled, setEnabled] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [currentPreset, setCurrentPreset] = useState('flat');
+  const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
     // Check state from storage
@@ -23,6 +24,7 @@ export default function App() {
     // 1. Get user email from Chrome Identity
     chrome.identity.getProfileUserInfo((userInfo) => {
         if (userInfo && userInfo.email) {
+            setUserEmail(userInfo.email);
             // 2. Check against backend
             fetch(`https://smart-audio-eq-1.onrender.com/check-license?email=${userInfo.email}`)
                 .then(res => res.json())
@@ -30,6 +32,11 @@ export default function App() {
                     if (data.premium) {
                         setIsPremium(true);
                         chrome.storage.local.set({ isPremium: true });
+                    } else {
+                        // Re-verify: If not premium in backend, ensure we don't have stale true state?
+                        // Actually, maybe keep it true if offline? But for now let's trust backend.
+                        // setIsPremium(false); 
+                        // chrome.storage.local.set({ isPremium: false });
                     }
                 })
                 .catch(err => console.error("License check failed", err));
@@ -98,6 +105,17 @@ export default function App() {
         <h3>Smart Audio EQ</h3>
         {isPremium && <span className="premium-badge">PRO</span>}
       </div>
+
+      {userEmail && (
+        <div style={{fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '10px', background: '#222', padding: '5px', borderRadius: '4px'}}>
+            👤 <span style={{color: '#fff'}}>{userEmail}</span>
+            {isPremium ? (
+                <span style={{color: '#ffd700', marginLeft: '5px', fontWeight: 'bold'}}>• PREMIUM 💎</span>
+            ) : (
+                <span style={{color: '#ccc', marginLeft: '5px'}}>• Free</span>
+            )}
+        </div>
+      )}
 
       <div className="controls">
         <span>Power</span>

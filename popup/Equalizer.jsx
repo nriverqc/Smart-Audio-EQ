@@ -62,19 +62,22 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
       setPendingChanges(false);
 
       // 5. Redirect to page (Requested feature: Throttled to every 30s)
-      chrome.storage.local.get(['lastRedirect'], (result) => {
-          const now = Date.now();
-          const last = result.lastRedirect || 0;
-          
-          if (now - last > 30000) { // 30 seconds
-              // Get user email to pass to web for profile extraction
-              chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
-                  const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
-                  chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/${emailParam}` });
-                  chrome.storage.local.set({ lastRedirect: now });
-              });
-          }
-      });
+      // Only redirect if NOT premium
+      if (!isPremium) {
+        chrome.storage.local.get(['lastRedirect'], (result) => {
+            const now = Date.now();
+            const last = result.lastRedirect || 0;
+            
+            if (now - last > 30000) { // 30 seconds
+                // Get user email to pass to web for profile extraction
+                chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+                    const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
+                    chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/${emailParam}` });
+                    chrome.storage.local.set({ lastRedirect: now });
+                });
+            }
+        });
+      }
   };
 
   return (

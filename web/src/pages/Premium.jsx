@@ -35,60 +35,9 @@ export default function Premium({ lang }) {
           if (container) {
               container.innerHTML = ""; // Clear previous buttons
               try {
-                  window.paypal.Buttons({
-                      onClick: (data, actions) => {
-                          const currentEmail = emailRef.current;
-                          if (!currentEmail || !currentEmail.includes('@')) {
-                              alert(lang === 'es' ? 'Por favor ingresa un email válido arriba.' : 'Please enter a valid email above.');
-                              return actions.reject();
-                          }
-                          return actions.resolve();
-                      },
-                      createOrder: (data, actions) => {
-                          return actions.order.create({
-                              purchase_units: [{
-                                  amount: {
-                                      value: '4.99'
-                                  },
-                                  description: "Smart Audio EQ Premium"
-                              }]
-                          });
-                      },
-                      onApprove: (data, actions) => {
-                          return actions.order.capture().then((details) => {
-                              const currentEmail = emailRef.current;
-                              console.log("PayPal Approved:", details);
-                              setLoading(true);
-                              
-                              // Register license in backend
-                              fetch(`${API_BASE}/register-paypal`, {
-                                  method: 'POST',
-                                  headers: {'Content-Type': 'application/json'},
-                                  body: JSON.stringify({
-                                      email: currentEmail,
-                                      orderID: data.orderID
-                                  })
-                              })
-                              .then(res => res.json())
-                              .then(response => {
-                                  if (response.status === 'approved') {
-                                      alert(lang === 'es' ? '¡Pago exitoso!' : 'Payment successful!');
-                                      refreshUser();
-                                  } else {
-                                      alert('Error activating license: ' + (response.error || 'Unknown'));
-                                  }
-                              })
-                              .catch(err => {
-                                  console.error(err);
-                                  alert('Network error activating license');
-                              })
-                              .finally(() => setLoading(false));
-                          });
-                      },
-                      onError: (err) => {
-                          console.error("PayPal Error:", err);
-                          alert("PayPal Error: " + err.message);
-                      }
+                  // Revert to HostedButtons as provided Client ID is not for REST API
+                  window.paypal.HostedButtons({
+                      hostedButtonId: "8M45H2NRA2N92",
                   }).render("#" + containerId);
               } catch (e) {
                   console.error("PayPal Render Error:", e);

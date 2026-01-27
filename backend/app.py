@@ -203,6 +203,38 @@ def webhook():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/register-paypal", methods=["POST"])
+def register_paypal():
+    try:
+        data = request.json
+        email = data.get("email")
+        order_id = data.get("orderID")
+        
+        if not email or not order_id:
+            return jsonify({"error": "Missing email or orderID"}), 400
+            
+        print(f"Registering PayPal payment for {email} (Order: {order_id})")
+        
+        # In production, we should verify order_id with PayPal API using Client Secret
+        # For now, we trust the client-side success for this MVP
+        
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO licenses (email, is_premium, payment_id)
+                VALUES (?, 1, ?)
+                ON CONFLICT(email) DO UPDATE SET
+                is_premium=1,
+                payment_id=excluded.payment_id
+            """, (email, f"PAYPAL_{order_id}"))
+            conn.commit()
+            
+        return jsonify({"status": "approved", "email": email})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/check-license", methods=["GET"])
 def check_license():
     email = request.args.get("email")

@@ -14,12 +14,88 @@ export default function Premium({ lang }) {
   const [showBrick, setShowBrick] = useState(false);
   const [preferenceId, setPreferenceId] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [country, setCountry] = useState('CO'); // 'CO' or 'INT'
+  const emailRef = React.useRef(email);
 
   useEffect(() => {
     if (user.email) {
         setEmail(user.email);
     }
   }, [user.email]);
+
+  useEffect(() => {
+      emailRef.current = email;
+  }, [email]);
+
+  // PayPal Effect
+  useEffect(() => {
+      if (country === 'INT' && window.paypal) {
+          const containerId = "paypal-container-8M45H2NRA2N92";
+          const container = document.getElementById(containerId);
+          if (container) {
+              container.innerHTML = ""; // Clear previous buttons
+              try {
+                  window.paypal.Buttons({
+                      onClick: (data, actions) => {
+                          const currentEmail = emailRef.current;
+                          if (!currentEmail || !currentEmail.includes('@')) {
+                              alert(lang === 'es' ? 'Por favor ingresa un email válido arriba.' : 'Please enter a valid email above.');
+                              return actions.reject();
+                          }
+                          return actions.resolve();
+                      },
+                      createOrder: (data, actions) => {
+                          return actions.order.create({
+                              purchase_units: [{
+                                  amount: {
+                                      value: '4.99'
+                                  },
+                                  description: "Smart Audio EQ Premium"
+                              }]
+                          });
+                      },
+                      onApprove: (data, actions) => {
+                          return actions.order.capture().then((details) => {
+                              const currentEmail = emailRef.current;
+                              console.log("PayPal Approved:", details);
+                              setLoading(true);
+                              
+                              // Register license in backend
+                              fetch(`${API_BASE}/register-paypal`, {
+                                  method: 'POST',
+                                  headers: {'Content-Type': 'application/json'},
+                                  body: JSON.stringify({
+                                      email: currentEmail,
+                                      orderID: data.orderID
+                                  })
+                              })
+                              .then(res => res.json())
+                              .then(response => {
+                                  if (response.status === 'approved') {
+                                      alert(lang === 'es' ? '¡Pago exitoso!' : 'Payment successful!');
+                                      refreshUser();
+                                  } else {
+                                      alert('Error activating license: ' + (response.error || 'Unknown'));
+                                  }
+                              })
+                              .catch(err => {
+                                  console.error(err);
+                                  alert('Network error activating license');
+                              })
+                              .finally(() => setLoading(false));
+                          });
+                      },
+                      onError: (err) => {
+                          console.error("PayPal Error:", err);
+                          alert("PayPal Error: " + err.message);
+                      }
+                  }).render("#" + containerId);
+              } catch (e) {
+                  console.error("PayPal Render Error:", e);
+              }
+          }
+      }
+  }, [country, lang]);
 
   const texts = {
     es: {
@@ -28,7 +104,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Gratis',
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPrice: '$20000 / de por vida',
+      premiumPriceCO: '$20.000 COP / de por vida',
+      premiumPriceINT: '$4.99 USD / lifetime',
       freeItems: ['✅ Ecualizador de 6 bandas', '✅ Presets básicos (Flat, Vocal, etc.)', '✅ Mejora de volumen'],
       premiumItems: [
         '✅ Todo lo de Gratis',
@@ -37,13 +114,17 @@ export default function Premium({ lang }) {
         '✅ Sync en la nube (próximamente)',
         '✅ Soporte prioritario',
       ],
-      buyLabel: 'Pagar con Tarjeta',
+      buyLabel: 'Pagar con Tarjeta (MercadoPago)',
       processingLabel: 'Procesando...',
       loadingLabel: 'Cargando formulario de pago...',
-      emailLabel: 'Ingresa tu email de Google (para activar Premium en la extensión)',
+      emailLabel: 'Ingresa tu email de Google (para activar Premium)',
       emailPlaceholder: 'tu.email@gmail.com',
       successMessage: '¡Pago exitoso! Tu licencia Premium ha sido activada.',
-      errorMessage: 'Hubo un error al procesar el pago.'
+      errorMessage: 'Hubo un error al procesar el pago.',
+      countryLabel: 'Selecciona tu país:',
+      optionCO: '🇨🇴 Colombia (MercadoPago)',
+      optionINT: '🌍 Resto del Mundo (PayPal)',
+      paypalNote: 'Nota: Después de pagar en PayPal, tu cuenta se activará automáticamente en unos minutos. Si no, contáctanos.'
     },
     en: {
       title: 'Unlock the full power',
@@ -51,7 +132,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Free',
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
-      premiumPrice: '$20000 / lifetime',
+      premiumPriceCO: '$20.000 COP / lifetime',
+      premiumPriceINT: '$4.99 USD / lifetime',
       freeItems: ['✅ 6-Band EQ', '✅ Basic presets (Flat, Vocal, etc.)', '✅ Volume boost'],
       premiumItems: [
         '✅ Everything in Free',
@@ -60,13 +142,17 @@ export default function Premium({ lang }) {
         '✅ Cloud sync (coming soon)',
         '✅ Priority support',
       ],
-      buyLabel: 'Pay with Card',
+      buyLabel: 'Pay with Card (MercadoPago)',
       processingLabel: 'Processing...',
       loadingLabel: 'Loading payment form...',
-      emailLabel: 'Enter your Google Email (to activate Premium in the extension)',
+      emailLabel: 'Enter your Google Email (to activate Premium)',
       emailPlaceholder: 'your.email@gmail.com',
       successMessage: 'Payment successful! Your Premium license has been activated.',
-      errorMessage: 'There was an error processing the payment.'
+      errorMessage: 'There was an error processing the payment.',
+      countryLabel: 'Select your country:',
+      optionCO: '🇨🇴 Colombia (MercadoPago)',
+      optionINT: '🌍 Rest of World (PayPal)',
+      paypalNote: 'Note: After paying on PayPal, your account will be activated automatically within a few minutes. If not, contact us.'
     },
   };
 
@@ -193,12 +279,39 @@ export default function Premium({ lang }) {
 
         <div className="feature-card" style={{border: '2px solid #ffd700', textAlign: 'left', minWidth: '300px', transform: 'scale(1.05)'}}>
           <h2 style={{color: '#ffd700'}}>{t.premiumTitle}</h2>
+          
+          {/* Country Selector */}
+          <div style={{margin: '10px 0'}}>
+              <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc'}}>{t.countryLabel}</label>
+              <select 
+                value={country} 
+                onChange={(e) => {
+                    setCountry(e.target.value);
+                    setShowBrick(false); // Reset brick on change
+                }}
+                style={{
+                    width: '100%', 
+                    padding: '8px', 
+                    borderRadius: '5px', 
+                    background: '#222', 
+                    color: '#fff', 
+                    border: '1px solid #555'
+                }}
+              >
+                  <option value="CO">{t.optionCO}</option>
+                  <option value="INT">{t.optionINT}</option>
+              </select>
+          </div>
+
           <ul style={{listStyle: 'none', padding: 0, lineHeight: '2'}}>
             {t.premiumItems.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <h3 style={{marginTop: '20px'}}>{t.premiumPrice}</h3>
+          
+          <h3 style={{marginTop: '20px'}}>
+              {country === 'CO' ? t.premiumPriceCO : t.premiumPriceINT}
+          </h3>
           
           <div style={{margin: '20px 0', textAlign: 'left'}}>
               <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc'}}>
@@ -221,46 +334,52 @@ export default function Premium({ lang }) {
               />
           </div>
 
-          {!showBrick ? (
-              <>
-                  {errorMsg && <div style={{color: 'red', marginBottom: '10px'}}>{errorMsg}</div>}
-                  <button 
-                    className="btn-premium" 
-                    style={{width: '100%', marginTop: '10px', opacity: loading ? 0.5 : 1}}
-                    disabled={loading}
-                    onClick={() => {
-                        if (!email || !email.includes('@')) {
-                            alert(lang === 'es' ? 'Por favor ingresa un email válido.' : 'Please enter a valid email.');
-                            return;
-                        }
-                        createPreference();
-                    }}
-                  >
-                    {loading ? t.loadingLabel : t.buyLabel}
-                  </button>
-              </>
+          {/* PAYMENT OPTIONS */}
+          {country === 'CO' ? (
+              // MERCADO PAGO
+              !showBrick ? (
+                  <>
+                      {errorMsg && <div style={{color: 'red', marginBottom: '10px'}}>{errorMsg}</div>}
+                      <button 
+                        className="btn-premium" 
+                        style={{width: '100%', marginTop: '10px', opacity: loading ? 0.5 : 1}}
+                        disabled={loading}
+                        onClick={() => {
+                            if (!email || !email.includes('@')) {
+                                alert(lang === 'es' ? 'Por favor ingresa un email válido.' : 'Please enter a valid email.');
+                                return;
+                            }
+                            createPreference();
+                        }}
+                      >
+                        {loading ? t.processingLabel : t.buyLabel}
+                      </button>
+                  </>
+              ) : (
+                  <div style={{marginTop: '20px'}}>
+                      <p style={{color: '#ccc', marginBottom: '10px'}}>{t.loadingLabel}</p>
+                      <Payment
+                          initialization={initialization}
+                          customization={customization}
+                          onSubmit={handleBrickSubmit}
+                      />
+                      <button 
+                        onClick={() => setShowBrick(false)}
+                        style={{marginTop: '10px', background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', textDecoration: 'underline'}}
+                      >
+                        {lang === 'es' ? 'Cancelar / Cambiar método' : 'Cancel / Change method'}
+                      </button>
+                  </div>
+              )
           ) : (
-              <div style={{background: '#fff', padding: '10px', borderRadius: '5px'}}>
-                  {loading && <div style={{color: '#333', marginBottom: '10px'}}>{t.processingLabel}</div>}
-                  <Payment
-                    initialization={initialization}
-                    customization={customization}
-                    onSubmit={handleBrickSubmit}
-                    onError={(error) => {
-                        console.error("Brick Error:", error);
-                        alert("Payment Brick Error: " + (error.message || JSON.stringify(error)));
-                    }}
-                  />
-                  <button 
-                    onClick={() => setShowBrick(false)}
-                    disabled={loading}
-                    style={{marginTop: '10px', background: 'transparent', border: 'none', color: '#333', cursor: 'pointer', textDecoration: 'underline', opacity: loading ? 0.5 : 1}}
-                  >
-                    {lang === 'es' ? 'Cancelar' : 'Cancel'}
-                  </button>
+              // PAYPAL
+              <div style={{marginTop: '20px'}}>
+                  <div id="paypal-container-8M45H2NRA2N92"></div>
+                  <p style={{fontSize: '0.8rem', color: '#aaa', marginTop: '10px'}}>
+                      {t.paypalNote}
+                  </p>
               </div>
           )}
-
         </div>
       </div>
     </div>

@@ -112,15 +112,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 chrome.runtime.onMessageExternal.addListener(
   function(request, sender, sendResponse) {
     if (request.tipo === "LOGIN_EXITOSO") {
-      // Guardamos los datos en el almacenamiento de la extensión
       chrome.storage.local.set({
         uid: request.uid,
         email: request.email,
         isPremium: request.isPremium
       }, function() {
-        console.log("Datos sincronizados desde la web");
         sendResponse({status: "OK - Extensión actualizada"});
       });
+      return true;
+    }
+    if (request.accion === "SYNC_USER") {
+      chrome.storage.local.set({
+        uid: request.uid,
+        isPremium: request.isPremium,
+        userName: request.nombre || '',
+        userPhoto: request.foto || ''
+      }, function() {
+        sendResponse({status: "success"});
+      });
+      return true;
     }
   }
 );

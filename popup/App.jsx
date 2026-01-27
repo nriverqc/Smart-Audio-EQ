@@ -37,8 +37,11 @@ export default function App() {
   }, []);
 
   const handleLogin = () => {
-      // Open the web page to login
-      chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/' });
+      // Open the web page to login, pass email if available
+      chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+          const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
+          chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/${emailParam}` });
+      });
   };
 
 
@@ -187,6 +190,25 @@ export default function App() {
              <button onClick={handleLogin} style={{background: '#4285F4', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem'}}>
                  Login / Sync
              </button>
+             <div style={{marginTop: '6px'}}>
+               <button 
+                 onClick={refreshStatus}
+                 disabled={loading}
+                 title="Sync Status"
+                 style={{
+                   background: 'transparent',
+                   border: '1px solid #666',
+                   color: '#fff',
+                   borderRadius: '4px',
+                   cursor: 'pointer',
+                   fontSize: '0.8rem',
+                   padding: '4px 8px',
+                   opacity: loading ? 0.5 : 1
+                 }}
+               >
+                 {loading ? '...' : '↻ Sync'}
+               </button>
+             </div>
          </div>
       )}
 

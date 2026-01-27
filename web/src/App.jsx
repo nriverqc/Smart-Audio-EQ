@@ -26,8 +26,6 @@ function AppContent() {
   const EXTENSION_ID = "edblkdnmdjodkbolefojlgdfkmbkplpf"; 
 
   const syncWithExtension = (userData) => {
-    // Method 1: window.postMessage (Best for dynamic Extension IDs and Content Scripts)
-    // This sends the data to the content script (content.js) injected by the extension
     window.postMessage({
         type: "LOGIN_EXITOSO",
         uid: userData.uid,
@@ -35,14 +33,14 @@ function AppContent() {
         isPremium: userData.isPremium
     }, "*");
 
-    // Method 2: chrome.runtime.sendMessage (Legacy/Specific ID)
     if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage && EXTENSION_ID !== "YOUR_EXTENSION_ID_HERE") {
         try {
             window.chrome.runtime.sendMessage(EXTENSION_ID, {
-                tipo: "LOGIN_EXITOSO",
+                accion: "SYNC_USER",
                 uid: userData.uid,
-                email: userData.email,
-                isPremium: userData.isPremium
+                isPremium: userData.isPremium,
+                nombre: userData.displayName || '',
+                foto: userData.photoURL || ''
             }, (response) => {
                 console.log("Extension response:", response);
             });

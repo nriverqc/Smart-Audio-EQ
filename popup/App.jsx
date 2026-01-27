@@ -137,24 +137,27 @@ export default function App() {
                 
                 if (webTab) {
                     console.log("Found web tab:", webTab.id);
-                    chrome.tabs.sendMessage(webTab.id, { type: "CHECK_WEB_SESSION" }, (response) => {
-                        console.log("Asked web tab for session", response);
-                        
-                        // Wait a moment for the sync to propagate to storage
-                        setTimeout(() => {
-                            chrome.storage.local.get(['email', 'uid', 'isPremium'], (updated) => {
-                                if (updated.email) {
-                                    setUserEmail(updated.email);
-                                    if (updated.isPremium) setIsPremium(true);
-                                    alert("Synced with open web tab! ✅");
-                                    setLoading(false);
-                                } else {
-                                    alert("Found web tab, but not logged in there. Please login on the website.");
-                                    setLoading(false);
-                                    handleLogin(); // Open/focus the tab
-                                }
+                    
+                    // NEW METHOD: Ask content script to read localStorage
+                    chrome.tabs.sendMessage(webTab.id, { type: "PREGUNTAR_DATOS" }, (response) => {
+                        console.log("Web tab response:", response);
+                        if (response && response.email) {
+                            chrome.storage.local.set({
+                                email: response.email,
+                                uid: response.uid,
+                                isPremium: response.isPremium
+                            }, () => {
+                                setUserEmail(response.email);
+                                if (response.isPremium) setIsPremium(true);
+                                alert("Synced with open web tab! ✅");
+                                setLoading(false);
                             });
-                        }, 1000);
+                        } else {
+                            // Fallback to old method if no response (maybe content script not reloaded)
+                            chrome.tabs.sendMessage(webTab.id, { type: "CHECK_WEB_SESSION" });
+                            alert("Found tab, asking for session... (Check if you are logged in)");
+                            setLoading(false);
+                        }
                     });
                 } else {
                     alert("Please login first to sync status. Opening login page...");

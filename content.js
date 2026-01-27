@@ -27,4 +27,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     window.postMessage({ type: "REQUEST_SESSION" }, "*");
     sendResponse({ status: "Request sent to web page" });
   }
+
+  if (msg.type === "PREGUNTAR_DATOS") {
+     console.log("Content: Extension asking for data via localStorage...");
+     const datos = localStorage.getItem('user_sync_data');
+     console.log("Content: Found data:", datos);
+     if (datos) {
+         sendResponse(JSON.parse(datos));
+     } else {
+         sendResponse(null);
+     }
+     return true; // Keep channel open? Not strictly needed for sync response but good practice
+  }
 });

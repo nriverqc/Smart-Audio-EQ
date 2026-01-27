@@ -11,7 +11,8 @@
     "activeTab",
     "tabCapture",
     "offscreen",
-    "identity"
+    "identity",
+    "tabs"
   ],
   "background": {
     "service_worker": "background.js",

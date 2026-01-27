@@ -26,6 +26,19 @@ function AppContent() {
   const EXTENSION_ID = "edblkdnmdjodkbolefojlgdfkmbkplpf"; 
 
   const syncWithExtension = (userData) => {
+    // Save to localStorage for Content Script to read
+    try {
+        localStorage.setItem('user_sync_data', JSON.stringify({
+            uid: userData.uid,
+            email: userData.email,
+            isPremium: userData.isPremium,
+            nombre: userData.displayName,
+            foto: userData.photoURL
+        }));
+    } catch (e) {
+        console.error("Error saving to localStorage:", e);
+    }
+
     // 1. Send via Window Message (for Content Script)
     window.postMessage({
         type: "LOGIN_EXITOSO",

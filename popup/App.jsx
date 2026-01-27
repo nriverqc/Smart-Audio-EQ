@@ -126,8 +126,42 @@ export default function App() {
         }
 
         if (!email) {
-            alert("Please login first to sync status.");
-            setLoading(false);
+            // Last resort: Check if the user has the web page open and ask it directly
+            // This requires "host_permissions" for the URL in manifest (which we have <all_urls>)
+            console.log("No email found. Searching for web tab...");
+            
+            const webUrlPattern = "smart-audio-eq.pages.dev";
+            
+            chrome.tabs.query({}, (tabs) => {
+                const webTab = tabs.find(t => t.url && t.url.includes(webUrlPattern));
+                
+                if (webTab) {
+                    console.log("Found web tab:", webTab.id);
+                    chrome.tabs.sendMessage(webTab.id, { type: "CHECK_WEB_SESSION" }, (response) => {
+                        console.log("Asked web tab for session", response);
+                        
+                        // Wait a moment for the sync to propagate to storage
+                        setTimeout(() => {
+                            chrome.storage.local.get(['email', 'uid', 'isPremium'], (updated) => {
+                                if (updated.email) {
+                                    setUserEmail(updated.email);
+                                    if (updated.isPremium) setIsPremium(true);
+                                    alert("Synced with open web tab! ✅");
+                                    setLoading(false);
+                                } else {
+                                    alert("Found web tab, but not logged in there. Please login on the website.");
+                                    setLoading(false);
+                                    handleLogin(); // Open/focus the tab
+                                }
+                            });
+                        }, 1000);
+                    });
+                } else {
+                    alert("Please login first to sync status. Opening login page...");
+                    setLoading(false);
+                    handleLogin();
+                }
+            });
             return;
         }
 

@@ -92,6 +92,24 @@ function AppContent() {
     return () => unsubscribe();
   }, []);
 
+  // Listen for requests from the extension to resend session data
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.source !== window) return;
+      if (event.data.type === "REQUEST_SESSION") {
+        console.log("Web: Received session request from extension");
+        if (user.email) {
+           console.log("Web: Resending session data...", user);
+           syncWithExtension(user);
+        } else {
+           console.log("Web: No user session to send.");
+        }
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [user]);
+
   const loginWithGoogle = () => {
     signInWithPopup(auth, googleProvider)
       .then((result) => {

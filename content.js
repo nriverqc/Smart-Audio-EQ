@@ -19,3 +19,12 @@ window.addEventListener("message", (event) => {
     });
   }
 });
+
+// Listen for messages from the extension (popup) asking for session
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "CHECK_WEB_SESSION") {
+    console.log("Content: Asking web page for session...");
+    window.postMessage({ type: "REQUEST_SESSION" }, "*");
+    sendResponse({ status: "Request sent to web page" });
+  }
+});

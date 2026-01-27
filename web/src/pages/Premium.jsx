@@ -413,6 +413,31 @@ export default function Premium({ lang }) {
                   </p>
               </div>
           )}
+
+          {/* Refresh Status Button */}
+          <div style={{marginTop: '30px', borderTop: '1px solid #333', paddingTop: '15px'}}>
+              <p style={{fontSize: '0.9rem', color: '#ccc', marginBottom: '10px'}}>
+                  {lang === 'es' ? '¿Ya eres Premium?' : 'Already Premium?'}
+              </p>
+              <button 
+                  onClick={() => {
+                      setLoading(true);
+                      refreshUser();
+                      setTimeout(() => setLoading(false), 2000);
+                  }}
+                  style={{
+                      background: 'transparent', 
+                      border: '1px solid #ffd700', 
+                      color: '#ffd700', 
+                      padding: '8px 15px', 
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem'
+                  }}
+              >
+                  {lang === 'es' ? 'Haz clic aquí para actualizar' : 'Click here to refresh status'}
+              </button>
+          </div>
         </div>
       </div>
     </div>

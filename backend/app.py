@@ -59,7 +59,7 @@ def create_payment():
             {
                 "title": data.get("item", "Smart Audio EQ Premium"),
                 "quantity": 1,
-                # "currency_id": "USD", 
+                "currency_id": "COP", 
                 "unit_price": price, 
             }
         ],

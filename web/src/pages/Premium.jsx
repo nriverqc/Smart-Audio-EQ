@@ -8,7 +8,7 @@ const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 initMercadoPago('TEST-b4334d13-d110-4e26-9800-79a643dd69d4');
 
 export default function Premium({ lang }) {
-  const { user, refreshUser } = useContext(UserContext);
+  const { user, refreshUser, loginWithGoogle } = useContext(UserContext);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [showBrick, setShowBrick] = useState(false);
@@ -16,12 +16,14 @@ export default function Premium({ lang }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [country, setCountry] = useState('CO'); // 'CO' or 'INT'
   const emailRef = React.useRef(email);
+  const userRef = React.useRef(user);
 
   useEffect(() => {
     if (user.email) {
         setEmail(user.email);
     }
-  }, [user.email]);
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
       emailRef.current = email;
@@ -37,26 +39,29 @@ export default function Premium({ lang }) {
               try {
                   window.paypal.Buttons({
                       onClick: (data, actions) => {
-                          const currentEmail = emailRef.current;
-                          if (!currentEmail || !currentEmail.includes('@')) {
-                              alert(lang === 'es' ? 'Por favor ingresa un email válido arriba.' : 'Please enter a valid email above.');
+                          const currentUser = userRef.current;
+                          if (!currentUser || !currentUser.uid) {
+                              alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
+                              loginWithGoogle();
                               return actions.reject();
                           }
                           return actions.resolve();
                       },
                       createOrder: (data, actions) => {
+                          const currentUser = userRef.current;
                           return actions.order.create({
                               purchase_units: [{
                                   amount: {
                                       value: '4.99'
                                   },
-                                  description: "Smart Audio EQ Premium"
+                                  description: "Smart Audio EQ Premium",
+                                  custom_id: currentUser.uid // Attach Firebase UID
                               }]
                           });
                       },
                       onApprove: (data, actions) => {
                           return actions.order.capture().then((details) => {
-                              const currentEmail = emailRef.current;
+                              const currentUser = userRef.current;
                               console.log("PayPal Approved:", details);
                               setLoading(true);
                               
@@ -65,7 +70,8 @@ export default function Premium({ lang }) {
                                   method: 'POST',
                                   headers: {'Content-Type': 'application/json'},
                                   body: JSON.stringify({
-                                      email: currentEmail,
+                                      email: currentUser.email,
+                                      uid: currentUser.uid,
                                       orderID: data.orderID
                                   })
                               })
@@ -95,7 +101,7 @@ export default function Premium({ lang }) {
               }
           }
       }
-  }, [country, lang]);
+  }, [country, lang, loginWithGoogle]); // Added loginWithGoogle dependency
 
   const texts = {
     es: {
@@ -159,28 +165,44 @@ export default function Premium({ lang }) {
   const t = texts[lang] || texts.es;
 
   const createPreference = async () => {
-      setLoading(true);
-      setErrorMsg('');
-      try {
-          console.log("Creating preference with price 20000...");
-          const res = await fetch(`${API_BASE}/create-payment`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: email, price: 20000, item: 'Smart Audio EQ Premium' })
-          });
-          const data = await res.json();
-          if (data.preference_id) {
-              console.log("Preference created:", data.preference_id);
-              setPreferenceId(data.preference_id);
-              setShowBrick(true);
-          } else {
-              setErrorMsg('Error creating preference: ' + (data.error || 'Unknown error') + ' | ' + JSON.stringify(data.details || {}));
-          }
-      } catch (err) {
-          setErrorMsg('Network error: ' + err.message);
-      } finally {
-          setLoading(false);
-      }
+    if (!user.uid) {
+        alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
+        loginWithGoogle();
+        return;
+    }
+    const email = user.email; // Use user email directly
+    if (!email || !email.includes('@')) {
+      alert('Email invalid');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+    
+    try {
+        const res = await fetch(`${API_BASE}/create-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                email: email, 
+                uid: user.uid, // Send UID
+                price: 20000, 
+                item: 'Smart Audio EQ Premium' 
+            })
+        });
+        const data = await res.json();
+        if (data.preference_id) {
+            console.log("Preference created:", data.preference_id);
+            setPreferenceId(data.preference_id);
+            setShowBrick(true);
+        } else {
+            setErrorMsg('Error creating preference: ' + (data.error || 'Unknown error') + ' | ' + JSON.stringify(data.details || {}));
+        }
+    } catch (err) {
+        setErrorMsg('Network error: ' + err.message);
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleBrickSubmit = async ({ formData }) => {
@@ -322,16 +344,20 @@ export default function Premium({ lang }) {
                   placeholder={t.emailPlaceholder}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={showBrick}
+                  disabled={showBrick || !!user.uid}
                   style={{
                       width: '100%', 
                       padding: '10px', 
                       borderRadius: '5px', 
                       border: '1px solid #555',
-                      background: '#222',
-                      color: '#fff'
+                      background: !!user.uid ? '#333' : '#222',
+                      color: !!user.uid ? '#aaa' : '#fff',
+                      cursor: !!user.uid ? 'not-allowed' : 'text'
                   }}
               />
+              {user.uid && <div style={{fontSize: '0.8rem', color: '#00d2ff', marginTop: '5px'}}>
+                  {lang === 'es' ? 'Sesión iniciada con Google' : 'Logged in with Google'}
+              </div>}
           </div>
 
           {/* PAYMENT OPTIONS */}

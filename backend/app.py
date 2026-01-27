@@ -4,6 +4,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mercadopago
 from dotenv import load_dotenv
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 load_dotenv()
 
@@ -12,6 +14,21 @@ CORS(app)
 
 # Database setup
 DB_NAME = "licenses.db"
+
+# Initialize Firebase Admin
+# NOTE: You must add your serviceAccountKey.json file to the backend folder!
+cred = None
+db = None
+try:
+    if os.path.exists("serviceAccountKey.json"):
+        cred = credentials.Certificate("serviceAccountKey.json")
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        print("Firebase Admin Initialized")
+    else:
+        print("WARNING: serviceAccountKey.json not found. Firestore updates will fail.")
+except Exception as e:
+    print(f"Error initializing Firebase: {e}")
 
 def init_db():
     with sqlite3.connect(DB_NAME) as conn:
@@ -43,16 +60,17 @@ def home():
 def create_payment():
     data = request.json or {}
     email = data.get("email")
+    uid = data.get("uid")
     
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
-    frontend_url = os.getenv("FRONTEND_URL", "https://example.com")
+    frontend_url = os.getenv("FRONTEND_URL", "https://smart-audio-eq.pages.dev")
 
     # FORCE 20000 to ensure it covers minimums in COP/ARS etc
     price = 20000 
     
-    print(f"Creating preference for {email} with price {price}")
+    print(f"Creating preference for {email} (UID: {uid}) with price {price}")
 
     preference_data = {
         "items": [
@@ -66,11 +84,15 @@ def create_payment():
         "payer": {
             "email": email
         },
-        "external_reference": email, # KEY: We use email as external_reference to link payment
+        "metadata": {
+            "uid": uid,
+            "email": email
+        },
+        "external_reference": email, # Fallback
         "back_urls": {
-            "success": f"{frontend_url}/success",
-            "failure": f"{frontend_url}/failure",
-            "pending": f"{frontend_url}/pending",
+            "success": f"{frontend_url}/premium",
+            "failure": f"{frontend_url}/premium",
+            "pending": f"{frontend_url}/premium",
         },
         "auto_return": "approved",
         "payment_methods": {
@@ -180,11 +202,13 @@ def webhook():
             
             status = payment.get("status")
             external_reference = payment.get("external_reference") # This is the EMAIL
+            metadata = payment.get("metadata", {})
+            uid = metadata.get("uid")
             
-            print(f"Payment {payment_id} status: {status} for email: {external_reference}")
+            print(f"Payment {payment_id} status: {status} for email: {external_reference} uid: {uid}")
 
-            if status == "approved" and external_reference:
-                # Update Database
+            if status == "approved":
+                # Update SQLite
                 with sqlite3.connect(DB_NAME) as conn:
                     cursor = conn.cursor()
                     cursor.execute("""
@@ -195,6 +219,27 @@ def webhook():
                         payment_id=excluded.payment_id
                     """, (external_reference, payment_id))
                     conn.commit()
+                
+                # Update Firestore
+                if db and uid:
+                    try:
+                        user_ref = db.collection('usuarios').document(uid)
+                        user_ref.set({
+                            'isPremium': True,
+                            'lastPayment': firestore.SERVER_TIMESTAMP,
+                            'paymentId': payment_id,
+                            'method': 'MercadoPago',
+                            'email': external_reference
+                        }, merge=True)
+                        print(f"Firestore updated for user {uid}")
+                    except Exception as e:
+                        print(f"Error updating Firestore: {e}")
+                elif db and external_reference:
+                    # Try to find user by email if UID missing (unlikely if passed correctly)
+                    # NOTE: Firestore doesn't support easy querying without indexes sometimes
+                    # Skipping for now to keep simple
+                    pass
+
                 print(f"License activated for {external_reference}")
 
         return jsonify({"status": "received"}), 200
@@ -209,11 +254,12 @@ def register_paypal():
         data = request.json
         email = data.get("email")
         order_id = data.get("orderID")
+        uid = data.get("uid")
         
         if not email or not order_id:
             return jsonify({"error": "Missing email or orderID"}), 400
             
-        print(f"Registering PayPal payment for {email} (Order: {order_id})")
+        print(f"Registering PayPal payment for {email} (Order: {order_id}) UID: {uid}")
         
         # In production, we should verify order_id with PayPal API using Client Secret
         # For now, we trust the client-side success for this MVP
@@ -228,6 +274,21 @@ def register_paypal():
                 payment_id=excluded.payment_id
             """, (email, f"PAYPAL_{order_id}"))
             conn.commit()
+            
+        # Update Firestore
+        if db and uid:
+            try:
+                user_ref = db.collection('usuarios').document(uid)
+                user_ref.set({
+                    'isPremium': True,
+                    'lastPayment': firestore.SERVER_TIMESTAMP,
+                    'paymentId': order_id,
+                    'method': 'PayPal',
+                    'email': email
+                }, merge=True)
+                print(f"Firestore updated for user {uid}")
+            except Exception as e:
+                print(f"Error updating Firestore: {e}")
             
         return jsonify({"status": "approved", "email": email})
     except Exception as e:

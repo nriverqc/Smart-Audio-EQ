@@ -1,6 +1,7 @@
-Flask
-mercadopago
-python-dotenv
-flask-cors
-gunicorn
-psycopg2-binary
+firebase-admin==6.6.0
+Flask==3.0.3
+Flask-Cors==4.0.1
+mercadopago==2.2.0
+python-dotenv==1.0.1
+gunicorn==22.0.0
+requests==2.31.0

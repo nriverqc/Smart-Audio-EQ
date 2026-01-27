@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regla para la colección de usuarios
+    match /usuarios/{userId} {
+      // El usuario puede leer su propio documento para ver si es premium
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // NADIE puede escribir desde el frontend (Cloudflare Pages)
+      // Solo permitiremos cambios desde el Backend (Render) usando el Admin SDK
+      allow write: if false;
+    }
+  }
+}

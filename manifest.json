@@ -23,5 +23,12 @@
       "js": ["content.js"]
     }
   ],
-  "host_permissions": ["<all_urls>"]
+  "host_permissions": [
+    "<all_urls>",
+    "https://*.firebaseio.com/*",
+    "https://*.googleapis.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 }

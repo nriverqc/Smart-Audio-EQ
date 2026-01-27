@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Equalizer from './Equalizer';
 import { PRESETS, IS_PREMIUM_PRESET } from './presets';
+import { auth, db, googleProvider } from '../firebase';
+import { onAuthStateChanged, signInWithPopup } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function App() {
   const [enabled, setEnabled] = useState(false);
@@ -14,35 +17,49 @@ export default function App() {
       if (result.enabled) setEnabled(true);
       if (result.isPremium) setIsPremium(true);
       if (result.currentPreset) setCurrentPreset(result.currentPreset);
-
-      // Verify premium status with backend if not already premium or periodically
-      verifyPremiumStatus();
     });
+
+    // Firebase Auth Listener
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserEmail(user.email);
+        
+        // Listen to Firestore for Premium status changes in real-time
+        const unsubDoc = onSnapshot(doc(db, "usuarios", user.uid), (docSnap) => {
+          const data = docSnap.data();
+          if (data && data.isPremium) {
+            setIsPremium(true);
+            chrome.storage.local.set({ isPremium: true });
+          } else {
+            setIsPremium(false);
+            chrome.storage.local.set({ isPremium: false });
+          }
+        }, (error) => {
+            console.error("Error listening to user doc:", error);
+        });
+
+        return () => unsubDoc();
+      } else {
+        setUserEmail('');
+        // Optional: Keep isPremium true if offline? 
+        // For now, let's not force false immediately to avoid flickering if checks fail, 
+        // but strictly speaking, if not logged in, we can't verify.
+        // Let's rely on storage for offline, but if we know we are logged out, maybe prompt login.
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const verifyPremiumStatus = () => {
-    // 1. Get user email from Chrome Identity
-    chrome.identity.getProfileUserInfo((userInfo) => {
-        if (userInfo && userInfo.email) {
-            setUserEmail(userInfo.email);
-            // 2. Check against backend
-            fetch(`https://smart-audio-eq-1.onrender.com/check-license?email=${userInfo.email}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.premium) {
-                        setIsPremium(true);
-                        chrome.storage.local.set({ isPremium: true });
-                    } else {
-                        // Re-verify: If not premium in backend, ensure we don't have stale true state?
-                        // Actually, maybe keep it true if offline? But for now let's trust backend.
-                        // setIsPremium(false); 
-                        // chrome.storage.local.set({ isPremium: false });
-                    }
-                })
-                .catch(err => console.error("License check failed", err));
-        }
-    });
+  const handleLogin = () => {
+      signInWithPopup(auth, googleProvider).then((result) => {
+          console.log("Logged in:", result.user.email);
+      }).catch((error) => {
+          console.error("Login failed:", error);
+          alert("Login failed: " + error.message);
+      });
   };
+
 
   const toggleEq = async () => {
     const newState = !enabled;
@@ -106,7 +123,7 @@ export default function App() {
         {isPremium && <span className="premium-badge">PRO</span>}
       </div>
 
-      {userEmail && (
+      {userEmail ? (
         <div style={{fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '10px', background: '#222', padding: '5px', borderRadius: '4px'}}>
             👤 <span style={{color: '#fff'}}>{userEmail}</span>
             {isPremium ? (
@@ -115,6 +132,12 @@ export default function App() {
                 <span style={{color: '#ccc', marginLeft: '5px'}}>• Free</span>
             )}
         </div>
+      ) : (
+         <div style={{textAlign: 'center', marginBottom: '10px'}}>
+             <button onClick={handleLogin} style={{background: '#4285F4', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem'}}>
+                 Sign in with Google
+             </button>
+         </div>
       )}
 
       <div className="controls">

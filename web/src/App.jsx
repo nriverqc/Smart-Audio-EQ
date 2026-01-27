@@ -26,6 +26,7 @@ function AppContent() {
   const EXTENSION_ID = "edblkdnmdjodkbolefojlgdfkmbkplpf"; 
 
   const syncWithExtension = (userData) => {
+    // 1. Send via Window Message (for Content Script)
     window.postMessage({
         type: "LOGIN_EXITOSO",
         uid: userData.uid,
@@ -33,16 +34,29 @@ function AppContent() {
         isPremium: userData.isPremium
     }, "*");
 
-    if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage && EXTENSION_ID !== "YOUR_EXTENSION_ID_HERE") {
+    // 2. Send via Runtime Message (Directly to Extension Background if allowed)
+    if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage) {
         try {
+            // Using "LOGIN_SUCCESS" to match user request, but keeping "LOGIN_EXITOSO" structure support in background
             window.chrome.runtime.sendMessage(EXTENSION_ID, {
-                accion: "SYNC_USER",
+                type: "LOGIN_SUCCESS", // User preferred name
+                accion: "SYNC_USER",   // Fallback name
                 uid: userData.uid,
+                email: userData.email,
                 isPremium: userData.isPremium,
+                user: { // Nesting user object as per user example
+                    uid: userData.uid,
+                    email: userData.email,
+                    isPremium: userData.isPremium
+                },
                 nombre: userData.displayName || '',
                 foto: userData.photoURL || ''
             }, (response) => {
-                console.log("Extension response:", response);
+                 if (window.chrome.runtime.lastError) {
+                     console.log("Extension not found or not installed.");
+                 } else {
+                     console.log("Extension response:", response);
+                 }
             });
         } catch (e) {
             console.log("Could not sync with extension directly:", e);

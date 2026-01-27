@@ -111,13 +111,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // Escuchar mensajes externos (desde la web directamente, si externally_connectable está configurado)
 chrome.runtime.onMessageExternal.addListener(
   function(request, sender, sendResponse) {
-    if (request.type === "LOGIN_EXITOSO" || request.accion === "SYNC_USER") {
+    if (request.type === "LOGIN_EXITOSO" || request.type === "LOGIN_SUCCESS" || request.accion === "SYNC_USER") {
       console.log("Datos recibidos externamente desde:", sender.url);
       
+      // Handle nested "user" object if present (from user's example) or flat fields
+      const uid = request.uid || (request.user && request.user.uid);
+      const email = request.email || (request.user && request.user.email);
+      const isPremium = request.isPremium || (request.user && request.user.isPremium);
+
       chrome.storage.local.set({
-        uid: request.uid,
-        email: request.email,
-        isPremium: request.isPremium
+        uid: uid,
+        email: email,
+        isPremium: isPremium
       }, function() {
         console.log("Datos sincronizados desde la web (External)");
         sendResponse({status: "OK - Extensión actualizada"});

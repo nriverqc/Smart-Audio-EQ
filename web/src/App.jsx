@@ -23,7 +23,7 @@ function AppContent() {
 
   // REPLACE THIS WITH YOUR ACTUAL EXTENSION ID from chrome://extensions
   // e.g. "abcdefghijklmnop..."
-  const EXTENSION_ID = "YOUR_EXTENSION_ID_HERE"; 
+  const EXTENSION_ID = "edblkdnmdjodkbolefojlgdfkmbkplpf"; 
 
   const syncWithExtension = (userData) => {
     if (chrome && chrome.runtime && chrome.runtime.sendMessage && EXTENSION_ID !== "YOUR_EXTENSION_ID_HERE") {

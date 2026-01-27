@@ -7,6 +7,7 @@ export default function App() {
   const [isPremium, setIsPremium] = useState(false);
   const [currentPreset, setCurrentPreset] = useState('flat');
   const [userEmail, setUserEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Check state from storage
@@ -96,6 +97,57 @@ export default function App() {
     chrome.storage.local.set({ customGains: newGains });
   };
 
+  const refreshStatus = async () => {
+    setLoading(true);
+    
+    // Helper to get identity email
+    const getIdentityEmail = () => {
+        return new Promise((resolve) => {
+            chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+                resolve(userInfo ? userInfo.email : null);
+            });
+        });
+    };
+
+    chrome.storage.local.get(['email', 'uid'], async (items) => {
+        let email = items.email;
+        let uid = items.uid;
+
+        if (!email) {
+            // Try to get from identity
+            email = await getIdentityEmail();
+            if (email) {
+                chrome.storage.local.set({ email: email });
+                setUserEmail(email);
+            }
+        }
+
+        if (!email) {
+            alert("Please login first to sync status.");
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const response = await fetch(`https://smart-audio-eq-api.onrender.com/check-license?email=${encodeURIComponent(email)}&uid=${encodeURIComponent(uid || '')}`);
+            const data = await response.json();
+
+            if (data.premium) {
+                setIsPremium(true);
+                chrome.storage.local.set({ isPremium: true });
+                alert("Premium status synced! 💎");
+            } else {
+                alert("Status: Free. If you bought Premium, please wait a minute.");
+            }
+        } catch (error) {
+            console.error("Sync error:", error);
+            alert("Network error checking status.");
+        } finally {
+            setLoading(false);
+        }
+    });
+  };
+
   return (
     <div>
       <div className="controls">
@@ -104,13 +156,30 @@ export default function App() {
       </div>
 
       {userEmail ? (
-        <div style={{fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '10px', background: '#222', padding: '5px', borderRadius: '4px'}}>
-            👤 <span style={{color: '#fff'}}>{userEmail}</span>
+        <div style={{fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '10px', background: '#222', padding: '5px', borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'}}>
+            <span>👤 <span style={{color: '#fff'}}>{userEmail}</span></span>
             {isPremium ? (
-                <span style={{color: '#ffd700', marginLeft: '5px', fontWeight: 'bold'}}>• PREMIUM 💎</span>
+                <span style={{color: '#ffd700', fontWeight: 'bold'}}>• PREMIUM 💎</span>
             ) : (
-                <span style={{color: '#ccc', marginLeft: '5px'}}>• Free</span>
+                <span style={{color: '#ccc'}}>• Free</span>
             )}
+            <button 
+                onClick={refreshStatus} 
+                disabled={loading}
+                title="Sync Status"
+                style={{
+                    background: 'transparent',
+                    border: '1px solid #666',
+                    color: '#fff',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '10px',
+                    padding: '2px 6px',
+                    opacity: loading ? 0.5 : 1
+                }}
+            >
+                {loading ? '...' : '↻'}
+            </button>
         </div>
       ) : (
          <div style={{textAlign: 'center', marginBottom: '10px'}}>

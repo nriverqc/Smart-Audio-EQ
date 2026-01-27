@@ -93,6 +93,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     })();
     return true;
   }
+
+  if (msg.type === 'LOGIN_EXITOSO') {
+      // Guardamos los datos en el almacenamiento de la extensión (Internal Message)
+      chrome.storage.local.set({
+        uid: msg.uid,
+        email: msg.email,
+        isPremium: msg.isPremium
+      }, function() {
+        console.log("Datos sincronizados internamente");
+        sendResponse({status: "OK - Extensión actualizada"});
+      });
+      return true;
+  }
 });
 
 // Escuchar mensajes desde tu sitio web

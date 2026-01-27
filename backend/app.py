@@ -105,26 +105,28 @@ def create_payment():
         preference_response = sdk.preference().create(preference_data)
         
         # Log full response for debugging
-        print("MercadoPago Response:", preference_response)
+        print("MercadoPago Response:", json.dumps(preference_response, default=str))
 
         # Check if request was successful
         if preference_response.get("status") not in [200, 201]:
+             print(f"MP Error Status: {preference_response.get('status')}")
              return jsonify({
                  "error": "MercadoPago API Error", 
                  "details": preference_response.get("response", "No details")
              }), 500
 
-        payment_url = preference_response["response"].get("init_point")
-        preference_id = preference_response["response"].get("id")
+        response_body = preference_response.get("response", {})
+        payment_url = response_body.get("init_point")
+        preference_id = response_body.get("id")
         
-        if not payment_url:
+        if not preference_id:
              return jsonify({
-                 "error": "No init_point in response", 
-                 "details": preference_response
+                 "error": "No preference_id in response", 
+                 "details": response_body
              }), 500
              
         return jsonify({
-            "payment_url": payment_url,
+            "payment_url": payment_url, # Optional if using Bricks
             "preference_id": preference_id
         })
         
@@ -167,6 +169,7 @@ def process_payment():
         if payment.get("status") == "approved":
              email = payment.get("external_reference")
              payment_id = str(payment.get("id"))
+             uid = data.get("uid") # Get UID from request
              
              with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
@@ -178,6 +181,21 @@ def process_payment():
                     payment_id=excluded.payment_id
                 """, (email, payment_id))
                 conn.commit()
+             
+             # Update Firestore
+             if db and uid:
+                try:
+                    user_ref = db.collection('usuarios').document(uid)
+                    user_ref.set({
+                        'isPremium': True,
+                        'lastPayment': firestore.SERVER_TIMESTAMP,
+                        'paymentId': payment_id,
+                        'method': 'MercadoPago_Brick',
+                        'email': email
+                    }, merge=True)
+                    print(f"Firestore updated for user {uid}")
+                except Exception as e:
+                    print(f"Error updating Firestore: {e}")
 
         return jsonify(payment)
     except Exception as e:

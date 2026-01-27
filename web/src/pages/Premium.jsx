@@ -207,13 +207,20 @@ export default function Premium({ lang }) {
 
   const handleBrickSubmit = async ({ formData }) => {
      setLoading(true);
+     // Add UID to the data sent to backend
+     const requestData = {
+         ...formData,
+         uid: user.uid,
+         email: user.email // Ensure email is explicit
+     };
+
      return new Promise((resolve, reject) => {
          fetch(`${API_BASE}/process_payment`, {
              method: 'POST',
              headers: {
                  'Content-Type': 'application/json',
              },
-             body: JSON.stringify(formData),
+             body: JSON.stringify(requestData),
          })
          .then((response) => response.json())
          .then((response) => {
@@ -238,7 +245,7 @@ export default function Premium({ lang }) {
 
   const initialization = React.useMemo(() => ({
     preferenceId: preferenceId,
-    amount: 20000,
+    // amount: 20000, // REMOVED: Should not be used with preferenceId
   }), [preferenceId]);
 
   const customization = React.useMemo(() => ({

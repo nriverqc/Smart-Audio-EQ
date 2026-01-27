@@ -155,7 +155,7 @@ export default function App() {
                         } else {
                             // Fallback to old method if no response (maybe content script not reloaded)
                             chrome.tabs.sendMessage(webTab.id, { type: "CHECK_WEB_SESSION" });
-                            alert("Found tab, asking for session... (Check if you are logged in)");
+                            alert("Intentando sincronizar con la web... Por favor espera unos segundos.");
                             setLoading(false);
                         }
                     });

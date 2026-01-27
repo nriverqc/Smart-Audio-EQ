@@ -137,6 +137,23 @@ function AppContent() {
     return () => window.removeEventListener("message", handleMessage);
   }, [user]);
 
+  // Ensure data is always in localStorage when user is logged in
+  useEffect(() => {
+    if (user.email && user.uid) {
+        try {
+            localStorage.setItem('user_sync_data', JSON.stringify({
+                uid: user.uid,
+                email: user.email,
+                isPremium: user.isPremium,
+                nombre: user.displayName,
+                foto: user.photoURL
+            }));
+        } catch (e) {
+            console.error("Error saving to localStorage:", e);
+        }
+    }
+  }, [user]);
+
   const loginWithGoogle = () => {
     signInWithPopup(auth, googleProvider)
       .then((result) => {

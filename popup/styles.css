@@ -68,8 +68,9 @@ h3 {
 }
 
 .band input[type="range"] {
-  writing-mode: bt-lr; /* IE/Edge */
-  -webkit-appearance: slider-vertical;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  appearance: auto;
   width: 8px;
   height: 120px;
   background: #333;

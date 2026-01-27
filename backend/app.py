@@ -317,10 +317,12 @@ def register_paypal():
 @app.route("/check-license", methods=["GET"])
 def check_license():
     email = request.args.get("email")
+    uid = request.args.get("uid")
+    
     if not email:
         return jsonify({"premium": False, "error": "No email provided"})
         
-    # Check against database
+    # 1. Check SQLite first (fast)
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
@@ -328,12 +330,35 @@ def check_license():
             row = cursor.fetchone()
             
             if row and row[0]:
-                return jsonify({"premium": True})
-            else:
-                return jsonify({"premium": False})
+                return jsonify({"premium": True, "source": "sqlite"})
     except Exception as e:
         print("DB Error:", e)
-        return jsonify({"premium": False, "error": "DB Error"})
+
+    # 2. Check Firestore (persistent backup)
+    if db and uid:
+        try:
+            doc = db.collection('usuarios').document(uid).get()
+            if doc.exists:
+                data = doc.to_dict()
+                if data.get('isPremium') is True:
+                     # Sync back to SQLite for cache
+                     try:
+                         with sqlite3.connect(DB_NAME) as conn:
+                            cursor = conn.cursor()
+                            cursor.execute("""
+                                INSERT INTO licenses (email, is_premium, payment_id)
+                                VALUES (?, 1, ?)
+                                ON CONFLICT(email) DO UPDATE SET is_premium=1
+                            """, (email, data.get('paymentId', 'synced_from_firestore')))
+                            conn.commit()
+                     except: 
+                         pass
+                         
+                     return jsonify({"premium": True, "source": "firestore"})
+        except Exception as e:
+            print("Firestore Check Error:", e)
+
+    return jsonify({"premium": False})
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)

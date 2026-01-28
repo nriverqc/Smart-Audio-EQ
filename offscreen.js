@@ -13,7 +13,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
         video: false
       });
       
-      initAudio(stream);
+      await initAudio(stream);
       sendResponse({ success: true });
     } catch (err) {
       console.error('Error capturing audio in offscreen:', err);
@@ -22,6 +22,13 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     return true; // async response
   }
   
+  if (msg.type === 'STOP_AUDIO_CAPTURE') {
+      // Opcional: limpiar recursos aquí si no se cierra el documento
+      // window.close(); // También se puede cerrar desde aquí
+      sendResponse({ success: true });
+      return true;
+  }
+
   if (msg.type === 'SET_GAIN') {
     setGain(msg.index, msg.value);
     sendResponse({ success: true });

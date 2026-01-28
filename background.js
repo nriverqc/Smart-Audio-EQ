@@ -26,9 +26,30 @@ async function setupOffscreenDocument(path) {
       reasons: ['AUDIO_PLAYBACK', 'USER_MEDIA'],
       justification: 'Procesamiento de audio y ecualización en tiempo real',
     });
-    await creating;
+    
+    try {
+        await creating;
+    } catch(err) {
+        // Ignorar si ya existe (condición de carrera)
+        if (!err.message.includes('Only a single offscreen document may be created')) {
+            throw err;
+        }
+    }
+    
     creating = null;
   }
+}
+
+async function closeOffscreenDocument() {
+    try {
+        if (creating) {
+            await creating;
+        }
+        await chrome.offscreen.closeDocument();
+    } catch(err) {
+        // Ignorar errores al cerrar
+        console.log("Error cerrando offscreen (puede que no exista):", err.message);
+    }
 }
 
 // ===== ESCUCHAR MENSAJES DEL POPUP =====
@@ -46,6 +67,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         // 1. Asegurar Offscreen Document
+        // Si ya hay audio sonando, podría ser buena idea reiniciarlo para la nueva pestaña
+        await closeOffscreenDocument(); 
         await setupOffscreenDocument('offscreen.html');
 
         // 2. Obtener Stream ID
@@ -56,10 +79,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         console.log("✅ StreamId obtenido:", streamId);
 
         // 3. Enviar al Offscreen
+        // Esperar un poco para asegurar que el offscreen esté listo recibiendo mensajes
+        await new Promise(r => setTimeout(r, 500));
+
         const response = await chrome.runtime.sendMessage({
           type: 'START_AUDIO_CAPTURE',
           streamId: streamId,
-          data: msg.data // Pasar datos extra si es necesario (ej: configuración inicial)
+          data: msg.data
         });
 
         if (response && response.success) {
@@ -80,17 +106,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "DISABLE_EQ") {
     (async () => {
       try {
-        // Enviar mensaje de parada al offscreen si es necesario, 
-        // o simplemente actualizar estado. 
-        // Nota: TabCapture se detiene si se cierra el stream en offscreen.
         chrome.storage.local.set({ enabled: false });
         
-        // Opcional: Cerrar offscreen para ahorrar recursos si no se usa
-        // chrome.offscreen.closeDocument(); 
+        // Notificar parada
+        try {
+            await chrome.runtime.sendMessage({ type: 'STOP_AUDIO_CAPTURE' });
+        } catch(e) {}
         
-        // Por ahora solo notificamos
-        chrome.runtime.sendMessage({ type: 'STOP_AUDIO_CAPTURE' }).catch(() => {});
-        
+        // Cerrar el documento para liberar recursos y permitir nueva captura limpia después
+        await closeOffscreenDocument();
+
         sendResponse({ success: true });
       } catch (err) {
         sendResponse({ success: false, error: err.message });

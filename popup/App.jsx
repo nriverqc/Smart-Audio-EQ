@@ -24,6 +24,17 @@ export default function App() {
 
     checkState();
 
+    // ACTIVAR ECUALIZADOR AUTOMÁTICAMENTE
+    chrome.runtime.sendMessage({ type: 'ENABLE_EQ' }, (response) => {
+      if (response && response.success) {
+        console.log("✅ EQ activado automáticamente");
+        setEnabled(true);
+        chrome.storage.local.set({ enabled: true });
+      } else {
+        console.log("⚠️  No se pudo activar EQ automáticamente:", response?.error);
+      }
+    });
+
     // Listen for storage changes (e.g. from background.js update)
     const handleStorageChange = (changes, area) => {
         if (area === 'local') {

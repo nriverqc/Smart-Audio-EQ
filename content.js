@@ -1,3 +1,9 @@
+// GUARD: Evitar que el script se ejecute dos veces
+if (window.__SMART_AUDIO_EQ_LOADED) {
+  console.log("⚠️  Smart Audio EQ ya está cargado en esta pestaña");
+} else {
+  window.__SMART_AUDIO_EQ_LOADED = true;
+
 console.log("✅ Smart Audio EQ: Content script loaded");
 
 // ========== ESTADO GLOBAL ==========
@@ -364,3 +370,4 @@ window.addEventListener("message", (event) => {
 });
 
 console.log("✅ Content script listo para recibir mensajes");
+} // FIN DEL GUARD

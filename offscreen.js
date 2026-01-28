@@ -1,4 +1,4 @@
-import { initAudio, setGain, setMasterVolume } from './audio/processor.js';
+import { initAudio, setGain, setMasterVolume, getAnalyserData } from './audio/processor.js';
 
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   if (msg.type === 'START_AUDIO_CAPTURE') {
@@ -24,10 +24,31 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   
   if (msg.type === 'SET_GAIN') {
     setGain(msg.index, msg.value);
+    sendResponse({ success: true });
+    return true;
   }
 
   if (msg.type === 'SET_VOLUME') {
     setMasterVolume(msg.value);
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (msg.type === 'GET_ANALYSER_DATA') {
+    try {
+      const data = getAnalyserData();
+      sendResponse({ success: true, data });
+    } catch (err) {
+      sendResponse({ success: false, error: err.message });
+    }
+    return true;
+  }
+
+  if (msg.type === 'SET_TAB_VOLUME') {
+    // Handle per-tab volume
+    setMasterVolume(msg.volume);
+    sendResponse({ success: true });
+    return true;
   }
 });
 

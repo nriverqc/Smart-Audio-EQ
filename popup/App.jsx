@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Equalizer from './Equalizer';
+import TabMixer from './TabMixer';
+import SpectrumAnalyzer from './SpectrumAnalyzer';
 import { PRESETS, IS_PREMIUM_PRESET } from './presets';
 
 export default function App() {
@@ -169,19 +171,40 @@ export default function App() {
         }
 
         try {
-            const response = await fetch(`https://smart-audio-eq-api.onrender.com/check-license?email=${encodeURIComponent(email)}&uid=${encodeURIComponent(uid || '')}`);
+            const apiUrl = `https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(email)}&uid=${encodeURIComponent(uid || '')}`;
+            console.log("Checking license at:", apiUrl);
+            
+            const response = await fetch(apiUrl);
+            console.log("Response status:", response.status, response.statusText);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                console.error("Invalid response type:", contentType);
+                alert("Server error. Please try again later.");
+                setLoading(false);
+                return;
+            }
+            
             const data = await response.json();
+            console.log("License data:", data);
 
             if (data.premium) {
                 setIsPremium(true);
                 chrome.storage.local.set({ isPremium: true });
                 alert("Premium status synced! 💎");
             } else {
+                setIsPremium(false);
+                chrome.storage.local.set({ isPremium: false });
                 alert("Status: Free. If you bought Premium, please wait a minute.");
             }
         } catch (error) {
             console.error("Sync error:", error);
-            alert("Network error checking status.");
+            // Fallback: mostrar alerta sin detalle técnico
+            alert("Could not sync status. Please ensure you're logged in on the website first.");
         } finally {
             setLoading(false);
         }
@@ -293,6 +316,14 @@ export default function App() {
         presetGains={PRESETS[currentPreset]}
         onUserAdjust={onUserAdjust}
       />
+
+      {enabled && (
+        <SpectrumAnalyzer />
+      )}
+
+      {isPremium && enabled && (
+        <TabMixer />
+      )}
 
       {!isPremium && (
         <div style={{marginTop: '1rem', textAlign: 'center'}}>

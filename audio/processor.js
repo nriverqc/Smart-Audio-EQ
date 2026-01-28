@@ -2,15 +2,24 @@ let audioCtx;
 let source;
 let filters = [];
 let gainNode;
+let analyser;
+let isPremium = false;
 
-export function initAudio(stream) {
+export function initAudio(stream, premium = false) {
   if (audioCtx) audioCtx.close();
   
   audioCtx = new AudioContext({ latencyHint: "interactive" });
   source = audioCtx.createMediaStreamSource(stream);
 
-  const freqs = [60, 170, 350, 1000, 3500, 10000]; // Basic 6 bands
-  // Premium bands could be added here dynamically
+  // Get premium status from storage
+  chrome.storage.local.get(['isPremium'], (result) => {
+    isPremium = result.isPremium || false;
+  });
+
+  // Select frequencies based on premium status
+  const freqs = isPremium 
+    ? [20, 40, 60, 100, 170, 250, 350, 500, 1000, 2000, 3500, 5000, 7000, 10000, 16000] // 15 bands
+    : [60, 170, 350, 1000, 3500, 10000]; // 6 bands
 
   let last = source;
   filters = []; // Reset filters
@@ -27,10 +36,15 @@ export function initAudio(stream) {
     filters.push(filter);
   });
 
+  // Analyser for spectrum visualization
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  last.connect(analyser);
+
   // Master Gain
   gainNode = audioCtx.createGain();
   gainNode.gain.value = 1.0;
-  last.connect(gainNode);
+  analyser.connect(gainNode);
 
   // Compressor to prevent saturation (Limiter)
   const compressor = audioCtx.createDynamicsCompressor();
@@ -59,6 +73,17 @@ export function setMasterVolume(value) {
   }
 }
 
+export function getAnalyserData() {
+  if (!analyser) return null;
+  
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(dataArray);
+  
+  return Array.from(dataArray);
+}
+
 export function getBands() {
-    return [60, 170, 350, 1000, 3500, 10000];
+  return isPremium
+    ? [20, 40, 60, 100, 170, 250, 350, 500, 1000, 2000, 3500, 5000, 7000, 10000, 16000]
+    : [60, 170, 350, 1000, 3500, 10000];
 }

@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
 export default function Equalizer({ enabled, isPremium, currentPreset, presetGains, onUserAdjust }) {
-  const bands = [60, 170, 350, 1000, 3500, 10000];
-  const displayLabels = ['60', '170', '350', '1k', '3.5k', '10k'];
+  // FREE: 6 bands, PREMIUM: 15 bands
+  const isFree = !isPremium;
+  const bands = isFree 
+    ? [60, 170, 350, 1000, 3500, 10000]
+    : [20, 40, 60, 100, 170, 250, 350, 500, 1000, 2000, 3500, 5000, 7000, 10000, 16000];
+  const displayLabels = isFree
+    ? ['60', '170', '350', '1k', '3.5k', '10k']
+    : ['20', '40', '60', '100', '170', '250', '350', '500', '1k', '2k', '3.5k', '5k', '7k', '10k', '16k'];
   
   // Local state to track slider values for UI, initialized with presetGains
-  const [gains, setGains] = useState(presetGains || [0,0,0,0,0,0]);
+  const [gains, setGains] = useState(presetGains || new Array(bands.length).fill(0));
   const [volume, setVolume] = useState(100);
   const [pendingChanges, setPendingChanges] = useState(false);
 

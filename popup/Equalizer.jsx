@@ -29,7 +29,30 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
   }, [currentPreset, presetGains]);
 
   const changeGain = (i, v) => {
-    if (!enabled) return;
+    if (!enabled) {
+      console.warn(`⚠️  EQ no está activado, activando primero...`);
+      // Intentar activar
+      chrome.runtime.sendMessage({ type: 'ENABLE_EQ' }, (response) => {
+        if (response?.success) {
+          // Esperar un poco y luego enviar la banda
+          setTimeout(() => {
+            const newVal = parseFloat(v);
+            chrome.runtime.sendMessage({ 
+              type: "SET_BAND_GAIN", 
+              bandIndex: i, 
+              value: newVal 
+            }, (response) => {
+              if (chrome.runtime.lastError) {
+                console.error("Error enviando banda:", chrome.runtime.lastError.message);
+              } else {
+                console.log(`✅ Banda ${i} aplicada: ${newVal}dB`);
+              }
+            });
+          }, 100);
+        }
+      });
+      return;
+    }
     
     const newVal = parseFloat(v);
     const newGains = [...gains];
@@ -56,7 +79,23 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
   };
 
   const changeVolume = (v) => {
-    if (!enabled) return;
+    if (!enabled) {
+      console.warn(`⚠️  EQ no está activado, activando primero...`);
+      chrome.runtime.sendMessage({ type: 'ENABLE_EQ' }, (response) => {
+        if (response?.success) {
+          setTimeout(() => {
+            const newVol = parseInt(v);
+            const normalizedVol = newVol / 100;
+            chrome.runtime.sendMessage({ 
+              type: "SET_MASTER_VOLUME", 
+              value: normalizedVol 
+            });
+          }, 100);
+        }
+      });
+      return;
+    }
+    
     const newVol = parseInt(v);
     setVolume(newVol);
     

@@ -279,7 +279,7 @@ function setMasterVolume(value) {
 
   try {
     const volumeValue = parseFloat(value);
-    const clampedValue = Math.max(0, Math.min(2, volumeValue));
+    const clampedValue = Math.max(0, Math.min(3, volumeValue)); // Permitir hasta 3x (300%)
     const oldValue = gainNode.gain.value;
     gainNode.gain.value = clampedValue;
     

@@ -11,7 +11,7 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
     : ['20', '40', '60', '100', '170', '250', '350', '500', '1k', '2k', '3.5k', '5k', '7k', '10k', '16k'];
   
   const [gains, setGains] = useState(presetGains || new Array(bands.length).fill(0));
-  const [volume, setVolume] = useState(100);
+  const [volume, setVolume] = useState(100); // 100% es volumen normal (1.0x)
 
   useEffect(() => {
     if (currentPreset === 'custom') {
@@ -60,8 +60,10 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
     const newVol = parseInt(v);
     setVolume(newVol);
     
-    // Enviar volumen normalizado (0-2)
+    // Enviar volumen normalizado (0 a 3, donde 1 es volumen normal)
     const normalizedVol = newVol / 100;
+    console.log(`📊 Volumen UI: ${newVol}% → Normalizado: ${normalizedVol}`);
+    
     chrome.runtime.sendMessage({ 
       type: "SET_MASTER_VOLUME", 
       value: normalizedVol 
@@ -69,7 +71,7 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
       if (chrome.runtime.lastError) {
         console.error("Error enviando volumen:", chrome.runtime.lastError.message);
       } else {
-        console.log(`✅ Volumen aplicado: ${newVol}% (${normalizedVol.toFixed(2)})`);
+        console.log(`✅ Volumen aplicado: ${newVol}% (${normalizedVol.toFixed(2)}x)`);
       }
     });
 
@@ -89,7 +91,7 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
         <input 
           type="range" 
           min="0" 
-          max="200" 
+          max="300" 
           value={volume} 
           onChange={(e) => changeVolume(e.target.value)}
           className="volume-slider"

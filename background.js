@@ -96,15 +96,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === 'LOGIN_EXITOSO') {
       // Guardamos los datos en el almacenamiento de la extensión (Internal Message)
+      console.log("Background: Received LOGIN_EXITOSO:", msg);
       chrome.storage.local.set({
         uid: msg.uid,
         email: msg.email,
         isPremium: msg.isPremium
       }, function() {
-        console.log("Datos sincronizados internamente");
-        sendResponse({status: "OK - Extensión actualizada"});
+        console.log("Background: Datos sincronizados internamente");
+        try {
+          sendResponse({status: "OK - Extensión actualizada"});
+        } catch (e) {
+          console.log("Background: Could not send response (channel closed)", e);
+        }
       });
-      return true;
+      return true; // Indicate we'll respond asynchronously
   }
 });
 
@@ -112,23 +117,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 chrome.runtime.onMessageExternal.addListener(
   function(request, sender, sendResponse) {
     if (request.type === "LOGIN_EXITOSO" || request.type === "LOGIN_SUCCESS" || request.accion === "SYNC_USER") {
-      console.log("Datos recibidos externamente desde:", sender.url);
+      console.log("Background (External): Datos recibidos desde:", sender.url);
+      console.log("Background (External): Request data:", request);
       
       // Handle nested "user" object if present (from user's example) or flat fields
       const uid = request.uid || (request.user && request.user.uid);
       const email = request.email || (request.user && request.user.email);
       const isPremium = request.isPremium || (request.user && request.user.isPremium);
 
+      console.log("Background (External): Storing - uid:", uid, "email:", email, "isPremium:", isPremium);
+      
       chrome.storage.local.set({
         uid: uid,
         email: email,
         isPremium: isPremium
       }, function() {
-        console.log("Datos sincronizados desde la web (External)");
-        sendResponse({status: "OK - Extensión actualizada"});
+        console.log("Background (External): Datos sincronizados desde la web");
+        try {
+          sendResponse({status: "OK - Extensión actualizada"});
+        } catch (e) {
+          console.log("Background (External): Could not send response", e);
+        }
       });
-      // Importante: return true para respuesta asíncrona si fuera necesario, 
-      // aunque aquí el set es callback.
-      return true;
+      return true; // Indicate async response
     }
-});
+    return false; // No handler
+  });

@@ -8,6 +8,7 @@ let compressor = null;
 let gainNode = null;
 let analyser = null;
 let isEnabled = false;
+let mediaStream = null;
 const frequencies = [60, 170, 350, 1000, 3500, 10000];
 
 // ========== FUNCIONES DE AUDIO ==========
@@ -21,7 +22,7 @@ function initAudioContext() {
   }
 }
 
-function activateEQ() {
+function activateEQ(streamId) {
   if (isEnabled) {
     console.log("⚠️  EQ ya está activado");
     return true;
@@ -29,18 +30,27 @@ function activateEQ() {
 
   initAudioContext();
 
-  // Buscar elemento de audio/video
-  let mediaElement = document.querySelector('video') || document.querySelector('audio');
+  // Si no hay streamId, intentar con elemento media tradicional
+  if (!streamId) {
+    console.log("📋 Intentando con elemento media tradicional...");
+    let mediaElement = document.querySelector('video') || document.querySelector('audio');
 
-  if (!mediaElement) {
-    console.warn("❌ No se encontró elemento audio/video");
-    return false;
+    if (!mediaElement) {
+      console.warn("❌ No se encontró elemento audio/video y no hay streamId");
+      return false;
+    }
+
+    return activateEQWithMediaElement(mediaElement);
   }
 
-  console.log("📺 Elemento encontrado:", mediaElement.tagName);
+  // Usar tabCapture si hay streamId
+  return activateEQWithTabCapture(streamId);
+}
 
+function activateEQWithMediaElement(mediaElement) {
   try {
-    // Crear source desde el elemento
+    console.log("📺 Usando MediaElementAudioSource");
+
     mediaSource = audioContext.createMediaElementAudioSource(mediaElement);
 
     // Crear filtros
@@ -54,11 +64,11 @@ function activateEQ() {
       bands.push(filter);
     });
 
-    // Analizador para espectro
+    // Analizador
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 256;
 
-    // Compressor (limiter)
+    // Compressor
     compressor = audioContext.createDynamicsCompressor();
     compressor.threshold.value = -10;
     compressor.knee.value = 10;
@@ -73,22 +83,86 @@ function activateEQ() {
     // ===== CONEXIÓN CLAVE =====
     mediaSource.connect(bands[0]);
 
-    // Conectar filtros en cadena
     for (let i = 0; i < bands.length - 1; i++) {
       bands[i].connect(bands[i + 1]);
     }
 
-    // Último filtro → analizador → ganancia → compressor → DESTINO
     bands[bands.length - 1].connect(analyser);
     analyser.connect(gainNode);
     gainNode.connect(compressor);
-    compressor.connect(audioContext.destination); // ⭐ ESTO evita el silencio
+    compressor.connect(audioContext.destination);
 
     isEnabled = true;
-    console.log("✅ EQ activado SIN silenciar audio");
+    console.log("✅ EQ activado (MediaElement)");
     return true;
   } catch (e) {
-    console.error("❌ Error activando EQ:", e);
+    console.error("❌ Error con MediaElement:", e);
+    return false;
+  }
+}
+
+async function activateEQWithTabCapture(streamId) {
+  try {
+    console.log("🔊 Usando tabCapture con streamId:", streamId);
+
+    // Obtener el MediaStream desde el streamId
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        mandatory: {
+          chromeMediaSource: "tab",
+          chromeMediaSourceId: streamId
+        }
+      },
+      video: false
+    });
+
+    mediaStream = stream;
+    mediaSource = audioContext.createMediaStreamSource(stream);
+
+    // Crear filtros
+    bands = [];
+    frequencies.forEach(freq => {
+      const filter = audioContext.createBiquadFilter();
+      filter.type = "peaking";
+      filter.frequency.value = freq;
+      filter.Q.value = 1;
+      filter.gain.value = 0;
+      bands.push(filter);
+    });
+
+    // Analizador
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+
+    // Compressor
+    compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -10;
+    compressor.knee.value = 10;
+    compressor.ratio.value = 20;
+    compressor.attack.value = 0.005;
+    compressor.release.value = 0.1;
+
+    // Ganancia
+    gainNode = audioContext.createGain();
+    gainNode.gain.value = 1.0;
+
+    // ===== CONEXIÓN =====
+    mediaSource.connect(bands[0]);
+
+    for (let i = 0; i < bands.length - 1; i++) {
+      bands[i].connect(bands[i + 1]);
+    }
+
+    bands[bands.length - 1].connect(analyser);
+    analyser.connect(gainNode);
+    gainNode.connect(compressor);
+    compressor.connect(audioContext.destination);
+
+    isEnabled = true;
+    console.log("✅ EQ activado (TabCapture)");
+    return true;
+  } catch (e) {
+    console.error("❌ Error con tabCapture:", e);
     return false;
   }
 }
@@ -97,9 +171,12 @@ function deactivateEQ() {
   if (!isEnabled) return true;
 
   try {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+      mediaStream = null;
+    }
     if (mediaSource) {
       mediaSource.disconnect();
-      mediaSource.connect(audioContext.destination);
     }
     isEnabled = false;
     console.log("✅ EQ desactivado");
@@ -131,13 +208,12 @@ function getAnalyserData() {
   return Array.from(data);
 }
 
-// ========== ESCUCHAR MENSAJES DEL POPUP/BACKGROUND ==========
-// ⭐ REGISTRAR LISTENER INMEDIATAMENTE AL CARGAR
+// ========== ESCUCHAR MENSAJES ==========
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   console.log("📨 Content recibió mensaje:", msg.type);
 
   if (msg.type === "ENABLE_EQ") {
-    const success = activateEQ();
+    const success = activateEQ(msg.streamId);
     sendResponse({ success });
     return false;
   }
@@ -167,7 +243,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === "PREGUNTAR_DATOS") {
-    console.log("📋 Solicitando datos del usuario...");
     const datos = localStorage.getItem('user_sync_data');
     if (datos) {
       sendResponse(JSON.parse(datos));
@@ -177,7 +252,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return false;
   }
 
-  // Por defecto, no responder
   return false;
 });
 

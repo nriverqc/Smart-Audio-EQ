@@ -44,15 +44,26 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
 
+        // Obtener streamId para tabCapture (funciona para SoundCloud, YouTube, etc.)
+        let streamId = null;
+        try {
+          streamId = await chrome.tabCapture.getMediaStreamId({
+            targetTabId: tab.id
+          });
+          console.log("✅ streamId obtenido:", streamId);
+        } catch (e) {
+          console.log("⚠️  TabCapture no disponible, usando MediaElement fallback");
+        }
+
         // Asegurar que el content script existe
         await ensureContentScriptLoaded(tab.id);
 
-        // Enviar mensaje con timeout
+        // Enviar mensaje con streamId
         const timeoutId = setTimeout(() => {
           sendResponse({ success: false, error: "Content script timeout" });
         }, 2000);
 
-        chrome.tabs.sendMessage(tab.id, { type: "ENABLE_EQ" }, (response) => {
+        chrome.tabs.sendMessage(tab.id, { type: "ENABLE_EQ", streamId: streamId }, (response) => {
           clearTimeout(timeoutId);
 
           if (chrome.runtime.lastError) {

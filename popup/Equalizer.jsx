@@ -40,12 +40,26 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
     newGains[i] = newVal;
     setGains(newGains);
     setPendingChanges(true);
+    
+    // Enviar cambio al content script de forma inmediata
+    chrome.runtime.sendMessage({ 
+      type: "SET_BAND_GAIN", 
+      bandIndex: i, 
+      value: newVal 
+    });
   };
 
   const changeVolume = (v) => {
       if (!enabled) return;
-      setVolume(parseInt(v));
+      const newVol = parseInt(v);
+      setVolume(newVol);
       setPendingChanges(true);
+      
+      // Enviar volumen inmediatamente
+      chrome.runtime.sendMessage({ 
+        type: "SET_MASTER_VOLUME", 
+        value: newVol / 100 
+      });
   };
 
   const applyChanges = () => {

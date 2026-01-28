@@ -10,26 +10,22 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
     ? ['60', '170', '350', '1k', '3.5k', '10k']
     : ['20', '40', '60', '100', '170', '250', '350', '500', '1k', '2k', '3.5k', '5k', '7k', '10k', '16k'];
   
-  // Local state to track slider values for UI, initialized with presetGains
   const [gains, setGains] = useState(presetGains || new Array(bands.length).fill(0));
   const [volume, setVolume] = useState(100);
-  const [pendingChanges, setPendingChanges] = useState(false);
 
-  // Update sliders when preset changes
   useEffect(() => {
-      if (currentPreset === 'custom') {
-           chrome.storage.local.get(['customGains', 'masterVolume'], (result) => {
-               if (result.customGains) {
-                   setGains(result.customGains);
-               }
-               if (result.masterVolume) {
-                   setVolume(result.masterVolume);
-               }
-           });
-      } else if (presetGains) {
-          setGains(presetGains);
-          // Keep current volume when switching presets
-      }
+    if (currentPreset === 'custom') {
+      chrome.storage.local.get(['customGains', 'masterVolume'], (result) => {
+        if (result.customGains) {
+          setGains(result.customGains);
+        }
+        if (result.masterVolume) {
+          setVolume(result.masterVolume);
+        }
+      });
+    } else if (presetGains) {
+      setGains(presetGains);
+    }
   }, [currentPreset, presetGains]);
 
   const changeGain = (i, v) => {
@@ -39,128 +35,88 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
     const newGains = [...gains];
     newGains[i] = newVal;
     setGains(newGains);
-    setPendingChanges(true);
     
-    // Enviar cambio al content script de forma inmediata
+    // Enviar inmediatamente al content script
     chrome.runtime.sendMessage({ 
       type: "SET_BAND_GAIN", 
       bandIndex: i, 
       value: newVal 
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error enviando banda:", chrome.runtime.lastError.message);
+      } else {
+        console.log(`✅ Banda ${i} aplicada: ${newVal}dB`);
+      }
     });
+
+    // Guardar en custom
+    if (onUserAdjust) {
+      onUserAdjust(newGains);
+    }
   };
 
   const changeVolume = (v) => {
-      if (!enabled) return;
-      const newVol = parseInt(v);
-      setVolume(newVol);
-      setPendingChanges(true);
-      
-      // Enviar volumen inmediatamente
-      chrome.runtime.sendMessage({ 
-        type: "SET_MASTER_VOLUME", 
-        value: newVol / 100 
-      });
-  };
-
-  const applyChanges = () => {
-      // 1. Send Gain updates
-      gains.forEach((val, i) => {
-        chrome.runtime.sendMessage({ type: "SET_GAIN", index: i, value: val });
-      });
-
-      // 2. Send Volume update (normalize 0-200 to 0.0-2.0)
-      chrome.runtime.sendMessage({ type: "SET_VOLUME", value: volume / 100 });
-      
-      // 3. Save to storage (Custom preset)
-      // Notify parent about adjustment so it switches to 'custom' if needed
-      if (onUserAdjust) {
-          onUserAdjust(gains);
+    if (!enabled) return;
+    const newVol = parseInt(v);
+    setVolume(newVol);
+    
+    // Enviar volumen normalizado (0-2)
+    const normalizedVol = newVol / 100;
+    chrome.runtime.sendMessage({ 
+      type: "SET_MASTER_VOLUME", 
+      value: normalizedVol 
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error enviando volumen:", chrome.runtime.lastError.message);
+      } else {
+        console.log(`✅ Volumen aplicado: ${newVol}% (${normalizedVol.toFixed(2)})`);
       }
-      chrome.storage.local.set({ masterVolume: volume });
+    });
 
-      // 4. Clear pending state
-      setPendingChanges(false);
-
-      // 5. Redirect to page (Requested feature: Throttled to every 30s)
-      // Only redirect if NOT premium
-      if (!isPremium) {
-        chrome.storage.local.get(['lastRedirect'], (result) => {
-            const now = Date.now();
-            const last = result.lastRedirect || 0;
-            
-            if (now - last > 30000) { // 30 seconds
-                // Get user email to pass to web for profile extraction
-                chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
-                    const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
-                    chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/${emailParam}` });
-                    chrome.storage.local.set({ lastRedirect: now });
-                });
-            }
-        });
-      }
+    chrome.storage.local.set({ masterVolume: newVol });
   };
 
   return (
-    <div className="eq-container" style={{ opacity: enabled ? 1 : 0.5, pointerEvents: enabled ? 'auto' : 'none', flexDirection: 'column', height: 'auto' }}>
+    <div className="eq-section">
+      <div className="eq-title">⚙️ Ecualizador (6 Bandas)</div>
       
-      {/* Volume Control */}
-      <div style={{ marginBottom: '15px', background: '#222', padding: '10px', borderRadius: '5px' }}>
-          <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.8rem', color: '#ccc'}}>
-              <span>Volumen Master</span>
-              <span style={{color: volume > 100 ? '#ffcc00' : '#fff'}}>{volume}%</span>
-          </div>
-          <input 
-              type="range" 
-              min="0" 
-              max="200" 
-              value={volume} 
-              onChange={(e) => changeVolume(e.target.value)}
-              style={{width: '100%', cursor: 'pointer'}}
-          />
+      {/* Master Volume */}
+      <div className="master-volume">
+        <div className="volume-label">
+          <span>🔊 Volumen Maestro</span>
+          <span className="volume-value">{volume}%</span>
+        </div>
+        <input 
+          type="range" 
+          min="0" 
+          max="200" 
+          value={volume} 
+          onChange={(e) => changeVolume(e.target.value)}
+          className="volume-slider"
+          disabled={!enabled}
+        />
       </div>
 
       {/* EQ Bands */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', height: '160px', gap: '4px' }}>
+      <div className="eq-container" style={{ opacity: enabled ? 1 : 0.5, pointerEvents: enabled ? 'auto' : 'none' }}>
         {bands.map((f, i) => (
-            <div key={i} className="band">
-            <div className="db-value">{gains[i] > 0 ? `+${gains[i]}` : gains[i]}</div>
-            <input
-                type="range"
-                min="-12"
-                max="12"
-                value={gains[i]}
-                step="1"
-                onChange={(e) => changeGain(i, e.target.value)}
-            />
-            <span>{displayLabels[i]}</span>
+          <div key={i} className="band">
+            <div className="db-value">
+              {gains[i] > 0 ? `+${gains[i]}` : gains[i]}dB
             </div>
+            <input
+              type="range"
+              min="-12"
+              max="12"
+              value={gains[i]}
+              step="0.5"
+              onChange={(e) => changeGain(i, e.target.value)}
+              disabled={!enabled}
+            />
+            <div className="band-label">{displayLabels[i]}Hz</div>
+          </div>
         ))}
       </div>
-
-      {/* Apply Button */}
-      <div style={{marginTop: '15px', textAlign: 'center'}}>
-          <button 
-            onClick={applyChanges}
-            className={pendingChanges ? 'pulse-btn' : ''}
-            style={{
-                background: pendingChanges ? '#ffcc00' : '#444',
-                color: pendingChanges ? '#000' : '#ccc',
-                border: 'none',
-                padding: '10px 0',
-                width: '100%',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                textTransform: 'uppercase',
-                fontSize: '0.9rem',
-                transition: 'all 0.3s ease'
-            }}
-          >
-            {pendingChanges ? '⚠️ Ecualizar (Aplicar)' : 'Ecualizado'}
-          </button>
-          {pendingChanges && <div style={{fontSize: '0.7rem', color: '#ffcc00', marginTop: '5px'}}>Cambios pendientes...</div>}
-      </div>
-
     </div>
   );
 }

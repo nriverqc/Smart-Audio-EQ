@@ -24,7 +24,11 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
         }
       });
     } else if (presetGains) {
-      setGains(presetGains);
+      // Normalize preset length to current bands count
+      const normalized = Array.from({ length: bands.length }, (_, i) => {
+        return typeof presetGains[i] !== 'undefined' ? presetGains[i] : 0;
+      });
+      setGains(normalized);
     }
   }, [currentPreset, presetGains]);
 

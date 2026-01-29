@@ -26,16 +26,13 @@ export default function TabMixer() {
   }, []);
 
   const handleVolumeChange = (tabId, volume) => {
-    setTabVolumes(prev => ({ ...prev, [tabId]: volume }));
-    
-    // Save to storage
-    chrome.storage.local.set({ tabVolumes });
-    
-    // Send to background script
-    chrome.runtime.sendMessage({
-      type: 'SET_TAB_VOLUME',
-      tabId,
-      volume
+    setTabVolumes(prev => {
+      const next = { ...prev, [tabId]: volume };
+      // Save to storage
+      chrome.storage.local.set({ tabVolumes: next });
+      // Send to background script
+      chrome.runtime.sendMessage({ type: 'SET_TAB_VOLUME', tabId, volume });
+      return next;
     });
   };
 

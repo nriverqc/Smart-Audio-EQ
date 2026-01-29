@@ -22,6 +22,44 @@ chrome.storage.local.get(['activeTabs'], (res) => {
   }
 });
 
+// Helper para enviar mensajes a una pestaña con retry si no existe listener
+async function sendMessageToTab(tabId, message, tryInject = true) {
+  try {
+    return await new Promise(async (resolve) => {
+      chrome.tabs.sendMessage(tabId, message, async (res) => {
+        if (chrome.runtime.lastError) {
+          console.warn('sendMessageToTab lastError:', chrome.runtime.lastError.message, 'msg:', message.type);
+          if (!tryInject) return resolve({ success: false, error: chrome.runtime.lastError.message });
+
+          // Intentar inyectar el content script y reintentar
+          try {
+            console.log('Intentando inyectar content script en tab', tabId);
+            await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+          } catch (injErr) {
+            console.error('Injection failed:', injErr && injErr.message ? injErr.message : injErr);
+            return resolve({ success: false, error: injErr && injErr.message ? injErr.message : String(injErr) });
+          }
+
+          // pequeña espera y reintento
+          setTimeout(() => {
+            chrome.tabs.sendMessage(tabId, message, (res2) => {
+              if (chrome.runtime.lastError) {
+                console.error('sendMessageToTab retry failed:', chrome.runtime.lastError.message, 'msg:', message.type);
+                return resolve({ success: false, error: chrome.runtime.lastError.message });
+              }
+              return resolve(res2);
+            });
+          }, 200);
+        } else {
+          return resolve(res);
+        }
+      });
+    });
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 async function setupOffscreenDocument(path) {
   // Verificar si ya existe un contexto offscreen
   const existingContexts = await chrome.runtime.getContexts({
@@ -56,6 +94,15 @@ async function setupOffscreenDocument(path) {
   }
 }
 
+// Limpiar activeTabs cuando una pestaña se cierra
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  if (activeTabs[tabId]) {
+    delete activeTabs[tabId];
+    try { chrome.storage.local.set({ activeTabs }); } catch (e) {}
+    console.log('Background: activeTabs entry cleaned for closed tab', tabId);
+  }
+});
+
 async function closeOffscreenDocument() {
     try {
         if (creating) {
@@ -89,11 +136,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (isPremium) {
           // Intentar iniciar procesamiento por pestaña (content script)
           try {
-            const res = await new Promise((resolve) => {
-              chrome.tabs.sendMessage(tab.id, { type: 'START_TAB_EQ', isPremium: true }, (r) => {
-                resolve(r);
-              });
-            });
+            const res = await sendMessageToTab(tab.id, { type: 'START_TAB_EQ', isPremium: true });
 
             if (res && res.success) {
               console.log('✅ EQ por pestaña iniciado para tab', tab.id);
@@ -199,8 +242,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
           // Stop per-tab processing
           try {
-            chrome.tabs.sendMessage(tabId, { type: 'STOP_TAB_EQ' }, (res) => {});
-          } catch (e) {}
+            await sendMessageToTab(tabId, { type: 'STOP_TAB_EQ' });
+          } catch (e) { console.warn('STOP_TAB_EQ send error', e && e.message); }
           delete activeTabs[tabId];
           // Persistir cambios
           try { chrome.storage.local.set({ activeTabs }); } catch (e) {}
@@ -237,7 +280,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const tabId = tab?.id;
         if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
           // send to content script for per-tab processing
-          chrome.tabs.sendMessage(tabId, { type: 'SET_GAIN', index: msg.bandIndex, value: msg.value }, (res) => {});
+          try { await sendMessageToTab(tabId, { type: 'SET_GAIN', index: msg.bandIndex, value: msg.value }); } catch (e) { console.warn('SET_GAIN send error', e && e.message); }
         } else if (offscreenPort) {
           offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
         } else {
@@ -349,7 +392,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
           // send entire preset to content script
-          chrome.tabs.sendMessage(tabId, { type: 'APPLY_PRESET', gains }, (res) => {});
+          try { await sendMessageToTab(tabId, { type: 'APPLY_PRESET', gains }); } catch (e) { console.warn('APPLY_PRESET send error', e && e.message); }
         } else if (offscreenPort) {
           // send gains to offscreen
           gains.forEach((g, i) => offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g }));

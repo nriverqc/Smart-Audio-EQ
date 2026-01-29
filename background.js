@@ -7,6 +7,8 @@ console.log("Smart Audio EQ: Background Service Worker iniciado");
 let creating; // Promesa para evitar condiciones de carrera
 let offscreenPort = null; // Puerto persistente para comunicación con offscreen
 let pendingPortMessages = []; 
+// Track per-tab EQ state
+let activeTabs = {}; // { [tabId]: { enabled: bool, preset: string, isPremium: bool, masterVolume: number, gains: [] } }
 
 async function setupOffscreenDocument(path) {
   // Verificar si ya existe un contexto offscreen
@@ -86,68 +88,57 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           const storage = await chrome.storage.local.get(['isPremium']);
           const isPremium = storage.isPremium || false;
           
-          // El offscreen document debe tener su listener listo
+          // Esperar un breve momento para que el offscreen document esté listo
           await new Promise(r => setTimeout(r, 300));
-          
+
           // Conectar con el offscreen para comunicación persistente
           if (offscreenPort) {
-            offscreenPort.disconnect();
+            try { offscreenPort.disconnect(); } catch(e) {}
           }
           offscreenPort = chrome.runtime.connect({ name: 'offscreen-port' });
 
           // Escuchar mensajes y desconexiones
           offscreenPort.onMessage.addListener((m) => {
-            // forward logs or handle specific events if necessary
             console.log('Background <- offscreen:', m && m.type);
           });
 
           offscreenPort.onDisconnect.addListener(() => {
-            console.log("❌ Offscreen desconectado");
+            console.log('❌ Offscreen desconectado');
             offscreenPort = null;
           });
 
-          // Flush pending messages queued while offscreen wasn't ready
+          // Enviar comando de inicio
+          const startMsg = { type: 'START_AUDIO_CAPTURE', streamId: streamId, isPremium: isPremium };
+          // Si hay mensajes pendientes, los enviamos primero para que el offscreen tenga el contexto
           if (pendingPortMessages.length > 0) {
             pendingPortMessages.forEach(pm => {
               try { offscreenPort.postMessage(pm); } catch (err) { console.warn('Flush msg failed', err); }
             });
             pendingPortMessages = [];
           }
-          
-          // Enviar comando de inicio
-          offscreenPort.postMessage({
-            type: 'START_AUDIO_CAPTURE',
-            streamId: streamId,
-            isPremium: isPremium
-          });
-          
-          // Esperar confirmación
-          await new Promise((resolve, reject) => {
+          offscreenPort.postMessage(startMsg);
+
+          // Esperar confirmación del offscreen (AUDIO_CAPTURE_STARTED)
+          const response = await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-              reject(new Error("Timeout - offscreen no respondió"));
-            }, 3000);
-            
+              reject(new Error('Timeout - offscreen no respondió'));
+            }, 5000);
+
             const listener = (msg) => {
+              if (!msg || !msg.type) return;
               if (msg.type === 'AUDIO_CAPTURE_STARTED') {
                 clearTimeout(timeout);
                 offscreenPort.onMessage.removeListener(listener);
-                resolve(msg);
+                resolve({ success: true, detail: msg });
+              } else if (msg.type === 'AUDIO_CAPTURE_FAILED') {
+                clearTimeout(timeout);
+                offscreenPort.onMessage.removeListener(listener);
+                resolve({ success: false, error: msg.error || 'Audio capture failed' });
               }
             };
-            
+
             offscreenPort.onMessage.addListener(listener);
           });
-          
-          const response = { success: true };
-
-          if (response && response.success) {
-            console.log("✅ Audio capture iniciado correctamente");
-            chrome.storage.local.set({ enabled: true });
-            sendResponse({ success: true });
-          } else {
-            console.error("❌ Respuesta inválida del offscreen:", response);
-            sendResponse({ success: false, error: "Audio initialization failed: " + (response?.error || "Invalid response") });
-          }
         } catch (e) {
           console.error("❌ Error comunicando con offscreen:", e.message);
           sendResponse({ success: false, error: "Offscreen communication error: " + e.message });

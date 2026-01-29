@@ -85,8 +85,6 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
       sources = [];
       els.forEach((el) => {
         try {
-          // Mute original element to avoid duplicate sound, we'll output via audioCtx
-          el.muted = true;
           const src = audioCtx.createMediaElementSource(el);
           // connect to first filter or directly to analyser
           if (filters.length > 0) {
@@ -111,10 +109,6 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
 
   function stopTabProcessing() {
     try {
-      // Restore element muted state
-      sources.forEach(({ el }) => {
-        try { el.muted = false; } catch (e) {}
-      });
       sources.forEach(({ src }) => { try { src.disconnect(); } catch (e) {} });
       sources = [];
 

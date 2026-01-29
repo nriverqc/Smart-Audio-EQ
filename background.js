@@ -78,42 +78,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         
         console.log("✅ StreamId obtenido:", streamId);
 
-        // 3. Enviar al Offscreen con reintentos
-        // El documento offscreen puede tardar en inicializar su listener
-        const sendMessageToOffscreen = async (msg, retries = 5, delay = 200) => {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    await new Promise(r => setTimeout(r, delay));
-                    const response = await chrome.runtime.sendMessage(msg);
-                    if (response) return response;
-                } catch (e) {
-                    console.log(`Intento ${i+1}/${retries} fallido enviando a offscreen:`, e.message);
-                    if (i === retries - 1) throw e;
-                }
-            }
-        };
-
-        let response;
+        // 3. Enviar mensaje al offscreen
         try {
-            response = await sendMessageToOffscreen({
-                type: 'START_AUDIO_CAPTURE',
-                streamId: streamId,
-                data: msg.data
-            });
-        } catch (e) {
-            console.error("Fallo definitivo comunicando con offscreen:", e);
-            // Verificar lastError si está disponible
-            if (chrome.runtime.lastError) {
-                console.error("LastError:", chrome.runtime.lastError.message);
-            }
-            throw new Error("No se pudo conectar con el procesador de audio (Offscreen)");
-        }
+          // El offscreen document debe tener su listener listo
+          await new Promise(r => setTimeout(r, 300));
+          
+          const response = await chrome.runtime.sendMessage({
+            type: 'START_AUDIO_CAPTURE',
+            streamId: streamId
+          });
 
-        if (response && response.success) {
-          chrome.storage.local.set({ enabled: true });
-          sendResponse({ success: true });
-        } else {
-          sendResponse({ success: false, error: response?.error || "Error iniciando audio en offscreen (respuesta inválida)" });
+          if (response && response.success) {
+            console.log("✅ Audio capture iniciado correctamente");
+            chrome.storage.local.set({ enabled: true });
+            sendResponse({ success: true });
+          } else {
+            console.error("❌ Respuesta inválida del offscreen:", response);
+            sendResponse({ success: false, error: "Audio initialization failed: " + (response?.error || "Invalid response") });
+          }
+        } catch (e) {
+          console.error("❌ Error comunicando con offscreen:", e.message);
+          sendResponse({ success: false, error: "Offscreen communication error: " + e.message });
         }
 
       } catch (err) {

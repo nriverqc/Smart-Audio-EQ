@@ -14,21 +14,28 @@ export default function SpectrumAnalyzer() {
 
     const draw = async () => {
       try {
-        // Request analyser from offscreen document
+        // Request analyser from background (que lo envía al offscreen)
         const response = await chrome.runtime.sendMessage({
           type: 'GET_ANALYSER_DATA'
-        });
+        }).catch(() => null);
 
-        if (!response || !response.data) {
+        if (!response || !response.data || response.data.length === 0) {
           animationRef.current = requestAnimationFrame(draw);
           return;
         }
 
-        const dataArray = new Uint8Array(response.data);
+        const dataArray = Array.isArray(response.data) 
+          ? new Uint8Array(response.data) 
+          : new Uint8Array(0);
         
         // Clear canvas
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (dataArray.length === 0) {
+          animationRef.current = requestAnimationFrame(draw);
+          return;
+        }
 
         // Draw spectrum bars
         const barWidth = (canvas.width / dataArray.length) * 2.5;
@@ -48,7 +55,7 @@ export default function SpectrumAnalyzer() {
 
         animationRef.current = requestAnimationFrame(draw);
       } catch (error) {
-        console.log('Spectrum analyzer inactive');
+        // Silenciar errores cuando EQ no está activo
         animationRef.current = requestAnimationFrame(draw);
       }
     };

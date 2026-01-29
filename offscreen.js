@@ -1,66 +1,70 @@
 import { initAudio, setGain, setMasterVolume, getAnalyserData } from './audio/processor.js';
 
-chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-  if (msg.type === 'START_AUDIO_CAPTURE') {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          mandatory: {
-            chromeMediaSource: 'tab',
-            chromeMediaSourceId: msg.streamId
-          }
-        },
-        video: false
-      });
+let port = null;
+
+// Escuchar conexiones del background
+chrome.runtime.onConnect.addListener((p) => {
+  if (p.name === 'offscreen-port') {
+    port = p;
+    console.log("✅ Offscreen conectado al background");
+    
+    port.onMessage.addListener(async (msg) => {
+      console.log("Offscreen recibió:", msg.type);
       
-      const isPremium = msg.isPremium || false;
-      await initAudio(stream, isPremium);
-      sendResponse({ success: true });
-    } catch (err) {
-      console.error('Error capturing audio in offscreen:', err);
-      sendResponse({ success: false, error: err.message });
-    }
-    return true; // async response
-  }
-  
-  if (msg.type === 'STOP_AUDIO_CAPTURE') {
-      // Opcional: limpiar recursos aquí si no se cierra el documento
-      // window.close(); // También se puede cerrar desde aquí
-      sendResponse({ success: true });
-      return true;
-  }
-
-  if (msg.type === 'SET_GAIN') {
-    setGain(msg.index, msg.value);
-    sendResponse({ success: true });
-    return true;
-  }
-
-  if (msg.type === 'SET_VOLUME') {
-    setMasterVolume(msg.value);
-    sendResponse({ success: true });
-    return true;
-  }
-
-  if (msg.type === 'GET_ANALYSER_DATA') {
-    try {
-      const data = getAnalyserData();
-      sendResponse({ success: true, data });
-    } catch (err) {
-      sendResponse({ success: false, error: err.message });
-    }
-    return true;
-  }
-
-  if (msg.type === 'SET_TAB_VOLUME') {
-    // Handle per-tab volume
-    setMasterVolume(msg.volume);
-    sendResponse({ success: true });
-    return true;
+      if (msg.type === 'START_AUDIO_CAPTURE') {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              mandatory: {
+                chromeMediaSource: 'tab',
+                chromeMediaSourceId: msg.streamId
+              }
+            },
+            video: false
+          });
+          
+          const isPremium = msg.isPremium || false;
+          await initAudio(stream, isPremium);
+          console.log("✅ Audio capture iniciado");
+          port.postMessage({ type: 'AUDIO_CAPTURE_STARTED', success: true });
+        } catch (err) {
+          console.error('Error capturing audio in offscreen:', err);
+          port.postMessage({ type: 'AUDIO_CAPTURE_STARTED', success: false, error: err.message });
+        }
+      }
+      
+      if (msg.type === 'SET_GAIN') {
+        setGain(msg.index, msg.value);
+      }
+      
+      if (msg.type === 'SET_VOLUME') {
+        setMasterVolume(msg.value);
+      }
+      
+      if (msg.type === 'GET_ANALYSER_DATA') {
+        try {
+          const data = getAnalyserData();
+          port.postMessage({ type: 'ANALYSER_DATA', success: true, data });
+        } catch (err) {
+          port.postMessage({ type: 'ANALYSER_DATA', success: false, error: err.message });
+        }
+      }
+      
+      if (msg.type === 'STOP_AUDIO_CAPTURE') {
+        port.postMessage({ type: 'AUDIO_CAPTURE_STOPPED', success: true });
+      }
+    });
+    
+    port.onDisconnect.addListener(() => {
+      console.log("❌ Desconectado del background");
+      port = null;
+    });
   }
 });
 
 // Keep-alive mechanism
 setInterval(() => {
-  chrome.runtime.sendMessage({ type: 'PING' }).catch(() => {});
+  if (port) {
+    port.postMessage({ type: 'PING' }).catch(() => {});
+  }
 }, 20000);

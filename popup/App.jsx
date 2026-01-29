@@ -24,27 +24,6 @@ export default function App() {
 
     checkState();
 
-    // Determinar si el EQ está activo para la pestaña actual (usar activeTabs persistido)
-    (async () => {
-      try {
-        const tabs = await new Promise((res) => chrome.tabs.query({ active: true, currentWindow: true }, res));
-        const tab = tabs && tabs[0];
-        if (!tab) return;
-        const storage = await new Promise((res) => chrome.storage.local.get(['activeTabs','enabled'], res));
-        const active = storage && storage.activeTabs && storage.activeTabs[tab.id] && storage.activeTabs[tab.id].enabled;
-        if (active) {
-          setEnabled(true);
-        } else if (storage && storage.enabled) {
-          // fallback global enabled flag (legacy)
-          setEnabled(true);
-        } else {
-          setEnabled(false);
-        }
-      } catch (e) {
-        console.warn('Could not determine tab EQ state:', e.message);
-      }
-    })();
-
     // Listen for storage changes (e.g. from background.js update)
     const handleStorageChange = (changes, area) => {
         if (area === 'local') {

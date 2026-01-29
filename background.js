@@ -129,34 +129,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
 
-        // Try per-tab processing ALWAYS (both free and premium)
-        try {
-          const isPremium = (await chrome.storage.local.get(['isPremium'])).isPremium || false;
-          const res = await sendMessageToTab(tab.id, { type: 'START_TAB_EQ', isPremium });
-
-          if (res && res.success) {
-            console.log('✅ Per-tab EQ started for tab', tab.id);
-            // Register per-tab state (regardless of premium status)
-            activeTabs[tab.id] = { enabled: true, isPremium, masterVolume: 1, gains: [] };
-            // Persist activeTabs
-            try { chrome.storage.local.set({ activeTabs }); } catch(e) {}
-            chrome.storage.local.set({ enabled: true });
-            sendResponse({ success: true, method: 'tab' });
-            return;
-          } else {
-            console.log('⚠️ Per-tab EQ failed, fallback to offscreen:', res && res.error);
-            // Continue with offscreen fallback
-          }
-        } catch (e) {
-          console.warn('Error starting per-tab EQ:', e.message);
-          // Continue with offscreen fallback
-        }
-
-        // Fallback: Setup Offscreen Document
+        // Setup Offscreen Document for audio processing
         await closeOffscreenDocument();
         await setupOffscreenDocument('offscreen.html');
 
-        // 2. Obtener Stream ID
+        // Get Stream ID from tab
         const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
         console.log('✅ StreamId obtenido:', streamId);
 
@@ -268,66 +245,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === "SET_BAND_GAIN") {
-    (async () => {
-      try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        const tabId = tab?.id;
-        // Try per-tab first if it's active (regardless of premium status)
-        let sentToTab = false;
-        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled) {
-          try { 
-            await sendMessageToTab(tabId, { type: 'SET_GAIN', index: msg.bandIndex, value: msg.value }); 
-            sentToTab = true;
-            console.log(`✅ SET_GAIN sent to tab ${tabId}`);
-          } catch (e) { 
-            console.warn(`⚠️ Could not send SET_GAIN to tab ${tabId}:`, e && e.message); 
-          }
-        }
-        // Fallback to offscreen if not sent to tab
-        if (!sentToTab) {
-          if (offscreenPort) {
-            offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
-          } else {
-            pendingPortMessages.push({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
-          }
-        }
-        sendResponse({ success: true });
-      } catch (e) {
-        sendResponse({ success: false, error: e.message });
-      }
-    })();
+    if (offscreenPort) {
+      offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
+    } else {
+      pendingPortMessages.push({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
+    }
+    sendResponse({ success: true });
     return true;
   }
 
   if (msg.type === "SET_MASTER_VOLUME") {
-    (async () => {
-      try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        const tabId = tab?.id;
-        // Try per-tab first if it's active (regardless of premium status)
-        let sentToTab = false;
-        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled) {
-          try { 
-            await sendMessageToTab(tabId, { type: 'SET_VOLUME', value: msg.value }); 
-            sentToTab = true;
-            console.log(`✅ SET_VOLUME sent to tab ${tabId}`);
-          } catch (e) { 
-            console.warn(`⚠️ Could not send SET_VOLUME to tab ${tabId}:`, e && e.message); 
-          }
-        }
-        // Fallback to offscreen if not sent to tab
-        if (!sentToTab) {
-          if (offscreenPort) {
-            offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value });
-          } else {
-            pendingPortMessages.push({ type: 'SET_VOLUME', value: msg.value });
-          }
-        }
-        sendResponse({ success: true });
-      } catch (e) {
-        sendResponse({ success: false, error: e.message });
-      }
-    })();
+    if (offscreenPort) {
+      offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value });
+    } else {
+      pendingPortMessages.push({ type: 'SET_VOLUME', value: msg.value });
+    }
+    sendResponse({ success: true });
     return true;
   }
 
@@ -403,47 +336,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'APPLY_PRESET') {
-    (async () => {
-      try {
-        const gains = Array.isArray(msg.gains) ? msg.gains : [];
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        const tabId = tab?.id;
+    try {
+      const gains = Array.isArray(msg.gains) ? msg.gains : [];
+      
+      // compute master compensation
+      const pos = gains.filter(g => typeof g === 'number' && g > 0);
+      const maxPos = pos.length ? Math.max(...pos) : 0;
+      let masterFactor = 1.0;
+      if (maxPos >= 15) masterFactor = 0.5;
+      else if (maxPos >= 10) masterFactor = 0.6;
+      else if (maxPos >= 6) masterFactor = 0.75;
 
-        // compute master compensation
-        const pos = gains.filter(g => typeof g === 'number' && g > 0);
-        const maxPos = pos.length ? Math.max(...pos) : 0;
-        let masterFactor = 1.0;
-        if (maxPos >= 15) masterFactor = 0.5;
-        else if (maxPos >= 10) masterFactor = 0.6;
-        else if (maxPos >= 6) masterFactor = 0.75;
-
-        // Try per-tab first if enabled (regardless of premium status)
-        let sentToTab = false;
-        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled) {
-          try { 
-            await sendMessageToTab(tabId, { type: 'APPLY_PRESET', gains }); 
-            sentToTab = true;
-          } catch (e) { 
-            console.warn('APPLY_PRESET send error', e && e.message); 
-          }
-        }
-        
-        // Fallback to offscreen if not sent to tab
-        if (!sentToTab) {
-          if (offscreenPort) {
-            gains.forEach((g, i) => offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g }));
-            offscreenPort.postMessage({ type: 'SET_VOLUME', value: masterFactor });
-          } else {
-            gains.forEach((g, i) => pendingPortMessages.push({ type: 'SET_GAIN', index: i, value: g }));
-            pendingPortMessages.push({ type: 'SET_VOLUME', value: masterFactor });
-          }
-        }
-
-        sendResponse({ success: true });
-      } catch (e) {
-        sendResponse({ success: false, error: e.message });
+      // Send to offscreen
+      if (offscreenPort) {
+        gains.forEach((g, i) => offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g }));
+        offscreenPort.postMessage({ type: 'SET_VOLUME', value: masterFactor });
+      } else {
+        gains.forEach((g, i) => pendingPortMessages.push({ type: 'SET_GAIN', index: i, value: g }));
+        pendingPortMessages.push({ type: 'SET_VOLUME', value: masterFactor });
       }
-    })();
+
+      sendResponse({ success: true });
+    } catch (e) {
+      sendResponse({ success: false, error: e.message });
+    }
     return true;
   }
   // ===== GESTIÓN DE USUARIOS / LOGIN =====

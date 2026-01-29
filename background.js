@@ -70,24 +70,47 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
 
+        // Comprobar si el usuario es premium y preferimos procesar por pestaña
+        const storage = await chrome.storage.local.get(['isPremium']);
+        const isPremium = storage.isPremium || false;
+
+        if (isPremium) {
+          // Intentar iniciar procesamiento por pestaña (content script)
+          try {
+            const res = await new Promise((resolve) => {
+              chrome.tabs.sendMessage(tab.id, { type: 'START_TAB_EQ', isPremium: true }, (r) => {
+                resolve(r);
+              });
+            });
+
+            if (res && res.success) {
+              console.log('✅ EQ por pestaña iniciado para tab', tab.id);
+              // Registrar estado por pestaña
+              activeTabs[tab.id] = { enabled: true, isPremium: true, masterVolume: 1, gains: [] };
+              chrome.storage.local.set({ enabled: true });
+              sendResponse({ success: true, method: 'tab' });
+              return;
+            } else {
+              console.log('⚠️ No se pudo iniciar EQ por pestaña, fallback a offscreen:', res && res.error);
+              // continuar con flujo offscreen como fallback
+            }
+          } catch (e) {
+            console.warn('Error iniciando tab EQ:', e.message);
+            // continuar con flujo offscreen
+          }
+        }
+
         // 1. Asegurar Offscreen Document
         // Si ya hay audio sonando, podría ser buena idea reiniciarlo para la nueva pestaña
-        await closeOffscreenDocument(); 
+        await closeOffscreenDocument();
         await setupOffscreenDocument('offscreen.html');
 
         // 2. Obtener Stream ID
-        const streamId = await chrome.tabCapture.getMediaStreamId({
-          targetTabId: tab.id
-        });
-        
-        console.log("✅ StreamId obtenido:", streamId);
+        const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+        console.log('✅ StreamId obtenido:', streamId);
 
         // 3. Enviar mensaje al offscreen
         try {
-          // Obtener estado premium antes de enviar
-          const storage = await chrome.storage.local.get(['isPremium']);
-          const isPremium = storage.isPremium || false;
-          
           // Esperar un breve momento para que el offscreen document esté listo
           await new Promise(r => setTimeout(r, 300));
 

@@ -22,7 +22,41 @@ export default function TabMixer() {
       });
     }, 1000);
 
+    // Also attempt to read current element volumes from each audible tab so UI reflects real values
+    const readVolumes = () => {
+      chrome.tabs.query({ audible: true }, (tabs) => {
+        tabs.forEach(tab => {
+          try {
+            chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              func: () => {
+                const els = Array.from(document.querySelectorAll('audio,video'));
+                if (els.length === 0) return null;
+                // return average volume across elements
+                const vols = els.map(e => (typeof e.volume === 'number' ? e.volume : 1));
+                const avg = vols.reduce((a, b) => a + b, 0) / vols.length;
+                return avg;
+              }
+            }).then(results => {
+              if (results && results[0] && typeof results[0].result === 'number') {
+                setTabVolumes(prev => ({ ...prev, [tab.id]: results[0].result }));
+              }
+            }).catch(() => {});
+          } catch (e) {}
+        });
+      });
+    };
+
+    // Read once on mount and then each interval tick
+    readVolumes();
+    const readInterval = setInterval(readVolumes, 3000);
+
     return () => clearInterval(interval);
+  }, []);
+
+  // cleanup readVolumes interval
+  useEffect(() => {
+    return () => {};
   }, []);
 
   const handleVolumeChange = (tabId, volume) => {

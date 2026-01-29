@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 export default function TabMixer() {
   const [audibleTabs, setAudibleTabs] = useState([]);
   const [tabVolumes, setTabVolumes] = useState({});
+  const [isChanging, setIsChanging] = useState(null); // Track which tab is being manually changed
 
   useEffect(() => {
     // Get all tabs with audio
@@ -22,8 +23,10 @@ export default function TabMixer() {
       });
     }, 1000);
 
-    // Also attempt to read current element volumes from each audible tab so UI reflects real values
+    // Sync current element volumes but only if user is NOT manually changing one
     const readVolumes = () => {
+      if (isChanging) return; // Don't read while user is adjusting
+      
       chrome.tabs.query({ audible: true }, (tabs) => {
         tabs.forEach(tab => {
           try {
@@ -51,28 +54,33 @@ export default function TabMixer() {
     readVolumes();
     const readInterval = setInterval(readVolumes, 3000);
 
-    return () => clearInterval(interval);
-  }, []);
-
-  // cleanup readVolumes interval
-  useEffect(() => {
-    return () => {};
-  }, []);
+    return () => {
+      clearInterval(interval);
+      clearInterval(readInterval);
+    };
+  }, [isChanging]);
 
   const handleVolumeChange = (tabId, volume) => {
+    setIsChanging(tabId); // Mark as changing
+    const normalizedVolume = parseFloat(volume);
+    
     setTabVolumes(prev => {
-      const next = { ...prev, [tabId]: volume };
+      const next = { ...prev, [tabId]: normalizedVolume };
       // Save to storage
       chrome.storage.local.set({ tabVolumes: next });
-      // Send to background script
-      chrome.runtime.sendMessage({ type: 'SET_TAB_VOLUME', tabId, volume });
+      // Send to background script to update element volume (0 to 1)
+      chrome.runtime.sendMessage({ type: 'SET_TAB_VOLUME', tabId, volume: normalizedVolume });
       return next;
     });
+
+    // Clear isChanging flag after slider release (300ms debounce)
+    setTimeout(() => setIsChanging(null), 300);
   };
 
   return (
     <div style={{ padding: '10px', fontSize: '12px' }}>
       <h3>🎚️ Tab Mixer (Premium)</h3>
+      <p style={{ fontSize: '10px', color: '#aaa' }}>Control volumen de cada pestaña (0-100%)</p>
       {audibleTabs.length === 0 ? (
         <p style={{ color: '#999' }}>No audio tabs detected</p>
       ) : (

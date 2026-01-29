@@ -295,12 +295,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === "SET_MASTER_VOLUME") {
-    if (offscreenPort) {
-      offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value });
-    } else {
-      pendingPortMessages.push({ type: 'SET_VOLUME', value: msg.value });
-    }
-    sendResponse({ success: true });
+    (async () => {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tabId = tab?.id;
+        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
+          // send to content script for per-tab processing
+          try { await sendMessageToTab(tabId, { type: 'SET_VOLUME', value: msg.value }); } catch (e) { console.warn('SET_VOLUME send error', e && e.message); }
+        } else if (offscreenPort) {
+          offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value });
+        } else {
+          pendingPortMessages.push({ type: 'SET_VOLUME', value: msg.value });
+        }
+        sendResponse({ success: true });
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
     return true;
   }
 

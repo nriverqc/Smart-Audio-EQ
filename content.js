@@ -50,16 +50,17 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
 
       // Create shared filters chain
       filters = createFilters(audioCtx, bandFreqs);
+      console.log(`✅ Created ${filters.length} filters for EQ`);
 
-      // Create analyser
+      // Create analyser for spectrum
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
 
-      // Master gain
+      // Master gain node
       gainNode = audioCtx.createGain();
       gainNode.gain.value = 1.0;
 
-      // Compressor
+      // Compressor for safety
       compressor = audioCtx.createDynamicsCompressor();
       compressor.threshold.value = -10;
       compressor.knee.value = 10;
@@ -67,16 +68,25 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
       compressor.attack.value = 0.005;
       compressor.release.value = 0.1;
 
-      // Connect chain: filters[0] <- filters[1] <- ... <- analyser <- gain -> compressor -> destination
-      // We'll connect sources into filters[0]
-      let last = filters.length > 0 ? filters[0] : null;
-      for (let i = 0; i < filters.length - 1; i++) {
-        filters[i].connect(filters[i + 1]);
+      // Build filter chain: source -> filter[0] -> filter[1] -> ... -> analyser -> gain -> compressor -> destination
+      let last = null;
+      for (let i = 0; i < filters.length; i++) {
+        if (i === 0) {
+          last = filters[0];
+        } else {
+          filters[i - 1].connect(filters[i]);
+          last = filters[i];
+        }
       }
 
+      // Connect end of filter chain to analyser
       if (last) {
         last.connect(analyser);
+      } else {
+        // No filters, analyser gets input directly
       }
+
+      // Analyser -> gain -> compressor -> output
       analyser.connect(gainNode);
       gainNode.connect(compressor);
       compressor.connect(audioCtx.destination);
@@ -86,20 +96,21 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
       els.forEach((el) => {
         try {
           const src = audioCtx.createMediaElementSource(el);
-          // connect to first filter or directly to analyser
+          // connect source to first filter (or analyser if no filters)
           if (filters.length > 0) {
             src.connect(filters[0]);
           } else {
             src.connect(analyser);
           }
           sources.push({ el, src });
+          console.log('✅ MediaElementSource connected to EQ chain');
         } catch (e) {
-          // createMediaElementSource can throw if element is already used by another context
           console.warn('Could not create MediaElementSource for element', e.message);
         }
       });
 
       isProcessing = true;
+      console.log('✅ startTabProcessing completed');
       return { success: true };
     } catch (e) {
       console.error('startTabProcessing error:', e.message);
@@ -130,23 +141,38 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
   function setBandGain(index, value) {
     try {
       const v = parseFloat(value);
-      if (!filters || index < 0 || index >= filters.length) return { success: false, error: 'invalid_index' };
+      if (!filters || index < 0 || index >= filters.length) {
+        console.warn(`❌ setBandGain: invalid index ${index} (filters length: ${filters ? filters.length : 0})`);
+        return { success: false, error: 'invalid_index' };
+      }
       // Smooth ramp 50ms
       const now = audioCtx.currentTime;
       filters[index].gain.cancelScheduledValues(now);
       filters[index].gain.linearRampToValueAtTime(v, now + 0.05);
+      console.log(`✅ setBandGain[${index}] = ${v}dB (freq: ${filters[index].frequency.value}Hz)`);
       return { success: true };
-    } catch (e) { return { success: false, error: e.message }; }
+    } catch (e) {
+      console.error(`❌ setBandGain error:`, e.message);
+      return { success: false, error: e.message };
+    }
   }
 
   function setMasterVolume(value) {
     try {
       const v = Math.min(3, parseFloat(value));
+      if (!gainNode) {
+        console.warn('❌ setMasterVolume: gainNode not initialized');
+        return { success: false, error: 'gainNode not ready' };
+      }
       const now = audioCtx.currentTime;
       gainNode.gain.cancelScheduledValues(now);
       gainNode.gain.linearRampToValueAtTime(v, now + 0.05);
+      console.log(`✅ setMasterVolume = ${v.toFixed(2)}x (${(v * 100).toFixed(0)}%)`);
       return { success: true };
-    } catch (e) { return { success: false, error: e.message }; }
+    } catch (e) {
+      console.error('❌ setMasterVolume error:', e.message);
+      return { success: false, error: e.message };
+    }
   }
 
   function getAnalyserData() {

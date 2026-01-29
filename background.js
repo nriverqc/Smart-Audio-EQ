@@ -10,6 +10,18 @@ let pendingPortMessages = [];
 // Track per-tab EQ state
 let activeTabs = {}; // { [tabId]: { enabled: bool, preset: string, isPremium: bool, masterVolume: number, gains: [] } }
 
+// Cargar estado persistido de activeTabs al iniciar el service worker
+chrome.storage.local.get(['activeTabs'], (res) => {
+  if (res && res.activeTabs) {
+    try {
+      activeTabs = res.activeTabs || {};
+      console.log('Background: activeTabs cargadas desde storage', Object.keys(activeTabs));
+    } catch (e) {
+      console.warn('Error parsing activeTabs from storage', e.message);
+    }
+  }
+});
+
 async function setupOffscreenDocument(path) {
   // Verificar si ya existe un contexto offscreen
   const existingContexts = await chrome.runtime.getContexts({
@@ -87,6 +99,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               console.log('✅ EQ por pestaña iniciado para tab', tab.id);
               // Registrar estado por pestaña
               activeTabs[tab.id] = { enabled: true, isPremium: true, masterVolume: 1, gains: [] };
+              // Persistir activeTabs
+              try { chrome.storage.local.set({ activeTabs }); } catch(e) {}
               chrome.storage.local.set({ enabled: true });
               sendResponse({ success: true, method: 'tab' });
               return;
@@ -178,17 +192,33 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "DISABLE_EQ") {
     (async () => {
       try {
+        // Disable EQ for current active tab if it's a per-tab premium session
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tabId = tab?.id;
+
+        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
+          // Stop per-tab processing
+          try {
+            chrome.tabs.sendMessage(tabId, { type: 'STOP_TAB_EQ' }, (res) => {});
+          } catch (e) {}
+          delete activeTabs[tabId];
+          // Persistir cambios
+          try { chrome.storage.local.set({ activeTabs }); } catch (e) {}
+          chrome.storage.local.set({ enabled: false });
+          sendResponse({ success: true, method: 'tab' });
+          return;
+        }
+
+        // Fallback: stop offscreen processing
         chrome.storage.local.set({ enabled: false });
-        
-        // Notificar parada
         try {
-            if (offscreenPort) {
-              offscreenPort.postMessage({ type: 'STOP_AUDIO_CAPTURE' });
-            } else {
-              await chrome.runtime.sendMessage({ type: 'STOP_AUDIO_CAPTURE' });
-            }
+          if (offscreenPort) {
+            offscreenPort.postMessage({ type: 'STOP_AUDIO_CAPTURE' });
+          } else {
+            await chrome.runtime.sendMessage({ type: 'STOP_AUDIO_CAPTURE' });
+          }
         } catch(e) {}
-        
+
         // Cerrar el documento para liberar recursos y permitir nueva captura limpia después
         await closeOffscreenDocument();
 

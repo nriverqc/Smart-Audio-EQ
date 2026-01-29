@@ -314,6 +314,12 @@ export default function App() {
                   <option value="cinema" disabled={!isPremium}>Cinema {isPremium ? '' : '🔒'}</option>
                   <option value="edm" disabled={!isPremium}>EDM / Trap {isPremium ? '' : '🔒'}</option>
                   <option value="podcast" disabled={!isPremium}>Podcast {isPremium ? '' : '🔒'}</option>
+                  <option value="night-cinema" disabled={!isPremium}>Night Cinema {isPremium ? '' : '🔒'}</option>
+                  <option value="warm-vintage" disabled={!isPremium}>Warm Vintage {isPremium ? '' : '🔒'}</option>
+                  <option value="crystal-clear" disabled={!isPremium}>Crystal Clear {isPremium ? '' : '🔒'}</option>
+                  <option value="deep-focus" disabled={!isPremium}>Deep Focus {isPremium ? '' : '🔒'}</option>
+                  <option value="rock-metal" disabled={!isPremium}>Rock / Metal {isPremium ? '' : '🔒'}</option>
+                  <option value="acoustic-live" disabled={!isPremium}>Acoustic / Live {isPremium ? '' : '🔒'}</option>
               </optgroup>
           </select>
       </div>

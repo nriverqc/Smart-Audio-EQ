@@ -129,36 +129,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
 
-        // Comprobar si el usuario es premium y preferimos procesar por pestaña
-        const storage = await chrome.storage.local.get(['isPremium']);
-        const isPremium = storage.isPremium || false;
+        // Try per-tab processing ALWAYS (both free and premium)
+        try {
+          const isPremium = (await chrome.storage.local.get(['isPremium'])).isPremium || false;
+          const res = await sendMessageToTab(tab.id, { type: 'START_TAB_EQ', isPremium });
 
-        if (isPremium) {
-          // Intentar iniciar procesamiento por pestaña (content script)
-          try {
-            const res = await sendMessageToTab(tab.id, { type: 'START_TAB_EQ', isPremium: true });
-
-            if (res && res.success) {
-              console.log('✅ EQ por pestaña iniciado para tab', tab.id);
-              // Registrar estado por pestaña
-              activeTabs[tab.id] = { enabled: true, isPremium: true, masterVolume: 1, gains: [] };
-              // Persistir activeTabs
-              try { chrome.storage.local.set({ activeTabs }); } catch(e) {}
-              chrome.storage.local.set({ enabled: true });
-              sendResponse({ success: true, method: 'tab' });
-              return;
-            } else {
-              console.log('⚠️ No se pudo iniciar EQ por pestaña, fallback a offscreen:', res && res.error);
-              // continuar con flujo offscreen como fallback
-            }
-          } catch (e) {
-            console.warn('Error iniciando tab EQ:', e.message);
-            // continuar con flujo offscreen
+          if (res && res.success) {
+            console.log('✅ Per-tab EQ started for tab', tab.id);
+            // Register per-tab state (regardless of premium status)
+            activeTabs[tab.id] = { enabled: true, isPremium, masterVolume: 1, gains: [] };
+            // Persist activeTabs
+            try { chrome.storage.local.set({ activeTabs }); } catch(e) {}
+            chrome.storage.local.set({ enabled: true });
+            sendResponse({ success: true, method: 'tab' });
+            return;
+          } else {
+            console.log('⚠️ Per-tab EQ failed, fallback to offscreen:', res && res.error);
+            // Continue with offscreen fallback
           }
+        } catch (e) {
+          console.warn('Error starting per-tab EQ:', e.message);
+          // Continue with offscreen fallback
         }
 
-        // 1. Asegurar Offscreen Document
-        // Si ya hay audio sonando, podría ser buena idea reiniciarlo para la nueva pestaña
+        // Fallback: Setup Offscreen Document
         await closeOffscreenDocument();
         await setupOffscreenDocument('offscreen.html');
 
@@ -235,17 +229,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "DISABLE_EQ") {
     (async () => {
       try {
-        // Disable EQ for current active tab if it's a per-tab premium session
+        // Disable EQ for current active tab if it's a per-tab session (free or premium)
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const tabId = tab?.id;
 
-        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
-          // Stop per-tab processing
+        // Stop per-tab processing if active (regardless of premium status)
+        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled) {
           try {
             await sendMessageToTab(tabId, { type: 'STOP_TAB_EQ' });
           } catch (e) { console.warn('STOP_TAB_EQ send error', e && e.message); }
           delete activeTabs[tabId];
-          // Persistir cambios
+          // Persist changes
           try { chrome.storage.local.set({ activeTabs }); } catch (e) {}
           chrome.storage.local.set({ enabled: false });
           sendResponse({ success: true, method: 'tab' });
@@ -262,7 +256,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           }
         } catch(e) {}
 
-        // Cerrar el documento para liberar recursos y permitir nueva captura limpia después
+        // Close document to free resources and allow clean new capture later
         await closeOffscreenDocument();
 
         sendResponse({ success: true });
@@ -278,13 +272,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const tabId = tab?.id;
-        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
-          // send to content script for per-tab processing
-          try { await sendMessageToTab(tabId, { type: 'SET_GAIN', index: msg.bandIndex, value: msg.value }); } catch (e) { console.warn('SET_GAIN send error', e && e.message); }
-        } else if (offscreenPort) {
-          offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
-        } else {
-          pendingPortMessages.push({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
+        // Try per-tab first if it's active (regardless of premium status)
+        let sentToTab = false;
+        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled) {
+          try { 
+            await sendMessageToTab(tabId, { type: 'SET_GAIN', index: msg.bandIndex, value: msg.value }); 
+            sentToTab = true;
+            console.log(`✅ SET_GAIN sent to tab ${tabId}`);
+          } catch (e) { 
+            console.warn(`⚠️ Could not send SET_GAIN to tab ${tabId}:`, e && e.message); 
+          }
+        }
+        // Fallback to offscreen if not sent to tab
+        if (!sentToTab) {
+          if (offscreenPort) {
+            offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
+          } else {
+            pendingPortMessages.push({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
+          }
         }
         sendResponse({ success: true });
       } catch (e) {
@@ -299,13 +304,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const tabId = tab?.id;
-        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
-          // send to content script for per-tab processing
-          try { await sendMessageToTab(tabId, { type: 'SET_VOLUME', value: msg.value }); } catch (e) { console.warn('SET_VOLUME send error', e && e.message); }
-        } else if (offscreenPort) {
-          offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value });
-        } else {
-          pendingPortMessages.push({ type: 'SET_VOLUME', value: msg.value });
+        // Try per-tab first if it's active (regardless of premium status)
+        let sentToTab = false;
+        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled) {
+          try { 
+            await sendMessageToTab(tabId, { type: 'SET_VOLUME', value: msg.value }); 
+            sentToTab = true;
+            console.log(`✅ SET_VOLUME sent to tab ${tabId}`);
+          } catch (e) { 
+            console.warn(`⚠️ Could not send SET_VOLUME to tab ${tabId}:`, e && e.message); 
+          }
+        }
+        // Fallback to offscreen if not sent to tab
+        if (!sentToTab) {
+          if (offscreenPort) {
+            offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value });
+          } else {
+            pendingPortMessages.push({ type: 'SET_VOLUME', value: msg.value });
+          }
         }
         sendResponse({ success: true });
       } catch (e) {
@@ -401,17 +417,26 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         else if (maxPos >= 10) masterFactor = 0.6;
         else if (maxPos >= 6) masterFactor = 0.75;
 
-        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
-          // send entire preset to content script
-          try { await sendMessageToTab(tabId, { type: 'APPLY_PRESET', gains }); } catch (e) { console.warn('APPLY_PRESET send error', e && e.message); }
-        } else if (offscreenPort) {
-          // send gains to offscreen
-          gains.forEach((g, i) => offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g }));
-          offscreenPort.postMessage({ type: 'SET_VOLUME', value: masterFactor });
-        } else {
-          // queue messages for offscreen
-          gains.forEach((g, i) => pendingPortMessages.push({ type: 'SET_GAIN', index: i, value: g }));
-          pendingPortMessages.push({ type: 'SET_VOLUME', value: masterFactor });
+        // Try per-tab first if enabled (regardless of premium status)
+        let sentToTab = false;
+        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled) {
+          try { 
+            await sendMessageToTab(tabId, { type: 'APPLY_PRESET', gains }); 
+            sentToTab = true;
+          } catch (e) { 
+            console.warn('APPLY_PRESET send error', e && e.message); 
+          }
+        }
+        
+        // Fallback to offscreen if not sent to tab
+        if (!sentToTab) {
+          if (offscreenPort) {
+            gains.forEach((g, i) => offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g }));
+            offscreenPort.postMessage({ type: 'SET_VOLUME', value: masterFactor });
+          } else {
+            gains.forEach((g, i) => pendingPortMessages.push({ type: 'SET_GAIN', index: i, value: g }));
+            pendingPortMessages.push({ type: 'SET_VOLUME', value: masterFactor });
+          }
         }
 
         sendResponse({ success: true });
@@ -421,7 +446,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     })();
     return true;
   }
-
   // ===== GESTIÓN DE USUARIOS / LOGIN =====
   if (msg.type === "LOGIN_EXITOSO") {
     chrome.storage.local.set({

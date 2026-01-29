@@ -17,6 +17,13 @@ export const PRESETS = {
   'cinema': [4, 3, 5, 2, 0, -1, 0, 1, 1, 2, 3, 4, 4, 5, 3],        // V-shape immersion
   'edm': [5, 4, 6, 3, -1, 0, 1, 2, 2, 3, 4, 3, 2, 1, 2],           // Punchy club sound
   'podcast': [-3, -2, 2, 5, 4, 2, 1, 0, -1, 0, -1, -2, -1, -2, -3], // Focus on voice (100Hz-3kHz)
+  // New Premium 10-band presets
+  'night-cinema': [-6, -5, -3, 0, 2, 4, 4, 2, -2, -4],
+  'warm-vintage': [2, 4, 3, 1, 10, -1, -3, -6, -8, -10],
+  'crystal-clear': [-8, -5, -2, 0, 1, 3, 6, 5, 3, 0],
+  'deep-focus': [2, 2, 1, 0, -1, -3, -5, -7, -8, -9],
+  'rock-metal': [4, 5, 3, -2, -3, 1, 3, 5, 4, 2],
+  'acoustic-live': [2, 10, 1, 2, 2, 4, 3, 2, 1, 0]
 };
 
 export const IS_PREMIUM_PRESET = (key) => {

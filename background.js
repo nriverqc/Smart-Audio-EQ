@@ -201,12 +201,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === "SET_BAND_GAIN") {
-    if (offscreenPort) {
-      offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
-    } else {
-      pendingPortMessages.push({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
-    }
-    sendResponse({ success: true });
+    (async () => {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tabId = tab?.id;
+        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
+          // send to content script for per-tab processing
+          chrome.tabs.sendMessage(tabId, { type: 'SET_GAIN', index: msg.bandIndex, value: msg.value }, (res) => {});
+        } else if (offscreenPort) {
+          offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
+        } else {
+          pendingPortMessages.push({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
+        }
+        sendResponse({ success: true });
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
     return true;
   }
 
@@ -288,6 +299,42 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return true;
     }
     sendResponse({ success: false, error: 'missing tabId' });
+    return true;
+  }
+
+  if (msg.type === 'APPLY_PRESET') {
+    (async () => {
+      try {
+        const gains = Array.isArray(msg.gains) ? msg.gains : [];
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tabId = tab?.id;
+
+        // compute master compensation
+        const pos = gains.filter(g => typeof g === 'number' && g > 0);
+        const maxPos = pos.length ? Math.max(...pos) : 0;
+        let masterFactor = 1.0;
+        if (maxPos >= 15) masterFactor = 0.5;
+        else if (maxPos >= 10) masterFactor = 0.6;
+        else if (maxPos >= 6) masterFactor = 0.75;
+
+        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled && activeTabs[tabId].isPremium) {
+          // send entire preset to content script
+          chrome.tabs.sendMessage(tabId, { type: 'APPLY_PRESET', gains }, (res) => {});
+        } else if (offscreenPort) {
+          // send gains to offscreen
+          gains.forEach((g, i) => offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g }));
+          offscreenPort.postMessage({ type: 'SET_VOLUME', value: masterFactor });
+        } else {
+          // queue messages for offscreen
+          gains.forEach((g, i) => pendingPortMessages.push({ type: 'SET_GAIN', index: i, value: g }));
+          pendingPortMessages.push({ type: 'SET_VOLUME', value: masterFactor });
+        }
+
+        sendResponse({ success: true });
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
     return true;
   }
 

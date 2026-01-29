@@ -195,6 +195,31 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
           return;
         }
 
+          if (msg.type === 'APPLY_PRESET') {
+            // msg.gains: array of gain values matching filters length
+            try {
+              const gains = Array.isArray(msg.gains) ? msg.gains : [];
+              // Apply each band smoothly
+              for (let i = 0; i < gains.length; i++) {
+                setBandGain(i, gains[i]);
+              }
+
+              // Auto master-volume compensation based on peak positive gain
+              const posGains = gains.filter(g => typeof g === 'number' && g > 0);
+              const maxPos = posGains.length ? Math.max(...posGains) : 0;
+              let masterFactor = 1.0;
+              if (maxPos >= 15) masterFactor = 0.5;
+              else if (maxPos >= 10) masterFactor = 0.6;
+              else if (maxPos >= 6) masterFactor = 0.75;
+
+              setMasterVolume(masterFactor);
+              sendResponse({ success: true });
+            } catch (e) {
+              sendResponse({ success: false, error: e.message });
+            }
+            return;
+          }
+
         if (msg.type === 'SET_VOLUME') {
           sendResponse(setMasterVolume(msg.value));
           return;

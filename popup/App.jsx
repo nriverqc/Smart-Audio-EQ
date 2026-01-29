@@ -96,10 +96,8 @@ export default function App() {
 
     const gains = PRESETS[presetKey];
     if (gains) {
-        // Apply gains
-        gains.forEach((gain, i) => {
-            chrome.runtime.sendMessage({ type: "SET_GAIN", index: i, value: gain });
-        });
+      // Apply preset in one message so background can route to per-tab or offscreen
+      chrome.runtime.sendMessage({ type: 'APPLY_PRESET', preset: presetKey, gains });
         // Force update equalizer UI by passing gains down? 
         // Better: Equalizer component should listen to preset changes or we pass key
     }

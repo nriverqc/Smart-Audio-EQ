@@ -80,12 +80,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         // 3. Enviar mensaje al offscreen
         try {
+          // Obtener estado premium antes de enviar
+          const storage = await chrome.storage.local.get(['isPremium']);
+          const isPremium = storage.isPremium || false;
+          
           // El offscreen document debe tener su listener listo
           await new Promise(r => setTimeout(r, 300));
           
           const response = await chrome.runtime.sendMessage({
             type: 'START_AUDIO_CAPTURE',
-            streamId: streamId
+            streamId: streamId,
+            isPremium: isPremium
           });
 
           if (response && response.success) {

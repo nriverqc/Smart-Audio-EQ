@@ -7,6 +7,7 @@ let isPremium = false;
 
 export async function initAudio(stream, premium = false) {
   console.log("🎵 Inicializando Audio Context...");
+  isPremium = premium;
   
   // Cerrar contexto anterior si existe
   if (audioCtx) {
@@ -48,22 +49,16 @@ export async function initAudio(stream, premium = false) {
     throw e;
   }
 
-  // Obtener estado premium de almacenamiento
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get(['isPremium'], (result) => {
-      isPremium = result.isPremium || false;
-      console.log("📊 Premium status:", isPremium);
-      
-      try {
-        setupAudioGraph();
-        console.log("✅ Audio graph configurado correctamente");
-        resolve(true);
-      } catch (e) {
-        console.error("❌ Error configurando audio graph:", e);
-        reject(e);
-      }
-    });
-  });
+  // Configurar audio graph directamente
+  try {
+    console.log("📊 Premium status:", isPremium);
+    setupAudioGraph();
+    console.log("✅ Audio graph configurado correctamente");
+    return Promise.resolve(true);
+  } catch (e) {
+    console.error("❌ Error configurando audio graph:", e);
+    return Promise.reject(e);
+  }
 }
 
 function setupAudioGraph() {

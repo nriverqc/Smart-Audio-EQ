@@ -13,7 +13,8 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
         video: false
       });
       
-      await initAudio(stream);
+      const isPremium = msg.isPremium || false;
+      await initAudio(stream, isPremium);
       sendResponse({ success: true });
     } catch (err) {
       console.error('Error capturing audio in offscreen:', err);

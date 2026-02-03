@@ -100,7 +100,6 @@ python app.py
 npm run build && npm run zip
 
 ## Última Actualización
-- **FIX CRÍTICO:** Se agregó archivo de configuración `wrangler.toml` para corregir el error de despliegue en Cloudflare ("Missing entry-point").
 - Se mejoraron las animaciones del espectro en la web.
 - Se agregaron badges BETA y efectos visuales de fondo.
 

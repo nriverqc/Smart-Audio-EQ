@@ -112,13 +112,24 @@ export default function Premium({ lang }) {
       premiumTitle: 'Premium 💎',
       premiumPriceCO: '$20.000 COP / de por vida',
       premiumPriceINT: '$4.99 USD / lifetime',
-      freeItems: ['✅ Ecualizador de 6 bandas', '✅ Presets básicos (Flat, Vocal, etc.)', '✅ Mejora de volumen'],
+      freeItems: [
+        '✅ Ecualizador de 6 bandas',
+        '✅ Presets básicos (Flat, Rock, Pop, etc.)',
+        '✅ Boost de volumen (hasta 300%)',
+        '✅ Visualizador de espectro',
+        '✅ Funciona en todas las webs (YouTube, Spotify...)',
+        '✅ Sin necesidad de registro'
+      ],
       premiumItems: [
-        '✅ Todo lo de Gratis',
-        '✅ Presets personalizados (guarda tus configuraciones)',
-        '✅ Presets Pro (Bass Pro, Gaming, Cinema)',
-        '✅ Sync en la nube (próximamente)',
-        '✅ Soporte prioritario',
+        '✨ Todo lo del plan Gratis',
+        '✨ Presets Personalizados Ilimitados',
+        '✨ Presets Pro (Bass Extreme, Cinema 3D, Gaming)',
+        '✨ Sincronización en la Nube (Tus presets en todos lados)',
+        '✨ Soporte Técnico Prioritario',
+        '✨ Acceso anticipado a nuevas funciones',
+        '✨ Sin anuncios / Experiencia limpia',
+        '✨ Badge Premium exclusivo',
+        '✨ Cualquier integración a la extensión'
       ],
       buyLabel: 'Pagar con Tarjeta (MercadoPago)',
       processingLabel: 'Procesando...',
@@ -140,13 +151,24 @@ export default function Premium({ lang }) {
       premiumTitle: 'Premium 💎',
       premiumPriceCO: '$20.000 COP / lifetime',
       premiumPriceINT: '$4.99 USD / lifetime',
-      freeItems: ['✅ 6-Band EQ', '✅ Basic presets (Flat, Vocal, etc.)', '✅ Volume boost'],
+      freeItems: [
+        '✅ 6-Band Equalizer',
+        '✅ Basic presets (Flat, Rock, Pop, etc.)',
+        '✅ Volume Boost (up to 300%)',
+        '✅ Spectrum Visualizer',
+        '✅ Works on all sites (YouTube, Spotify...)',
+        '✅ No registration required'
+      ],
       premiumItems: [
-        '✅ Everything in Free',
-        '✅ Custom presets (save your own)',
-        '✅ Pro presets (Bass Pro, Gaming, Cinema)',
-        '✅ Cloud sync (coming soon)',
-        '✅ Priority support',
+        '✨ Everything in Free plan',
+        '✨ Unlimited Custom Presets',
+        '✨ Pro Presets (Bass Extreme, Cinema 3D, Gaming)',
+        '✨ Cloud Sync (Your presets everywhere)',
+        '✨ Priority Support',
+        '✨ Early access to new features',
+        '✨ Ad-free / Clean experience',
+        '✨ Exclusive Premium Badge',
+        '✨ Any extension integration'
       ],
       buyLabel: 'Pay with Card (MercadoPago)',
       processingLabel: 'Processing...',
@@ -258,42 +280,35 @@ export default function Premium({ lang }) {
     },
   }), []);
 
-  if (user.isPremium) {
-      return (
-          <div style={{textAlign: 'center', padding: '100px 20px'}}>
-              <h1 style={{color: '#ffd700', fontSize: '4rem'}}>Premium 💎</h1>
-              <p style={{fontSize: '1.5rem', marginTop: '20px'}}>
-                  {lang === 'es' ? '¡Gracias por tu compra!' : 'Thank you for your purchase!'}
-              </p>
-              <p style={{color: '#ccc', marginTop: '10px'}}>
-                  {lang === 'es' 
-                    ? `Tu licencia está activa para: ${user.email}` 
-                    : `Your license is active for: ${user.email}`}
-              </p>
-              <div style={{marginTop: '40px', padding: '20px', background: '#222', borderRadius: '10px', display: 'inline-block'}}>
-                  <h3 style={{color: '#00d2ff'}}>
-                      {lang === 'es' ? '¿Qué sigue?' : 'What now?'}
-                  </h3>
-                  <ul style={{textAlign: 'left', marginTop: '15px', color: '#eee'}}>
-                      <li>1. {lang === 'es' ? 'Abre la extensión Smart Audio EQ' : 'Open Smart Audio EQ extension'}</li>
-                      <li>2. {lang === 'es' ? 'Verás el logo Premium activo' : 'You will see the Premium badge active'}</li>
-                      <li>3. {lang === 'es' ? 'Disfruta de presets ilimitados' : 'Enjoy unlimited presets'}</li>
-                  </ul>
-              </div>
-          </div>
-      );
-  }
-
   return (
     <div style={{textAlign: 'center', padding: '50px 0'}}>
-      <h1 style={{color: '#ffd700', fontSize: '3rem'}}>{t.title}</h1>
+      {user.isPremium && (
+          <div style={{marginBottom: '50px', padding: '20px', background: 'rgba(0, 210, 255, 0.1)', borderRadius: '10px', border: '1px solid #00d2ff', display: 'inline-block'}}>
+              <h1 style={{color: '#ffd700', fontSize: '2.5rem', margin: 0}}>Premium 💎 {lang === 'es' ? 'Activado' : 'Active'}</h1>
+              <p style={{fontSize: '1.2rem', marginTop: '10px'}}>
+                  {lang === 'es' ? '¡Gracias por tu compra!' : 'Thank you for your purchase!'}
+              </p>
+              <p style={{color: '#ccc', marginTop: '5px'}}>
+                  {lang === 'es' 
+                    ? `Licencia activa para: ${user.email}` 
+                    : `License active for: ${user.email}`}
+              </p>
+          </div>
+      )}
+
+      <h1 style={{color: '#ffd700', fontSize: '3rem'}}>
+        {t.title}
+        <span className="beta-badge" style={{fontSize: '0.4em', verticalAlign: 'middle', marginLeft: '15px'}}>BETA</span>
+      </h1>
       <p style={{fontSize: '1.2rem', marginBottom: '40px'}}>{t.subtitle}</p>
 
       {/* Sandbox Warning */}
-      <div style={{background: '#ffeb3b', color: '#000', padding: '10px', marginBottom: '20px', borderRadius: '5px', display: 'inline-block'}}>
-        <strong>MODO PRUEBA (Sandbox):</strong> Usa tarjetas de prueba. 
-        <br/>Nombre del titular: <b>APRO</b> (para aprobar)
-      </div>
+      {!user.isPremium && (
+        <div style={{background: '#ffeb3b', color: '#000', padding: '10px', marginBottom: '20px', borderRadius: '5px', display: 'inline-block'}}>
+            <strong>MODO PRUEBA (Sandbox):</strong> Usa tarjetas de prueba. 
+            <br/>Nombre del titular: <b>APRO</b> (para aprobar)
+        </div>
+      )}
 
       <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
         <div className="feature-card" style={{border: '1px solid #333', textAlign: 'left', minWidth: '300px'}}>
@@ -307,7 +322,10 @@ export default function Premium({ lang }) {
         </div>
 
         <div className="feature-card" style={{border: '2px solid #ffd700', textAlign: 'left', minWidth: '300px', transform: 'scale(1.05)'}}>
-          <h2 style={{color: '#ffd700'}}>{t.premiumTitle}</h2>
+          <h2 style={{color: '#ffd700'}}>
+            {t.premiumTitle}
+            <span className="beta-badge" style={{fontSize: '0.5em', verticalAlign: 'middle', marginLeft: '10px'}}>BETA</span>
+          </h2>
           
           {/* Country Selector */}
           <div style={{margin: '10px 0'}}>
@@ -342,76 +360,88 @@ export default function Premium({ lang }) {
               {country === 'CO' ? t.premiumPriceCO : t.premiumPriceINT}
           </h3>
           
-          <div style={{margin: '20px 0', textAlign: 'left'}}>
-              <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc'}}>
-                  {t.emailLabel}
-              </label>
-              <input 
-                  type="email" 
-                  placeholder={t.emailPlaceholder}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={showBrick || !!user.uid}
-                  style={{
-                      width: '100%', 
-                      padding: '10px', 
-                      borderRadius: '5px', 
-                      border: '1px solid #555',
-                      background: !!user.uid ? '#333' : '#222',
-                      color: !!user.uid ? '#aaa' : '#fff',
-                      cursor: !!user.uid ? 'not-allowed' : 'text'
-                  }}
-              />
-              {user.uid && <div style={{fontSize: '0.8rem', color: '#00d2ff', marginTop: '5px'}}>
-                  {lang === 'es' ? 'Sesión iniciada con Google' : 'Logged in with Google'}
-              </div>}
-          </div>
-
-          {/* PAYMENT OPTIONS */}
-          {country === 'CO' ? (
-              // MERCADO PAGO
-              !showBrick ? (
-                  <>
-                      {errorMsg && <div style={{color: 'red', marginBottom: '10px'}}>{errorMsg}</div>}
-                      <button 
-                        className="btn-premium" 
-                        style={{width: '100%', marginTop: '10px', opacity: loading ? 0.5 : 1}}
-                        disabled={loading}
-                        onClick={() => {
-                            if (!email || !email.includes('@')) {
-                                alert(lang === 'es' ? 'Por favor ingresa un email válido.' : 'Please enter a valid email.');
-                                return;
-                            }
-                            createPreference();
-                        }}
-                      >
-                        {loading ? t.processingLabel : t.buyLabel}
-                      </button>
-                  </>
-              ) : (
-                  <div style={{marginTop: '20px'}}>
-                      <p style={{color: '#ccc', marginBottom: '10px'}}>{t.loadingLabel}</p>
-                      <Payment
-                          initialization={initialization}
-                          customization={customization}
-                          onSubmit={handleBrickSubmit}
-                      />
-                      <button 
-                        onClick={() => setShowBrick(false)}
-                        style={{marginTop: '10px', background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', textDecoration: 'underline'}}
-                      >
-                        {lang === 'es' ? 'Cancelar / Cambiar método' : 'Cancel / Change method'}
-                      </button>
-                  </div>
-              )
-          ) : (
-              // PAYPAL
-              <div style={{marginTop: '20px'}}>
-                  <div id="paypal-container-8M45H2NRA2N92"></div>
-                  <p style={{fontSize: '0.8rem', color: '#aaa', marginTop: '10px'}}>
-                      {t.paypalNote}
-                  </p>
+          {/* PAYMENT FORM OR ACTIVE STATUS */}
+          {!user.isPremium ? (
+            <>
+              <div style={{margin: '20px 0', textAlign: 'left'}}>
+                  <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc'}}>
+                      {t.emailLabel}
+                  </label>
+                  <input 
+                      type="email" 
+                      placeholder={t.emailPlaceholder}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={showBrick || !!user.uid}
+                      style={{
+                          width: '100%', 
+                          padding: '10px', 
+                          borderRadius: '5px', 
+                          border: '1px solid #555',
+                          background: !!user.uid ? '#333' : '#222',
+                          color: !!user.uid ? '#aaa' : '#fff',
+                          cursor: !!user.uid ? 'not-allowed' : 'text'
+                      }}
+                  />
+                  {user.uid && <div style={{fontSize: '0.8rem', color: '#00d2ff', marginTop: '5px'}}>
+                      {lang === 'es' ? 'Sesión iniciada con Google' : 'Logged in with Google'}
+                  </div>}
               </div>
+
+              {/* PAYMENT OPTIONS */}
+              {country === 'CO' ? (
+                  // MERCADO PAGO
+                  !showBrick ? (
+                      <>
+                          {errorMsg && <div style={{color: 'red', marginBottom: '10px'}}>{errorMsg}</div>}
+                          <button 
+                            className="btn-premium" 
+                            style={{width: '100%', marginTop: '10px', opacity: loading ? 0.5 : 1}}
+                            disabled={loading}
+                            onClick={() => {
+                                if (!email || !email.includes('@')) {
+                                    alert(lang === 'es' ? 'Por favor ingresa un email válido.' : 'Please enter a valid email.');
+                                    return;
+                                }
+                                createPreference();
+                            }}
+                          >
+                            {loading ? t.processingLabel : t.buyLabel}
+                          </button>
+                      </>
+                  ) : (
+                      <div style={{marginTop: '20px'}}>
+                          <p style={{color: '#ccc', marginBottom: '10px'}}>{t.loadingLabel}</p>
+                          <Payment
+                              initialization={initialization}
+                              customization={customization}
+                              onSubmit={handleBrickSubmit}
+                          />
+                          <button 
+                            onClick={() => setShowBrick(false)}
+                            style={{marginTop: '10px', background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', textDecoration: 'underline'}}
+                          >
+                            {lang === 'es' ? 'Cancelar / Cambiar método' : 'Cancel / Change method'}
+                          </button>
+                      </div>
+                  )
+              ) : (
+                  // PAYPAL
+                  <div style={{marginTop: '20px'}}>
+                      <div id="paypal-container-8M45H2NRA2N92"></div>
+                      <p style={{fontSize: '0.8rem', color: '#aaa', marginTop: '10px'}}>
+                          {t.paypalNote}
+                      </p>
+                  </div>
+              )}
+            </>
+          ) : (
+            <div style={{marginTop: '30px', textAlign: 'center', padding: '20px', background: 'rgba(0, 255, 133, 0.1)', border: '1px solid #00ff85', borderRadius: '8px'}}>
+                <h3 style={{color: '#00ff85', margin: 0}}>✅ {lang === 'es' ? 'Plan Activo' : 'Active Plan'}</h3>
+                <p style={{color: '#ccc', fontSize: '0.9rem', marginTop: '10px'}}>
+                    {lang === 'es' ? 'Disfruta de todas las funciones Premium.' : 'Enjoy all Premium features.'}
+                </p>
+            </div>
           )}
 
           {/* Refresh Status Button */}

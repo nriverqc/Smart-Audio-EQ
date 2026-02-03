@@ -40,7 +40,10 @@ export default function Home({ lang }) {
       <div className="hero">
         <h1 style={{fontSize: '3.5rem', marginBottom: '20px'}}>
           {t.titleLine1} <br />
-          <span style={{color: '#00d2ff', textTransform: 'capitalize'}}>{t.titleHighlight}</span>
+          <span style={{color: '#00d2ff', textTransform: 'capitalize'}}>
+            {t.titleHighlight}
+            <span className="beta-badge" style={{fontSize: '0.4em', verticalAlign: 'top', marginTop: '10px'}}>BETA</span>
+          </span>
         </h1>
         <p style={{fontSize: '1.2rem', color: '#aaa', maxWidth: '600px', margin: '0 auto 40px'}}>
           {t.description}

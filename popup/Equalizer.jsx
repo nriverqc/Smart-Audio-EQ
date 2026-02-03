@@ -14,13 +14,17 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
   const [volume, setVolume] = useState(100); // 100% es volumen normal (1.0x)
 
   useEffect(() => {
+    // Always load master volume from storage
+    chrome.storage.local.get(['masterVolume'], (result) => {
+      if (result.masterVolume) {
+        setVolume(result.masterVolume);
+      }
+    });
+
     if (currentPreset === 'custom') {
-      chrome.storage.local.get(['customGains', 'masterVolume'], (result) => {
+      chrome.storage.local.get(['customGains'], (result) => {
         if (result.customGains) {
           setGains(result.customGains);
-        }
-        if (result.masterVolume) {
-          setVolume(result.masterVolume);
         }
       });
     } else if (presetGains) {
@@ -35,21 +39,23 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
   const changeGain = (i, v) => {
     if (!enabled) {
       console.warn(`⚠️  EQ no está activado, activando primero...`);
-      // Intentar activar
       chrome.runtime.sendMessage({ type: 'ENABLE_EQ' }, (response) => {
         if (response?.success) {
-          // Esperar un poco y luego enviar la banda
           setTimeout(() => {
             const newVal = parseFloat(v);
+            const newGains = [...gains];
+            newGains[i] = newVal;
+            setGains(newGains);
+
             chrome.runtime.sendMessage({ 
-              type: "SET_BAND_GAIN", 
-              bandIndex: i, 
-              value: newVal 
+              type: "APPLY_PRESET", 
+              preset: 'custom',
+              gains: newGains 
             }, (response) => {
               if (chrome.runtime.lastError) {
-                console.error("Error enviando banda:", chrome.runtime.lastError.message);
+                console.error("Error enviando preset:", chrome.runtime.lastError.message);
               } else {
-                console.log(`✅ Banda ${i} aplicada: ${newVal}dB`);
+                console.log(`✅ Banda ${i} aplicada via APPLY_PRESET`);
               }
             });
           }, 100);
@@ -63,16 +69,16 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
     newGains[i] = newVal;
     setGains(newGains);
     
-    // Enviar inmediatamente al content script
+    // Enviar todo el preset para que el background calcule compensación de volumen
     chrome.runtime.sendMessage({ 
-      type: "SET_BAND_GAIN", 
-      bandIndex: i, 
-      value: newVal 
+      type: "APPLY_PRESET", 
+      preset: 'custom',
+      gains: newGains
     }, (response) => {
       if (chrome.runtime.lastError) {
-        console.error("Error enviando banda:", chrome.runtime.lastError.message);
+        console.error("Error enviando preset:", chrome.runtime.lastError.message);
       } else {
-        console.log(`✅ Banda ${i} aplicada: ${newVal}dB`);
+        console.log(`✅ Banda ${i} aplicada via APPLY_PRESET`);
       }
     });
 

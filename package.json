@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Browser Audio Equalizer",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vite build -c vite.config.widget.js",
     "zip": "npm run build && powershell Compress-Archive -Path dist/* -DestinationPath extension.zip -Force"
   },
   "dependencies": {

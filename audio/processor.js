@@ -205,7 +205,8 @@ export function setMasterVolume(value) {
 
 export function getAnalyserData() {
   if (!analyser) {
-    console.warn("⚠️ Analyser no disponible");
+    // Silently return empty if just not ready yet to avoid console spam
+    // console.warn("⚠️ Analyser no disponible");
     return null;
   }
   

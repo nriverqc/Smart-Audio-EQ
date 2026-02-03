@@ -65,6 +65,10 @@ chrome.runtime.onConnect.addListener((p) => {
 // Keep-alive mechanism
 setInterval(() => {
   if (port) {
-    port.postMessage({ type: 'PING' }).catch(() => {});
+    try {
+      port.postMessage({ type: 'PING' });
+    } catch (err) {
+      console.warn('Error sending PING:', err.message);
+    }
   }
 }, 20000);

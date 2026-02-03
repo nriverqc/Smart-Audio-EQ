@@ -7,6 +7,14 @@ console.log("Smart Audio EQ: Background Service Worker iniciado");
 let creating; // Promesa para evitar condiciones de carrera
 let offscreenPort = null; // Puerto persistente para comunicación con offscreen
 let pendingPortMessages = []; 
+let isPremium = false; // Estado global de premium
+
+// Cargar estado inicial
+chrome.storage.local.get(['isPremium'], (res) => {
+  isPremium = res.isPremium || false;
+  console.log('Background: Initial isPremium state:', isPremium);
+});
+
 // Track per-tab EQ state
 let activeTabs = {}; // { [tabId]: { enabled: bool, preset: string, isPremium: bool, masterVolume: number, gains: [] } }
 
@@ -128,6 +136,49 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ success: false, error: "No active tab" });
           return;
         }
+        // ... (rest of logic)
+        if (activeTabs[tab.id] && activeTabs[tab.id].enabled) {
+           console.log("⚠️ EQ already active for tab", tab.id);
+
+           // CASE 1: Everything is perfect (offscreenPort alive)
+           if (offscreenPort) {
+             sendResponse({ success: true, alreadyActive: true });
+             return;
+           }
+
+           // CASE 2: Service Worker Restarted (Lost port, but offscreen document might be alive)
+           console.log("♻️ Service Worker restarted. Reconnecting to offscreen...");
+           const existingContexts = await chrome.runtime.getContexts({
+              contextTypes: ['OFFSCREEN_DOCUMENT'],
+              documentUrls: ['offscreen.html']
+           });
+
+           if (existingContexts.length > 0) {
+             try {
+                offscreenPort = chrome.runtime.connect({ name: 'offscreen-port' });
+                
+                // Re-attach listeners
+                offscreenPort.onMessage.addListener((m) => {
+                  console.log('Background <- offscreen (reconnected):', m && m.type);
+                });
+                offscreenPort.onDisconnect.addListener(() => {
+                  console.log('❌ Offscreen desconectado (reconnected)');
+                  offscreenPort = null;
+                });
+
+                // Send PING or just assume it's working?
+                // The offscreen keeps running, so audio should be flowing.
+                sendResponse({ success: true, reconnected: true });
+                
+                // Notify widget to show itself
+                sendMessageToTab(tab.id, { type: 'EQ_ENABLED' });
+                return;
+             } catch (e) {
+                console.warn("Failed to reconnect:", e);
+                // Fallthrough to recreate
+             }
+           }
+        }
 
         // Setup Offscreen Document for audio processing
         await closeOffscreenDocument();
@@ -190,6 +241,32 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
             offscreenPort.onMessage.addListener(listener);
           });
+
+          // Update state
+          const savedVolume = (await chrome.storage.local.get('masterVolume')).masterVolume;
+          // Normalized volume for audio processor (0.0 - 3.0)
+          const normalizedVolume = savedVolume ? savedVolume / 100 : 1.0;
+
+          activeTabs[tab.id] = { 
+              enabled: true, 
+              preset: 'flat', 
+              isPremium: isPremium,
+              masterVolume: normalizedVolume
+          };
+          try { chrome.storage.local.set({ activeTabs }); } catch (e) {}
+
+          // Apply saved volume immediately
+          if (normalizedVolume !== 1.0) {
+              offscreenPort.postMessage({ type: 'SET_VOLUME', value: normalizedVolume });
+          }
+
+          console.log("✅ EQ Enabled for tab", tab.id, "Volume:", normalizedVolume);
+
+          // Notify widget to show itself
+          sendMessageToTab(tab.id, { type: 'EQ_ENABLED' });
+
+          sendResponse(response);
+
         } catch (e) {
           console.error("❌ Error comunicando con offscreen:", e.message);
           sendResponse({ success: false, error: "Offscreen communication error: " + e.message });
@@ -214,6 +291,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled) {
           try {
             await sendMessageToTab(tabId, { type: 'STOP_TAB_EQ' });
+            // Also tell widget to hide
+            await sendMessageToTab(tabId, { type: 'EQ_DISABLED' });
           } catch (e) { console.warn('STOP_TAB_EQ send error', e && e.message); }
           delete activeTabs[tabId];
           // Persist changes
@@ -260,6 +339,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     } else {
       pendingPortMessages.push({ type: 'SET_VOLUME', value: msg.value });
     }
+    
+    // Persist volume
+    (async () => {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab && activeTabs[tab.id]) {
+            activeTabs[tab.id].masterVolume = msg.value;
+            chrome.storage.local.set({ activeTabs });
+        }
+        // Also update global preference
+        chrome.storage.local.set({ masterVolume: Math.round(msg.value * 100) });
+    })();
+
     sendResponse({ success: true });
     return true;
   }
@@ -339,6 +430,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     try {
       const gains = Array.isArray(msg.gains) ? msg.gains : [];
       
+      // Update active tab state if possible
+      (async () => {
+         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+         if (tab && activeTabs[tab.id]) {
+            activeTabs[tab.id].gains = gains;
+            activeTabs[tab.id].preset = msg.preset || 'custom';
+            chrome.storage.local.set({ activeTabs });
+         }
+      })();
+
       // compute master compensation
       const pos = gains.filter(g => typeof g === 'number' && g > 0);
       const maxPos = pos.length ? Math.max(...pos) : 0;
@@ -362,14 +463,168 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
     return true;
   }
+
+  if (msg.type === "PING") {
+    sendResponse({ pong: true });
+    return true;
+  }
+
+  if (msg.type === "OPEN_LOGIN_PAGE") {
+    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+      const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
+      chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/${emailParam}` });
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+
+  if (msg.type === "OPEN_PREMIUM_PAGE") {
+    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+      const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
+      chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/premium${emailParam}` });
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+
+  if (msg.type === "GET_USER_INFO") {
+    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+      sendResponse({ email: userInfo ? userInfo.email : null });
+    });
+    return true;
+  }
+
+  if (msg.type === "SYNC_STATUS") {
+    (async () => {
+        try {
+            // 1. Get current stored email
+            const storage = await chrome.storage.local.get(['email', 'uid']);
+            let email = storage.email;
+            let uid = storage.uid;
+
+            // 2. If no email, try identity
+            if (!email) {
+                const userInfo = await new Promise(resolve => 
+                    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, resolve)
+                );
+                if (userInfo && userInfo.email) {
+                    email = userInfo.email;
+                    await chrome.storage.local.set({ email });
+                }
+            }
+
+            // 3. If still no email, look for web tab
+            if (!email) {
+                const tabs = await chrome.tabs.query({});
+                const webTab = tabs.find(t => t.url && t.url.includes("smart-audio-eq.pages.dev"));
+                
+                if (webTab) {
+                    try {
+                        const response = await new Promise((resolve) => {
+                             chrome.tabs.sendMessage(webTab.id, { type: "PREGUNTAR_DATOS" }, resolve);
+                        });
+                        if (response && response.email) {
+                            email = response.email;
+                            uid = response.uid;
+                            await chrome.storage.local.set({ 
+                                email: response.email, 
+                                uid: response.uid,
+                                isPremium: response.isPremium
+                            });
+                            sendResponse({ success: true, message: "Synced with open web tab! ✅" });
+                            return;
+                        }
+                    } catch (e) { console.warn("Web tab sync failed", e); }
+                }
+                
+                sendResponse({ success: false, error: "Please login first to sync status." });
+                return;
+            }
+
+            // 4. If we have email, check API
+            const apiUrl = `https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(email)}&uid=${encodeURIComponent(uid || '')}`;
+            const res = await fetch(apiUrl);
+            if (!res.ok) throw new Error("Server error");
+            const data = await res.json();
+
+            await chrome.storage.local.set({ isPremium: !!data.premium });
+            
+            if (data.premium) {
+                sendResponse({ success: true, message: "Premium status synced! 💎" });
+            } else {
+                sendResponse({ success: true, message: "Status: Free. If you bought Premium, please wait a minute." });
+            }
+
+        } catch (e) {
+            sendResponse({ success: false, error: "Sync error: " + e.message });
+        }
+    })();
+    return true;
+  }
+
+  if (msg.type === "GET_TAB_STATUS") {
+
+    (async () => {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) {
+          sendResponse({ enabled: false });
+          return;
+        }
+
+        const tabId = tab.id;
+        // Check if we have active state for this tab
+        if (activeTabs[tabId] && activeTabs[tabId].enabled) {
+          
+          // If port is missing, try to reconnect silently
+          if (!offscreenPort) {
+             console.log("GET_TAB_STATUS: Active tab found but port missing. Attempting silent reconnect...");
+             const existingContexts = await chrome.runtime.getContexts({
+               contextTypes: ['OFFSCREEN_DOCUMENT'],
+               documentUrls: ['offscreen.html']
+             });
+
+             if (existingContexts.length > 0) {
+               try {
+                 offscreenPort = chrome.runtime.connect({ name: 'offscreen-port' });
+                 offscreenPort.onMessage.addListener((m) => {
+                    console.log('Background <- offscreen (reconnected via status):', m && m.type);
+                 });
+                 offscreenPort.onDisconnect.addListener(() => {
+                    console.log('❌ Offscreen desconectado (reconnected via status)');
+                    offscreenPort = null;
+                 });
+                 console.log("✅ Silent reconnect successful!");
+               } catch (e) {
+                 console.warn("Silent reconnect failed:", e);
+               }
+             }
+          }
+
+          sendResponse({ 
+            enabled: true, 
+            preset: activeTabs[tabId].preset || 'flat',
+            gains: activeTabs[tabId].gains,
+            masterVolume: activeTabs[tabId].masterVolume
+          });
+        } else {
+          sendResponse({ enabled: false });
+        }
+      } catch (e) {
+        sendResponse({ enabled: false, error: e.message });
+      }
+    })();
+    return true;
+  }
   // ===== GESTIÓN DE USUARIOS / LOGIN =====
   if (msg.type === "LOGIN_EXITOSO") {
+    isPremium = msg.isPremium; // Actualizar estado local
     chrome.storage.local.set({
       email: msg.email,
       uid: msg.uid,
       isPremium: msg.isPremium
     }, () => {
-      console.log("Background: Usuario sincronizado");
+      console.log("Background: Usuario sincronizado, isPremium:", isPremium);
       sendResponse({ success: true });
     });
     return true;

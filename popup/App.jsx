@@ -12,13 +12,37 @@ export default function App() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check state from storage
+    // Check state from storage and active tab status
     const checkState = () => {
-        chrome.storage.local.get(['enabled', 'isPremium', 'currentPreset', 'email', 'uid'], (result) => {
-            if (result.enabled) setEnabled(true);
+        // 1. Get global settings
+        chrome.storage.local.get(['isPremium', 'email', 'uid'], (result) => {
             if (result.isPremium) setIsPremium(true);
-            if (result.currentPreset) setCurrentPreset(result.currentPreset);
             if (result.email) setUserEmail(result.email);
+        });
+
+        // 2. Ask background for TAB SPECIFIC status
+        chrome.runtime.sendMessage({ type: 'GET_TAB_STATUS' }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.warn("Could not get tab status:", chrome.runtime.lastError.message);
+                return;
+            }
+            
+            if (response && response.enabled) {
+                console.log("✅ Tab is already active. Syncing UI...", response);
+                setEnabled(true);
+                if (response.preset) setCurrentPreset(response.preset);
+                // Note: Gains are passed to Equalizer via PRESETS[currentPreset] or we need a way to pass custom gains
+                if (response.gains) {
+                    // Store in local storage so Equalizer component can pick it up if it's 'custom'
+                    chrome.storage.local.set({ customGains: response.gains });
+                    if (response.preset === 'custom') {
+                        setCurrentPreset('custom');
+                    }
+                }
+            } else {
+                console.log("Tab is not active.");
+                setEnabled(false);
+            }
         });
     };
 
@@ -39,11 +63,8 @@ export default function App() {
   }, []);
 
   const handleLogin = () => {
-      // Open the web page to login, pass email if available
-      chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
-          const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
-          chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/${emailParam}` });
-      });
+      // Open the web page to login via background script
+      chrome.runtime.sendMessage({ type: 'OPEN_LOGIN_PAGE' });
   };
 
 
@@ -65,11 +86,8 @@ export default function App() {
   };
 
   const handleGoPremium = () => {
-    // Open the REAL premium page
-    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
-        const emailParam = (userInfo && userInfo.email) ? `?email=${encodeURIComponent(userInfo.email)}` : '';
-        chrome.tabs.create({ url: `https://smart-audio-eq.pages.dev/premium${emailParam}` });
-    });
+    // Open the REAL premium page via background
+    chrome.runtime.sendMessage({ type: 'OPEN_PREMIUM_PAGE' });
   };
 
   const handlePresetChange = (e) => {
@@ -102,109 +120,17 @@ export default function App() {
 
   const refreshStatus = async () => {
     setLoading(true);
-    
-    // Helper to get identity email
-    const getIdentityEmail = () => {
-        return new Promise((resolve) => {
-            chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
-                resolve(userInfo ? userInfo.email : null);
-            });
-        });
-    };
-
-    chrome.storage.local.get(['email', 'uid'], async (items) => {
-        let email = items.email;
-        let uid = items.uid;
-
-        if (!email) {
-            // Try to get from identity
-            email = await getIdentityEmail();
-            if (email) {
-                chrome.storage.local.set({ email: email });
-                setUserEmail(email);
-            }
-        }
-
-        if (!email) {
-            // Last resort: Check if the user has the web page open and ask it directly
-            // This requires "host_permissions" for the URL in manifest (which we have <all_urls>)
-            console.log("No email found. Searching for web tab...");
-            
-            const webUrlPattern = "smart-audio-eq.pages.dev";
-            
-            chrome.tabs.query({}, (tabs) => {
-                const webTab = tabs.find(t => t.url && t.url.includes(webUrlPattern));
-                
-                if (webTab) {
-                    console.log("Found web tab:", webTab.id);
-                    
-                    // NEW METHOD: Ask content script to read localStorage
-                    chrome.tabs.sendMessage(webTab.id, { type: "PREGUNTAR_DATOS" }, (response) => {
-                        console.log("Web tab response:", response);
-                        if (response && response.email) {
-                            chrome.storage.local.set({
-                                email: response.email,
-                                uid: response.uid,
-                                isPremium: response.isPremium
-                            }, () => {
-                                setUserEmail(response.email);
-                                if (response.isPremium) setIsPremium(true);
-                                alert("Synced with open web tab! ✅");
-                                setLoading(false);
-                            });
-                        } else {
-                            // Fallback to old method if no response (maybe content script not reloaded)
-                            chrome.tabs.sendMessage(webTab.id, { type: "CHECK_WEB_SESSION" });
-                            alert("Intentando sincronizar con la web... Por favor espera unos segundos.");
-                            setLoading(false);
-                        }
-                    });
-                } else {
-                    alert("Please login first to sync status. Opening login page...");
-                    setLoading(false);
-                    handleLogin();
-                }
-            });
-            return;
-        }
-
-        try {
-            const apiUrl = `https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(email)}&uid=${encodeURIComponent(uid || '')}`;
-            console.log("Checking license at:", apiUrl);
-            
-            const response = await fetch(apiUrl);
-            console.log("Response status:", response.status, response.statusText);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const contentType = response.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/json")) {
-                console.error("Invalid response type:", contentType);
-                alert("Server error. Please try again later.");
-                setLoading(false);
-                return;
-            }
-            
-            const data = await response.json();
-            console.log("License data:", data);
-
-            if (data.premium) {
-                setIsPremium(true);
-                chrome.storage.local.set({ isPremium: true });
-                alert("Premium status synced! 💎");
+    chrome.runtime.sendMessage({ type: 'SYNC_STATUS' }, (response) => {
+        setLoading(false);
+        if (response && response.success) {
+            alert(response.message);
+        } else {
+            if (response && response.error && response.error.includes("login")) {
+                 alert(response.error);
+                 handleLogin();
             } else {
-                setIsPremium(false);
-                chrome.storage.local.set({ isPremium: false });
-                alert("Status: Free. If you bought Premium, please wait a minute.");
+                 alert(response ? response.error : "Sync failed");
             }
-        } catch (error) {
-            console.error("Sync error:", error);
-            // Fallback: mostrar alerta sin detalle técnico
-            alert("Could not sync status. Please ensure you're logged in on the website first.");
-        } finally {
-            setLoading(false);
         }
     });
   };
@@ -212,7 +138,10 @@ export default function App() {
   return (
     <div>
       <div className="controls">
-        <h3>Smart Audio EQ</h3>
+        <h3 style={{display: 'flex', alignItems: 'center'}}>
+            Smart Audio EQ 
+            <span className="beta-badge" style={{fontSize: '0.6em', marginLeft: '8px', verticalAlign: 'middle'}}>BETA</span>
+        </h3>
         {isPremium && <span className="premium-badge">PRO</span>}
       </div>
 

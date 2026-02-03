@@ -99,6 +99,11 @@ python app.py
 # Extensión
 npm run build && npm run zip
 
+## Última Actualización
+- Se mejoraron las animaciones del espectro en la web.
+- Se agregaron badges BETA y efectos visuales de fondo.
+
+
 # Web
 cd web
 npm run build

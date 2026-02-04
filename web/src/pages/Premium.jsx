@@ -5,7 +5,7 @@ import { UserContext } from '../App';
 const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
 // Initialize with user's Public Key
-initMercadoPago('TEST-b4334d13-d110-4e26-9800-79a643dd69d4');
+initMercadoPago('APP_USR-cd0d6fd3-7087-4a47-9115-df2ada353f92');
 
 export default function Premium({ lang }) {
   const { user, refreshUser, loginWithGoogle } = useContext(UserContext);

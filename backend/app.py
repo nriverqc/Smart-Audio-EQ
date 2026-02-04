@@ -49,15 +49,15 @@ def init_db():
 init_db()
 
 # Initialize MercadoPago
-# Production credentials provided by user
-mp_access_token = os.getenv("MP_ACCESS_TOKEN", "APP_USR-592702321886404-012617-cc5e67e5816825efd02c22b69762bf91-1587079197")
+mp_access_token = os.getenv("MP_ACCESS_TOKEN")
 if not mp_access_token:
-    raise RuntimeError("MP_ACCESS_TOKEN is not set")
-sdk = mercadopago.SDK(mp_access_token)
+    print("WARNING: MP_ACCESS_TOKEN is not set. Payment features will fail.")
+else:
+    sdk = mercadopago.SDK(mp_access_token)
 
 # PayPal Configuration
-PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "AX9bU7jKcw7KBb3Ks4Z9ectLcdxkOsoVK-0hFxG2UlcWyojn9kOU31Nt-f2T9r5AiFVLN0QHVAWl1ok_")
-PAYPAL_SECRET = os.getenv("PAYPAL_SECRET", "EIECVvAuK_-DY3xNr_H1frpZ2_fsGMtIxsV5fV8MyqGWkBGy6dkhFL8YkHuFl2MAlzDcbmbiIvIsdOcF")
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
+PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
 PAYPAL_API_BASE = "https://api-m.paypal.com" # Use https://api-m.sandbox.paypal.com for sandbox
 
 def get_paypal_access_token():
@@ -102,7 +102,10 @@ def home():
 
 @app.route("/create-payment", methods=["POST"])
 def create_payment():
-    data = request.json or {}
+    if not mp_access_token:
+         return jsonify({"error": "Payment service unavailable (Configuration error)"}), 503
+    try:
+        data = request.json or {}
     email = data.get("email")
     uid = data.get("uid")
     
@@ -181,6 +184,8 @@ def create_payment():
 
 @app.route("/process_payment", methods=["POST"])
 def process_payment():
+    if not mp_access_token:
+         return jsonify({"error": "Payment service unavailable (Configuration error)"}), 503
     try:
         data = request.json
         print("Processing Brick Payment:", data)

@@ -5,7 +5,13 @@ import { UserContext } from '../App';
 const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
 // Initialize with user's Public Key
-initMercadoPago('APP_USR-cd0d6fd3-7087-4a47-9115-df2ada353f92');
+// NOTE: VITE_MP_PUBLIC_KEY must be set in your .env file
+const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
+if (MP_PUBLIC_KEY) {
+  initMercadoPago(MP_PUBLIC_KEY);
+} else {
+  console.warn("MercadoPago Public Key not found in env vars");
+}
 
 export default function Premium({ lang }) {
   const { user, refreshUser, loginWithGoogle } = useContext(UserContext);
@@ -15,6 +21,7 @@ export default function Premium({ lang }) {
   const [preferenceId, setPreferenceId] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [country, setCountry] = useState('CO'); // 'CO' or 'INT'
+  const [sdkReady, setSdkReady] = useState(false); // New state for PayPal SDK
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
 
@@ -31,10 +38,38 @@ export default function Premium({ lang }) {
 
   // PayPal Effect
   useEffect(() => {
-      if (country === 'INT' && window.paypal) {
+      if (country === 'INT') {
           const containerId = "paypal-container-8M45H2NRA2N92";
+          
+          // Dynamically load PayPal SDK if not already loaded
+          if (!window.paypal) {
+             const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+             if (!clientId) {
+                 console.error("PayPal Client ID not found in env vars");
+                 return;
+             }
+             const script = document.createElement("script");
+             script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
+             script.async = true;
+             script.onload = () => {
+                 // Re-trigger effect or handle loading state
+                 // For simplicity, we just let the next render cycle or retry pick it up
+                 // or manually call a render function. 
+                 // Actually, since this effect depends on country, we might need to force update 
+                 // or just rely on the script being available now.
+                 // A better pattern is to have a separate 'sdkLoaded' state.
+                 setSdkReady(true);
+             };
+             document.body.appendChild(script);
+             return; 
+          } else {
+             setSdkReady(true);
+          }
+
+          if (!sdkReady) return; // Wait for SDK
+
           const container = document.getElementById(containerId);
-          if (container) {
+          if (container && window.paypal) {
               container.innerHTML = ""; // Clear previous buttons
               try {
                   window.paypal.Buttons({
@@ -101,7 +136,7 @@ export default function Premium({ lang }) {
               }
           }
       }
-  }, [country, lang, loginWithGoogle]); // Added loginWithGoogle dependency
+  }, [country, lang, loginWithGoogle, sdkReady]); // Added sdkReady dependency
 
   const texts = {
     es: {

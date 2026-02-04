@@ -104,8 +104,8 @@ def home():
 def create_payment():
     if not mp_access_token:
          return jsonify({"error": "Payment service unavailable (Configuration error)"}), 503
-    try:
-        data = request.json or {}
+    
+    data = request.json or {}
     email = data.get("email")
     uid = data.get("uid")
     

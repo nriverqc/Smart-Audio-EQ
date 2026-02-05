@@ -441,20 +441,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       })();
 
       // compute master compensation
-      const pos = gains.filter(g => typeof g === 'number' && g > 0);
-      const maxPos = pos.length ? Math.max(...pos) : 0;
-      let masterFactor = 1.0;
-      if (maxPos >= 15) masterFactor = 0.5;
-      else if (maxPos >= 10) masterFactor = 0.6;
-      else if (maxPos >= 6) masterFactor = 0.75;
+      // const pos = gains.filter(g => typeof g === 'number' && g > 0);
+      // const maxPos = pos.length ? Math.max(...pos) : 0;
+      // let masterFactor = 1.0;
+      // if (maxPos >= 15) masterFactor = 0.5;
+      // else if (maxPos >= 10) masterFactor = 0.6;
+      // else if (maxPos >= 6) masterFactor = 0.75;
 
       // Send to offscreen
       if (offscreenPort) {
         gains.forEach((g, i) => offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g }));
-        offscreenPort.postMessage({ type: 'SET_VOLUME', value: masterFactor });
+        // offscreenPort.postMessage({ type: 'SET_VOLUME', value: masterFactor });
       } else {
         gains.forEach((g, i) => pendingPortMessages.push({ type: 'SET_GAIN', index: i, value: g }));
-        pendingPortMessages.push({ type: 'SET_VOLUME', value: masterFactor });
+        // pendingPortMessages.push({ type: 'SET_VOLUME', value: masterFactor });
       }
 
       sendResponse({ success: true });

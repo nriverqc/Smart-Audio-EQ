@@ -304,10 +304,13 @@ export default function Premium({ lang }) {
      });
   };
 
-  const initialization = React.useMemo(() => ({
-    preferenceId: preferenceId,
-    amount: 20000,
-  }), [preferenceId]);
+  const initialization = React.useMemo(() => {
+    console.log("Initializing Brick with Preference ID:", preferenceId);
+    return {
+      preferenceId: preferenceId,
+      amount: 20000, // Ensure amount is present as fallback
+    };
+  }, [preferenceId]);
 
   const customization = React.useMemo(() => ({
     paymentMethods: {
@@ -340,14 +343,6 @@ export default function Premium({ lang }) {
         <span className="beta-badge" style={{fontSize: '0.4em', verticalAlign: 'middle', marginLeft: '15px'}}>BETA</span>
       </h1>
       <p style={{fontSize: '1.2rem', marginBottom: '40px'}}>{t.subtitle}</p>
-
-      {/* Sandbox Warning */}
-      {!user.isPremium && import.meta.env.VITE_MP_PUBLIC_KEY && import.meta.env.VITE_MP_PUBLIC_KEY.includes('TEST') && (
-        <div style={{background: '#ffeb3b', color: '#000', padding: '10px', marginBottom: '20px', borderRadius: '5px', display: 'inline-block'}}>
-            <strong>MODO PRUEBA (Sandbox):</strong> Usa tarjetas de prueba. 
-            <br/>Nombre del titular: <b>APRO</b> (para aprobar)
-        </div>
-      )}
 
       <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
         <div className="feature-card" style={{border: '1px solid #333', textAlign: 'left', minWidth: '300px'}}>

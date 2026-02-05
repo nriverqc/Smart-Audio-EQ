@@ -431,37 +431,144 @@ def check_license():
             cursor = conn.cursor()
             cursor.execute("SELECT is_premium FROM licenses WHERE email = ?", (email,))
             row = cursor.fetchone()
-            
             if row and row[0]:
                 return jsonify({"premium": True, "source": "sqlite"})
     except Exception as e:
-        print("DB Error:", e)
+        print(f"SQLite Check Error: {e}")
 
-    # 2. Check Firestore (persistent backup)
+    # 2. Check Firestore (authoritative)
     if db and uid:
         try:
             doc = db.collection('usuarios').document(uid).get()
             if doc.exists:
                 data = doc.to_dict()
                 if data.get('isPremium') is True:
-                     # Sync back to SQLite for cache
-                     try:
-                         with sqlite3.connect(DB_NAME) as conn:
-                            cursor = conn.cursor()
-                            cursor.execute("""
-                                INSERT INTO licenses (email, is_premium, payment_id)
-                                VALUES (?, 1, ?)
-                                ON CONFLICT(email) DO UPDATE SET is_premium=1
-                            """, (email, data.get('paymentId', 'synced_from_firestore')))
-                            conn.commit()
-                     except: 
-                         pass
-                         
                      return jsonify({"premium": True, "source": "firestore"})
         except Exception as e:
-            print("Firestore Check Error:", e)
-
+             print(f"Firestore Check Error: {e}")
+             
     return jsonify({"premium": False})
 
+@app.route("/sync-user", methods=["POST"])
+def sync_user():
+    """Syncs user data from frontend to Firestore on login"""
+    try:
+        data = request.json
+        uid = data.get("uid")
+        email = data.get("email")
+        
+        if not uid or not email:
+            return jsonify({"error": "Missing uid or email"}), 400
+            
+        if db:
+            user_ref = db.collection('usuarios').document(uid)
+            # Use set with merge=True to create or update
+            # We don't overwrite isPremium if it exists
+            user_ref.set({
+                'uid': uid,
+                'email': email,
+                'displayName': data.get("displayName"),
+                'photoURL': data.get("photoURL"),
+                'lastLogin': firestore.SERVER_TIMESTAMP
+            }, merge=True)
+            print(f"User synced to Firestore: {email} ({uid})")
+            return jsonify({"status": "synced"})
+        else:
+             return jsonify({"error": "Firestore not initialized"}), 503
+    except Exception as e:
+        print(f"Error syncing user: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/restore-purchase", methods=["POST"])
+def restore_purchase():
+    """Manually checks MercadoPago for approved payments for a given email or payment ID"""
+    if not mp_access_token:
+         return jsonify({"error": "Payment service unavailable"}), 503
+         
+    try:
+        data = request.json
+        account_email = data.get("email") # The logged-in user's email
+        uid = data.get("uid")
+        
+        # Optional: User can provide the specific email they paid with OR a Payment ID
+        payer_email = data.get("payer_email") or account_email
+        payment_id_input = data.get("payment_id")
+
+        if not account_email:
+            return jsonify({"error": "Account email required"}), 400
+            
+        print(f"Restoring purchase for Account: {account_email} (UID: {uid}) | Search: {payer_email} / ID: {payment_id_input}")
+        
+        found_payment = None
+
+        # 1. Search by Payment ID (Most accurate)
+        if payment_id_input:
+            try:
+                payment_info = sdk.payment().get(int(payment_id_input))
+                payment = payment_info.get("response", {})
+                if payment.get("status") == "approved":
+                    found_payment = payment
+            except Exception as e:
+                print(f"Error searching by ID {payment_id_input}: {e}")
+
+        # 2. Search by Email (Fallback)
+        if not found_payment and payer_email:
+            filters = {
+                "status": "approved",
+                "payer.email": payer_email,
+                "sort": "date_created",
+                "criteria": "desc"
+            }
+            search_result = sdk.payment().search(filters)
+            results = search_result.get("response", {}).get("results", [])
+            if results:
+                found_payment = results[0] # Most recent
+
+        if found_payment:
+            payment_id = str(found_payment.get("id"))
+            payer_email_actual = found_payment.get("payer", {}).get("email")
+            print(f"Found approved payment {payment_id} for payer {payer_email_actual}")
+            
+            # Activate in SQLite (Link to the ACCOUNT email, not necessarily the payer email)
+            with sqlite3.connect(DB_NAME) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO licenses (email, is_premium, payment_id)
+                    VALUES (?, 1, ?)
+                    ON CONFLICT(email) DO UPDATE SET
+                    is_premium=1,
+                    payment_id=excluded.payment_id
+                """, (account_email, payment_id))
+                conn.commit()
+                
+            # Activate in Firestore
+            if db and uid:
+                user_ref = db.collection('usuarios').document(uid)
+                user_ref.set({
+                    'isPremium': True,
+                    'lastPayment': firestore.SERVER_TIMESTAMP,
+                    'paymentId': payment_id,
+                    'method': 'MercadoPago_Restore_Manual',
+                    'email': account_email,
+                    'payer_email': payer_email_actual # Record who actually paid
+                }, merge=True)
+                
+            return jsonify({
+                "status": "restored", 
+                "message": f"Premium restored! Linked payment {payment_id} to {account_email}",
+                "payment_id": payment_id
+            })
+        else:
+            return jsonify({
+                "status": "not_found",
+                "message": "No approved payments found for the provided details."
+            })
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)

@@ -225,6 +225,53 @@ export default function Premium({ lang }) {
 
   const t = texts[lang] || texts.es;
 
+  const restorePurchase = async () => {
+      if (!user.email) {
+          alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
+          return;
+      }
+
+      // Ask user for alternate email or payment ID
+      const paymentIdInput = prompt(lang === 'es' 
+          ? '¿Tienes el ID de la operación (Pago)? Si es así, ingrésalo aquí. Si no, déjalo vacío.' 
+          : 'Do you have the Operation ID (Payment ID)? If so, enter it here. If not, leave blank.');
+      
+      let payerEmailInput = '';
+      if (!paymentIdInput) {
+           payerEmailInput = prompt(lang === 'es'
+              ? `¿Pagaste con un email diferente a ${user.email}? Ingrésalo aquí. (Deja vacío para usar tu email actual)`
+              : `Did you pay with a different email than ${user.email}? Enter it here. (Leave blank to use current email)`);
+      }
+
+      setLoading(true);
+      try {
+          const res = await fetch(`${API_BASE}/restore-purchase`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  email: user.email, 
+                  uid: user.uid,
+                  payer_email: payerEmailInput ? payerEmailInput.trim() : null,
+                  payment_id: paymentIdInput ? paymentIdInput.trim() : null
+              })
+          });
+          const data = await res.json();
+          if (data.status === 'restored') {
+              alert(data.message);
+              refreshUser();
+          } else if (data.status === 'not_found') {
+              alert(lang === 'es' ? 'No se encontraron pagos aprobados con esos datos.' : 'No approved payments found with those details.');
+          } else {
+              alert('Error: ' + (data.error || 'Unknown'));
+          }
+      } catch (e) {
+          console.error(e);
+          alert('Error restoring purchase');
+      } finally {
+          setLoading(false);
+      }
+  };
+
   const createPreference = async () => {
     if (!user.uid) {
         alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
@@ -453,6 +500,24 @@ export default function Premium({ lang }) {
                             }}
                           >
                             {loading ? t.processingLabel : t.buyLabel}
+                          </button>
+                          
+                          <button 
+                              onClick={restorePurchase} 
+                              disabled={loading}
+                              style={{
+                                  marginTop: '15px', 
+                                  background: 'transparent', 
+                                  border: '1px solid #555', 
+                                  color: '#ccc', 
+                                  padding: '8px 12px', 
+                                  borderRadius: '5px', 
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  width: '100%'
+                              }}
+                          >
+                              {lang === 'es' ? '¿Ya pagaste? Verificar estado' : 'Already paid? Check status'}
                           </button>
                       </>
                   ) : (

@@ -96,6 +96,18 @@ function AppContent() {
             setUser(updatedUser);
             // Sync with extension
             syncWithExtension(updatedUser);
+
+            // Sync user to Firestore to ensure document exists
+            fetch(`${API_BASE}/sync-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    displayName: firebaseUser.displayName,
+                    photoURL: firebaseUser.photoURL
+                })
+            }).catch(e => console.error("Sync error:", e));
           })
           .catch(err => {
             console.error("Error checking license:", err);

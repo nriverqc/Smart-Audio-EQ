@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Premium from './pages/Premium';
 import { auth, googleProvider } from './firebase';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import AdBlockNotice from './components/AdBlockNotice';
 
 export const UserContext = createContext(null);
 
@@ -192,6 +193,7 @@ function AppContent() {
 
   return (
     <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout }}>
+      <AdBlockNotice />
       <div className="app-root">
         <div className="floating-icons-container">
             {/* Random floating music notes */}

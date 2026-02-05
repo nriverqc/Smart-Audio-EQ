@@ -73,7 +73,7 @@ export default function App() {
     
     // Redirect FREE users to the ad-supported page when turning ON
     if (newState && !isPremium) {
-        chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/' });
+        chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/', active: false });
     }
 
     setEnabled(newState);

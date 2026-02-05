@@ -7,7 +7,7 @@ const AdBlockNotice = () => {
     // 1. Create bait element
     const bait = document.createElement('div');
     bait.className = 'pub_300x250 pub_300x250m pub_728x90 text-ad textAd text_ad text_ads text-ads text-ad-links';
-    bait.style.setAttribute('style', 'width: 1px !important; height: 1px !important; position: absolute !important; left: -10000px !important; top: -1000px !important;');
+    bait.setAttribute('style', 'width: 1px !important; height: 1px !important; position: absolute !important; left: -10000px !important; top: -1000px !important;');
     document.body.appendChild(bait);
 
     // 2. Check if it was blocked/hidden

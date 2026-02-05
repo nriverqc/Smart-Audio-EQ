@@ -190,6 +190,8 @@ def process_payment():
         data = request.json
         print("Processing Brick Payment:", data)
 
+        frontend_url = os.getenv("FRONTEND_URL", "https://smart-audio-eq.pages.dev")
+
         payment_data = {
             "transaction_amount": float(data.get("transaction_amount")),
             "token": data.get("token"),
@@ -201,10 +203,21 @@ def process_payment():
                 "identification": {
                     "type": data["payer"]["identification"]["type"],
                     "number": data["payer"]["identification"]["number"]
-                }
+                },
+                # Some payment methods like PSE need entity_type
+                "entity_type": data["payer"].get("entity_type") 
             },
-            "external_reference": data["payer"]["email"] # LINK TO EMAIL
+            "external_reference": data["payer"]["email"], # LINK TO EMAIL
+            # REQUIRED FOR PSE / 3DS
+            "callback_url": f"{frontend_url}/premium", 
+            "additional_info": {
+                "ip_address": request.remote_addr or "127.0.0.1"
+            }
         }
+        
+        # Clean up None values to avoid API errors
+        if payment_data["payer"].get("entity_type") is None:
+             del payment_data["payer"]["entity_type"]
 
         if data.get("issuer_id"):
             payment_data["issuer_id"] = int(data["issuer_id"])

@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
 import Premium from './pages/Premium';
 import { auth, googleProvider } from './firebase';
@@ -19,7 +19,6 @@ function AppContent() {
     isPremium: false, 
     loading: true 
   });
-  const location = useLocation();
 
   // REPLACE THIS WITH YOUR ACTUAL EXTENSION ID from chrome://extensions
   // e.g. "abcdefghijklmnop..."
@@ -168,7 +167,7 @@ function AppContent() {
 
   const loginWithGoogle = () => {
     signInWithPopup(auth, googleProvider)
-      .then((result) => {
+      .then(() => {
         // User info handled by onAuthStateChanged
       })
       .catch((error) => {

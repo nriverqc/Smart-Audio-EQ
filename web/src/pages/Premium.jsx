@@ -140,7 +140,7 @@ export default function Premium({ lang }) {
               }
           }
       }
-  }, [country, lang, loginWithGoogle, sdkReady]); // Added sdkReady dependency
+  }, [country, lang, loginWithGoogle, sdkReady, refreshUser]); // Added sdkReady dependency
 
   const texts = {
     es: {
@@ -471,9 +471,9 @@ export default function Premium({ lang }) {
                           padding: '10px', 
                           borderRadius: '5px', 
                           border: '1px solid #555',
-                          background: !!user.uid ? '#333' : '#222',
-                          color: !!user.uid ? '#aaa' : '#fff',
-                          cursor: !!user.uid ? 'not-allowed' : 'text'
+                          background: user.uid ? '#333' : '#222',
+                          color: user.uid ? '#aaa' : '#fff',
+                          cursor: user.uid ? 'not-allowed' : 'text'
                       }}
                   />
                   {user.uid && <div style={{fontSize: '0.8rem', color: '#00d2ff', marginTop: '5px'}}>

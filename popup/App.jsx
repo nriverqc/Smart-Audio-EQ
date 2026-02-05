@@ -155,6 +155,7 @@ export default function App() {
             title="Visit Website"
         >
             <img src={logo} alt="Smart Audio EQ" style={{ height: '50px', objectFit: 'contain' }} />
+            <span className="beta-badge" style={{fontSize: '0.6em', marginLeft: '8px', verticalAlign: 'middle'}}>BETA</span>
         </div>
         {isPremium && <span className="premium-badge">PRO</span>}
       </div>

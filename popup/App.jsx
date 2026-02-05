@@ -70,6 +70,12 @@ export default function App() {
 
   const toggleEq = async () => {
     const newState = !enabled;
+    
+    // Redirect FREE users to the ad-supported page when turning ON
+    if (newState && !isPremium) {
+        chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/' });
+    }
+
     setEnabled(newState);
     
     if (newState) {

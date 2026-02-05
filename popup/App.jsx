@@ -3,7 +3,7 @@ import Equalizer from './Equalizer';
 import TabMixer from './TabMixer';
 import SpectrumAnalyzer from './SpectrumAnalyzer';
 import { PRESETS, IS_PREMIUM_PRESET } from './presets';
-import logo from './logo.png';
+import logo from './Logo ecualizador.png';
 
 export default function App() {
   const [enabled, setEnabled] = useState(false);

@@ -202,6 +202,10 @@ def process_payment():
             "installments": int(data.get("installments", 1)),
             "payment_method_id": data.get("payment_method_id"),
             "notification_url": f"{backend_url}/webhook/mercadopago",
+            "metadata": {
+                "uid": data.get("uid"),
+                "email": data["payer"]["email"]
+            },
             "payer": {
                 "email": data["payer"]["email"],
                 "identification": {
@@ -324,9 +328,30 @@ def webhook():
                         print(f"Error updating Firestore: {e}")
                 elif db and external_reference:
                     # Try to find user by email if UID missing (unlikely if passed correctly)
-                    # NOTE: Firestore doesn't support easy querying without indexes sometimes
-                    # Skipping for now to keep simple
-                    pass
+                    print(f"UID missing in metadata. Searching Firestore for email: {external_reference}")
+                    try:
+                        users_ref = db.collection('usuarios')
+                        query = users_ref.where('email', '==', external_reference).limit(1).stream()
+                        
+                        found = False
+                        for doc in query:
+                            found = True
+                            user_ref = doc.reference
+                            user_ref.set({
+                                'isPremium': True,
+                                'lastPayment': firestore.SERVER_TIMESTAMP,
+                                'paymentId': payment_id,
+                                'method': 'MercadoPago_Webhook_EmailFallback',
+                                'email': external_reference
+                            }, merge=True)
+                            print(f"Firestore updated for user {doc.id} (found by email)")
+                            break
+                        
+                        if not found:
+                             print(f"No user found with email {external_reference} to update.")
+                             
+                    except Exception as e:
+                        print(f"Error searching/updating Firestore by email: {e}")
 
                 print(f"License activated for {external_reference}")
 

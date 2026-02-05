@@ -3,6 +3,7 @@ import Equalizer from './Equalizer';
 import TabMixer from './TabMixer';
 import SpectrumAnalyzer from './SpectrumAnalyzer';
 import { PRESETS, IS_PREMIUM_PRESET } from './presets';
+import logo from './logo.png';
 
 export default function App() {
   const [enabled, setEnabled] = useState(false);
@@ -65,6 +66,10 @@ export default function App() {
   const handleLogin = () => {
       // Open the web page to login via background script
       chrome.runtime.sendMessage({ type: 'OPEN_LOGIN_PAGE' });
+  };
+
+  const openMainPage = () => {
+      chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/' });
   };
 
 
@@ -143,11 +148,14 @@ export default function App() {
 
   return (
     <div>
-      <div className="controls">
-        <h3 style={{display: 'flex', alignItems: 'center'}}>
-            Smart Audio EQ 
-            <span className="beta-badge" style={{fontSize: '0.6em', marginLeft: '8px', verticalAlign: 'middle'}}>BETA</span>
-        </h3>
+      <div className="controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div 
+            onClick={openMainPage} 
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            title="Visit Website"
+        >
+            <img src={logo} alt="Smart Audio EQ" style={{ height: '50px', objectFit: 'contain' }} />
+        </div>
         {isPremium && <span className="premium-badge">PRO</span>}
       </div>
 

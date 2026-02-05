@@ -290,6 +290,18 @@ export default function Premium({ lang }) {
                  alert(t.successMessage);
                  refreshUser();
                  resolve();
+             } else if (response.status === 'in_process' || response.status === 'pending') {
+                 // Handle PSE / Ticket redirects
+                 if (response.transaction_details && response.transaction_details.external_resource_url) {
+                     window.location.href = response.transaction_details.external_resource_url;
+                     resolve();
+                 } else {
+                     // Generic pending message (e.g. waiting for cash payment)
+                     alert(lang === 'es' 
+                        ? 'Pago iniciado. Por favor completa el proceso en la entidad seleccionada.' 
+                        : 'Payment initiated. Please complete the process at the selected institution.');
+                     resolve();
+                 }
              } else {
                  alert(t.errorMessage + " Status: " + response.status);
                  reject();

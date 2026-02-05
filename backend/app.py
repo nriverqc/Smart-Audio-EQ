@@ -221,6 +221,10 @@ def process_payment():
 
         if data.get("issuer_id"):
             payment_data["issuer_id"] = int(data["issuer_id"])
+            
+        # Add transaction_details if present (Required for PSE to pass financial_institution)
+        if data.get("transaction_details"):
+            payment_data["transaction_details"] = data["transaction_details"]
 
         payment_response = sdk.payment().create(payment_data)
         payment = payment_response["response"]

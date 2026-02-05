@@ -3,7 +3,7 @@ import Equalizer from './Equalizer';
 import TabMixer from './TabMixer';
 import SpectrumAnalyzer from './SpectrumAnalyzer';
 import { PRESETS, IS_PREMIUM_PRESET } from './presets';
-import logo from './Logo ecualizador.png';
+import logo from './Logo ecualizador 2.png';
 
 export default function App() {
   const [enabled, setEnabled] = useState(false);
@@ -112,12 +112,18 @@ export default function App() {
     setCurrentPreset(presetKey);
     chrome.storage.local.set({ currentPreset: presetKey });
 
-    const gains = PRESETS[presetKey];
-    if (gains) {
-      // Apply preset in one message so background can route to per-tab or offscreen
-      chrome.runtime.sendMessage({ type: 'APPLY_PRESET', preset: presetKey, gains });
-        // Force update equalizer UI by passing gains down? 
-        // Better: Equalizer component should listen to preset changes or we pass key
+    if (presetKey === 'custom') {
+        // Retrieve stored custom gains and apply them
+        chrome.storage.local.get(['customGains'], (result) => {
+            const savedGains = result.customGains || new Array(6).fill(0); // Default to flat if no custom gains
+            chrome.runtime.sendMessage({ type: 'APPLY_PRESET', preset: 'custom', gains: savedGains });
+        });
+    } else {
+        const gains = PRESETS[presetKey];
+        if (gains) {
+            // Apply preset in one message so background can route to per-tab or offscreen
+            chrome.runtime.sendMessage({ type: 'APPLY_PRESET', preset: presetKey, gains });
+        }
     }
   };
 

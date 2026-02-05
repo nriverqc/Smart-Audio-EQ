@@ -14,7 +14,6 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
   const [volume, setVolume] = useState(100); // 100% es volumen normal (1.0x)
 
   useEffect(() => {
-    // Always load master volume from storage
     chrome.storage.local.get(['masterVolume'], (result) => {
       if (result.masterVolume) {
         setVolume(result.masterVolume);

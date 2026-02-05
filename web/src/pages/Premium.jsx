@@ -8,7 +8,11 @@ const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 // NOTE: VITE_MP_PUBLIC_KEY must be set in your .env file
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
 if (MP_PUBLIC_KEY) {
-  initMercadoPago(MP_PUBLIC_KEY);
+  try {
+    initMercadoPago(MP_PUBLIC_KEY);
+  } catch (e) {
+    console.error("Failed to initialize MercadoPago", e);
+  }
 } else {
   console.warn("MercadoPago Public Key not found in env vars");
 }

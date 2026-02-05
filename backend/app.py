@@ -113,6 +113,7 @@ def create_payment():
         return jsonify({"error": "Email is required"}), 400
 
     frontend_url = os.getenv("FRONTEND_URL", "https://smart-audio-eq.pages.dev")
+    backend_url = os.getenv("BACKEND_URL", "https://smart-audio-eq-1.onrender.com")
 
     # FORCE 20000 to ensure it covers minimums in COP/ARS etc
     price = 20000 
@@ -136,6 +137,7 @@ def create_payment():
             "email": email
         },
         "external_reference": email, # Fallback
+        "notification_url": f"{backend_url}/webhook/mercadopago",
         "back_urls": {
             "success": f"{frontend_url}/premium",
             "failure": f"{frontend_url}/premium",
@@ -191,6 +193,7 @@ def process_payment():
         print("Processing Brick Payment:", data)
 
         frontend_url = os.getenv("FRONTEND_URL", "https://smart-audio-eq.pages.dev")
+        backend_url = os.getenv("BACKEND_URL", "https://smart-audio-eq-1.onrender.com")
 
         payment_data = {
             "transaction_amount": float(data.get("transaction_amount")),
@@ -198,6 +201,7 @@ def process_payment():
             "description": data.get("description", "Smart Audio EQ Premium"),
             "installments": int(data.get("installments", 1)),
             "payment_method_id": data.get("payment_method_id"),
+            "notification_url": f"{backend_url}/webhook/mercadopago",
             "payer": {
                 "email": data["payer"]["email"],
                 "identification": {

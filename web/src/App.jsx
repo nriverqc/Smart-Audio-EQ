@@ -2,6 +2,8 @@ import { createContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
 import Premium from './pages/Premium';
+import Privacy from './pages/Privacy';
+import SupportWidget from './components/SupportWidget';
 import { auth, googleProvider } from './firebase';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import AdBlockNotice from './components/AdBlockNotice';
@@ -282,11 +284,20 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Home lang={lang} />} />
             <Route path="/premium" element={<Premium lang={lang} />} />
+            <Route path="/privacy" element={<Privacy lang={lang} />} />
           </Routes>
 
           <footer>
             <p>© 2026 Smart Audio EQ. {lang === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.2 (20k)</span></p>
+            <p style={{ fontSize: '0.8rem', marginTop: '5px' }}>
+              <Link to="/privacy" style={{ color: '#aaa', textDecoration: 'none' }}>
+                {lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}
+              </Link>
+            </p>
           </footer>
+          
+          {/* Support Widget */}
+          <SupportWidget user={user} lang={lang} />
         </div>
       </div>
     </UserContext.Provider>

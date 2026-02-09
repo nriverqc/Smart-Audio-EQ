@@ -8,16 +8,11 @@ from dotenv import load_dotenv
 import json
 import firebase_admin
 from firebase_admin import credentials, firestore
-import resend
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
-
-# Resend Configuration
-# Using provided key as default fallback
-resend.api_key = os.getenv("RESEND_API_KEY", "re_hkj5p2Fs_BBLyhPFKEPcSyqCbtuJeJ6ap")
 
 # Database setup
 DB_NAME = "licenses.db"
@@ -572,50 +567,6 @@ def restore_purchase():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/support", methods=["POST"])
-def support():
-    try:
-        data = request.json
-        email = data.get("email")
-        subject = data.get("subject")
-        message = data.get("message")
-        
-        if not email or not subject or not message:
-            return jsonify({"error": "Todos los campos son obligatorios"}), 400
-
-        # Obtener el destinatario de la variable de entorno, o usar el email del admin por defecto
-        recipient = os.getenv("SUPPORT_EMAIL_RECIPIENT", "nr525859@gmail.com")
-        
-        # Construir el cuerpo del correo HTML
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-            <h2 style="color: #00d2ff;">Nuevo Mensaje de Soporte</h2>
-            <p><strong>De:</strong> {email}</p>
-            <p><strong>Asunto:</strong> {subject}</p>
-            <hr>
-            <p style="white-space: pre-wrap;">{message}</p>
-            <hr>
-            <p style="font-size: 12px; color: #888;">Enviado desde Smart Audio EQ Web</p>
-        </div>
-        """
-
-        params = {
-            "from": "Soporte Smart Audio EQ <onboarding@resend.dev>",
-            "to": [recipient],
-            "subject": f"[Soporte] {subject}",
-            "html": html_content,
-            "reply_to": email
-        }
-
-        email_response = resend.Emails.send(params)
-        print("Resend Response:", email_response)
-
-        return jsonify({"success": True, "id": email_response.get("id")})
-
-    except Exception as e:
-        print(f"Support Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

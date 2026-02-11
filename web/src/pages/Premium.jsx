@@ -494,6 +494,25 @@ export default function Premium({ lang }) {
                       </p>
                   </div>
               )}
+              
+              {/* RESTORE PURCHASE BUTTON */}
+              <button 
+                  onClick={restorePurchase} 
+                  disabled={loading}
+                  style={{
+                      marginTop: '20px', 
+                      background: 'transparent', 
+                      border: '1px solid #555', 
+                      color: '#ccc', 
+                      padding: '10px 15px', 
+                      borderRadius: '5px', 
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      width: '100%'
+                  }}
+              >
+                  {lang === 'es' ? '¿Ya pagaste? Ingresar ID de pago' : 'Already paid? Enter Payment ID'}
+              </button>
             </>
           ) : (
             <div style={{marginTop: '30px', textAlign: 'center', padding: '20px', background: 'rgba(0, 255, 133, 0.1)', border: '1px solid #00ff85', borderRadius: '8px'}}>

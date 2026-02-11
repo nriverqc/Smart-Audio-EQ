@@ -26,6 +26,8 @@ export default function Premium({ lang }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [country, setCountry] = useState('CO'); // 'CO' or 'INT'
   const [sdkReady, setSdkReady] = useState(false); // New state for PayPal SDK
+  const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
+  const [paypalPlans, setPaypalPlans] = useState({});
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
 
@@ -134,9 +136,6 @@ export default function Premium({ lang }) {
           }
       }
   }, [country, lang, loginWithGoogle, sdkReady, refreshUser, planType]); // Added planType dependency
-
-  const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
-  const [paypalPlans, setPaypalPlans] = useState({});
 
   useEffect(() => {
       // Fetch Plans from Backend

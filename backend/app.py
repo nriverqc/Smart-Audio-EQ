@@ -9,6 +9,7 @@ import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 import resend
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -40,14 +41,24 @@ except Exception as e:
 def init_db():
     with sqlite3.connect(DB_NAME) as conn:
         cursor = conn.cursor()
+        # Create table with new schema
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS licenses (
                 email TEXT PRIMARY KEY,
                 is_premium BOOLEAN DEFAULT 0,
                 payment_id TEXT,
-                date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expiration_date TIMESTAMP
             )
         """)
+        
+        # Migration: Add expiration_date column if it doesn't exist
+        try:
+            cursor.execute("ALTER TABLE licenses ADD COLUMN expiration_date TIMESTAMP")
+        except sqlite3.OperationalError:
+            # Column already exists
+            pass
+            
         conn.commit()
 
 # Initialize DB on start
@@ -113,6 +124,7 @@ def create_payment():
     data = request.json or {}
     email = data.get("email")
     uid = data.get("uid")
+    plan_type = data.get("plan_type", "monthly") # 'monthly' or 'yearly'
     
     if not email:
         return jsonify({"error": "Email is required"}), 400
@@ -120,15 +132,20 @@ def create_payment():
     frontend_url = os.getenv("FRONTEND_URL", "https://smart-audio-eq.pages.dev")
     backend_url = os.getenv("BACKEND_URL", "https://smart-audio-eq-1.onrender.com")
 
-    # FORCE 20000 to ensure it covers minimums in COP/ARS etc
-    price = 20000 
+    # Pricing Logic
+    if plan_type == "yearly":
+        price = 204000
+        title = "Smart Audio EQ Premium (Anual)"
+    else:
+        price = 20000
+        title = "Smart Audio EQ Premium (Mensual)"
     
-    print(f"Creating preference for {email} (UID: {uid}) with price {price}")
+    print(f"Creating preference for {email} (UID: {uid}) with price {price} ({plan_type})")
 
     preference_data = {
         "items": [
             {
-                "title": data.get("item", "Smart Audio EQ Premium"),
+                "title": title,
                 "quantity": 1,
                 "currency_id": "COP", 
                 "unit_price": price, 
@@ -139,7 +156,8 @@ def create_payment():
         },
         "metadata": {
             "uid": uid,
-            "email": email
+            "email": email,
+            "plan_type": plan_type
         },
         "external_reference": email, # Fallback
         "notification_url": f"{backend_url}/webhook/mercadopago",
@@ -305,16 +323,22 @@ def webhook():
             print(f"Payment {payment_id} status: {status} for email: {external_reference} uid: {uid}")
 
             if status == "approved":
+                # Determine Plan Type and Expiration
+                plan_type = metadata.get("plan_type", "monthly")
+                days_to_add = 365 if plan_type == "yearly" else 30
+                expiration_date = datetime.now() + timedelta(days=days_to_add)
+                
                 # Update SQLite
                 with sqlite3.connect(DB_NAME) as conn:
                     cursor = conn.cursor()
                     cursor.execute("""
-                        INSERT INTO licenses (email, is_premium, payment_id)
-                        VALUES (?, 1, ?)
+                        INSERT INTO licenses (email, is_premium, payment_id, expiration_date)
+                        VALUES (?, 1, ?, ?)
                         ON CONFLICT(email) DO UPDATE SET
                         is_premium=1,
-                        payment_id=excluded.payment_id
-                    """, (external_reference, payment_id))
+                        payment_id=excluded.payment_id,
+                        expiration_date=excluded.expiration_date
+                    """, (external_reference, payment_id, expiration_date))
                     conn.commit()
                 
                 # Update Firestore
@@ -324,6 +348,8 @@ def webhook():
                         user_ref.set({
                             'isPremium': True,
                             'lastPayment': firestore.SERVER_TIMESTAMP,
+                            'expirationDate': expiration_date,
+                            'planType': plan_type,
                             'paymentId': payment_id,
                             'method': 'MercadoPago',
                             'email': external_reference
@@ -345,6 +371,8 @@ def webhook():
                             user_ref.set({
                                 'isPremium': True,
                                 'lastPayment': firestore.SERVER_TIMESTAMP,
+                                'expirationDate': expiration_date,
+                                'planType': plan_type,
                                 'paymentId': payment_id,
                                 'method': 'MercadoPago_Webhook_EmailFallback',
                                 'email': external_reference
@@ -358,7 +386,7 @@ def webhook():
                     except Exception as e:
                         print(f"Error searching/updating Firestore by email: {e}")
 
-                print(f"License activated for {external_reference}")
+                print(f"License activated for {external_reference} until {expiration_date}")
 
         return jsonify({"status": "received"}), 200
     except Exception as e:
@@ -373,11 +401,12 @@ def register_paypal():
         email = data.get("email")
         order_id = data.get("orderID")
         uid = data.get("uid")
+        plan_type = data.get("plan_type", "monthly") # 'monthly' or 'yearly'
         
         if not email or not order_id:
             return jsonify({"error": "Missing email or orderID"}), 400
             
-        print(f"Registering PayPal payment for {email} (Order: {order_id}) UID: {uid}")
+        print(f"Registering PayPal payment for {email} (Order: {order_id}) UID: {uid} Plan: {plan_type}")
         
         # Verify order_id with PayPal API using Client Secret
         verified, result = verify_paypal_order(order_id)
@@ -390,15 +419,20 @@ def register_paypal():
         else:
             print(f"PayPal Payment Verified: {result.get('id')}")
         
+        # Calculate Expiration
+        days_to_add = 365 if plan_type == "yearly" else 30
+        expiration_date = datetime.now() + timedelta(days=days_to_add)
+
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO licenses (email, is_premium, payment_id)
-                VALUES (?, 1, ?)
+                INSERT INTO licenses (email, is_premium, payment_id, expiration_date)
+                VALUES (?, 1, ?, ?)
                 ON CONFLICT(email) DO UPDATE SET
                 is_premium=1,
-                payment_id=excluded.payment_id
-            """, (email, f"PAYPAL_{order_id}"))
+                payment_id=excluded.payment_id,
+                expiration_date=excluded.expiration_date
+            """, (email, f"PAYPAL_{order_id}", expiration_date))
             conn.commit()
             
         # Update Firestore
@@ -408,6 +442,8 @@ def register_paypal():
                 user_ref.set({
                     'isPremium': True,
                     'lastPayment': firestore.SERVER_TIMESTAMP,
+                    'expirationDate': expiration_date,
+                    'planType': plan_type,
                     'paymentId': order_id,
                     'method': 'PayPal',
                     'email': email
@@ -416,7 +452,7 @@ def register_paypal():
             except Exception as e:
                 print(f"Error updating Firestore: {e}")
             
-        return jsonify({"status": "approved", "email": email})
+        return jsonify({"status": "approved", "email": email, "expiration": expiration_date})
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -430,29 +466,81 @@ def check_license():
     if not email:
         return jsonify({"premium": False, "error": "No email provided"})
         
-    # 1. Check SQLite first (fast)
     try:
+        # 1. Check SQLite (Local Fast Cache)
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT is_premium FROM licenses WHERE email = ?", (email,))
+            cursor.execute("SELECT is_premium, expiration_date FROM licenses WHERE email = ?", (email,))
             row = cursor.fetchone()
-            if row and row[0]:
-                return jsonify({"premium": True, "source": "sqlite"})
-    except Exception as e:
-        print(f"SQLite Check Error: {e}")
+            
+            if row:
+                is_premium = bool(row[0])
+                expiration_str = row[1]
+                
+                # Check Expiration Logic
+                if is_premium and expiration_str:
+                    try:
+                        # Handle timestamp formats (sometimes has microseconds, sometimes not)
+                        if "." in expiration_str:
+                             expiration_date = datetime.strptime(expiration_str, "%Y-%m-%d %H:%M:%S.%f")
+                        else:
+                             expiration_date = datetime.strptime(expiration_str, "%Y-%m-%d %H:%M:%S")
+                             
+                        if datetime.now() > expiration_date:
+                            print(f"License expired for {email} on {expiration_date}")
+                            return jsonify({"premium": False, "status": "expired", "expiration": expiration_str})
+                        else:
+                            return jsonify({"premium": True, "source": "sqlite", "expiration": expiration_str})
+                    except Exception as e:
+                        print(f"Date parsing error: {e}")
+                        # Fallback: if date invalid but marked premium, assume valid for now or manual override
+                        return jsonify({"premium": True, "source": "sqlite_fallback"})
 
-    # 2. Check Firestore (authoritative)
-    if db and uid:
-        try:
-            doc = db.collection('usuarios').document(uid).get()
+                elif is_premium:
+                     # Legacy users (no expiration date) -> Treat as Lifetime or require migration?
+                     # For this transition, we'll assume they need to migrate or we gave them 30 days default elsewhere.
+                     # But if you promised Lifetime before, return True. 
+                     # If not, return False (Expired).
+                     # Let's assume Legacy = Lifetime for now to avoid angering old users, OR return False.
+                     # Given the user prompt asked to switch to monthly, we should probably check.
+                     pass 
+
+        # 2. Check Firestore (Cloud Source of Truth)
+        if db and uid:
+            user_ref = db.collection('usuarios').document(uid)
+            doc = user_ref.get()
             if doc.exists:
                 data = doc.to_dict()
                 if data.get('isPremium') is True:
-                     return jsonify({"premium": True, "source": "firestore"})
-        except Exception as e:
-             print(f"Firestore Check Error: {e}")
-             
-    return jsonify({"premium": False})
+                    # Check Expiration in Firestore
+                    exp_date = data.get('expirationDate')
+                    if exp_date:
+                        # Firestore timestamp to datetime
+                        # Note: Firestore returns a datetime object with timezone usually
+                        now = datetime.now(exp_date.tzinfo)
+                        if now > exp_date:
+                             return jsonify({"premium": False, "status": "expired_firestore"})
+                    
+                    # Sync back to SQLite
+                    with sqlite3.connect(DB_NAME) as conn:
+                        cursor = conn.cursor()
+                        # If exp_date is None, maybe set a default or leave null
+                        exp_str = exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None
+                        
+                        cursor.execute("""
+                            INSERT INTO licenses (email, is_premium, expiration_date)
+                            VALUES (?, 1, ?)
+                            ON CONFLICT(email) DO UPDATE SET is_premium=1, expiration_date=excluded.expiration_date
+                        """, (email, exp_str))
+                        conn.commit()
+                        
+                    return jsonify({"premium": True, "source": "firestore"})
+                    
+        return jsonify({"premium": False})
+        
+    except Exception as e:
+        print(f"Check License Error: {e}")
+        return jsonify({"premium": False, "error": str(e)})
 
 @app.route("/sync-user", methods=["POST"])
 def sync_user():

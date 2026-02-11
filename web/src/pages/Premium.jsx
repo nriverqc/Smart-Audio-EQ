@@ -56,12 +56,6 @@ export default function Premium({ lang }) {
              script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
              script.async = true;
              script.onload = () => {
-                 // Re-trigger effect or handle loading state
-                 // For simplicity, we just let the next render cycle or retry pick it up
-                 // or manually call a render function. 
-                 // Actually, since this effect depends on country, we might need to force update 
-                 // or just rely on the script being available now.
-                 // A better pattern is to have a separate 'sdkLoaded' state.
                  setSdkReady(true);
              };
              document.body.appendChild(script);
@@ -91,9 +85,9 @@ export default function Premium({ lang }) {
                           return actions.order.create({
                               purchase_units: [{
                                   amount: {
-                                      value: '4.99'
+                                      value: planType === 'yearly' ? '49.99' : '4.99'
                                   },
-                                  description: "Smart Audio EQ Premium",
+                                  description: `Smart Audio EQ Premium (${planType})`,
                                   custom_id: currentUser.uid // Attach Firebase UID
                               }]
                           });
@@ -111,7 +105,8 @@ export default function Premium({ lang }) {
                                   body: JSON.stringify({
                                       email: currentUser.email,
                                       uid: currentUser.uid,
-                                      orderID: data.orderID
+                                      orderID: data.orderID,
+                                      plan_type: planType
                                   })
                               })
                               .then(res => res.json())
@@ -140,17 +135,21 @@ export default function Premium({ lang }) {
               }
           }
       }
-  }, [country, lang, loginWithGoogle, sdkReady, refreshUser]); // Added sdkReady dependency
+  }, [country, lang, loginWithGoogle, sdkReady, refreshUser, planType]); // Added planType dependency
+
+  const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
 
   const texts = {
     es: {
       title: 'Desbloquea toda la potencia',
-      subtitle: 'Pago único. Acceso de por vida.',
+      subtitle: 'Elige el plan que mejor se adapte a ti.',
       freeTitle: 'Gratis',
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceCO: '$20.000 COP / de por vida',
-      premiumPriceINT: '$4.99 USD / lifetime',
+      premiumPriceCO_Monthly: '$20.000 COP / mes',
+      premiumPriceCO_Yearly: '$204.000 COP / año (Ahorra 15%)',
+      premiumPriceINT_Monthly: '$4.99 USD / month',
+      premiumPriceINT_Yearly: '$49.99 USD / year',
       freeItems: [
         '✅ Ecualizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -178,18 +177,23 @@ export default function Premium({ lang }) {
       successMessage: '¡Pago exitoso! Tu licencia Premium ha sido activada.',
       errorMessage: 'Hubo un error al procesar el pago.',
       countryLabel: 'Selecciona tu país:',
+      planLabel: 'Selecciona tu plan:',
       optionCO: '🇨🇴 Colombia (MercadoPago)',
       optionINT: '🌍 Resto del Mundo (PayPal)',
+      optionMonthly: 'Mensual',
+      optionYearly: 'Anual (Ahorra 15%)',
       paypalNote: 'Nota: Después de pagar en PayPal, tu cuenta se activará automáticamente en unos minutos. Si no, contáctanos.'
     },
     en: {
       title: 'Unlock the full power',
-      subtitle: 'One-time payment. Lifetime access.',
+      subtitle: 'Choose the plan that suits you best.',
       freeTitle: 'Free',
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
-      premiumPriceCO: '$20.000 COP / lifetime',
-      premiumPriceINT: '$4.99 USD / lifetime',
+      premiumPriceCO_Monthly: '$20.000 COP / month',
+      premiumPriceCO_Yearly: '$204.000 COP / year (Save 15%)',
+      premiumPriceINT_Monthly: '$4.99 USD / month',
+      premiumPriceINT_Yearly: '$49.99 USD / year',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basic presets (Flat, Rock, Pop, etc.)',
@@ -217,8 +221,11 @@ export default function Premium({ lang }) {
       successMessage: 'Payment successful! Your Premium license has been activated.',
       errorMessage: 'There was an error processing the payment.',
       countryLabel: 'Select your country:',
+      planLabel: 'Select your plan:',
       optionCO: '🇨🇴 Colombia (MercadoPago)',
       optionINT: '🌍 Rest of World (PayPal)',
+      optionMonthly: 'Monthly',
+      optionYearly: 'Yearly (Save 15%)',
       paypalNote: 'Note: After paying on PayPal, your account will be activated automatically within a few minutes. If not, contact us.'
     },
   };
@@ -294,8 +301,9 @@ export default function Premium({ lang }) {
             body: JSON.stringify({ 
                 email: email, 
                 uid: user.uid, // Send UID
-                price: 20000, 
-                item: 'Smart Audio EQ Premium' 
+                price: planType === 'yearly' ? 204000 : 20000, 
+                item: `Smart Audio EQ Premium (${planType === 'yearly' ? 'Yearly' : 'Monthly'})`,
+                plan_type: planType
             })
         });
         const data = await res.json();
@@ -367,9 +375,9 @@ export default function Premium({ lang }) {
     console.log("Initializing Brick with Preference ID:", preferenceId);
     return {
       preferenceId: preferenceId,
-      amount: 20000, // Ensure amount is present as fallback
+      amount: planType === 'yearly' ? 204000 : 20000, 
     };
-  }, [preferenceId]);
+  }, [preferenceId, planType]);
 
   const customization = React.useMemo(() => ({
     paymentMethods: {
@@ -420,6 +428,43 @@ export default function Premium({ lang }) {
             <span className="beta-badge" style={{fontSize: '0.5em', verticalAlign: 'middle', marginLeft: '10px'}}>BETA</span>
           </h2>
           
+          {/* Plan Selector */}
+          <div style={{margin: '10px 0'}}>
+              <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc'}}>{t.planLabel}</label>
+              <div style={{display: 'flex', gap: '10px'}}>
+                  <button 
+                      onClick={() => { setPlanType('monthly'); setShowBrick(false); }}
+                      style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '5px',
+                          background: planType === 'monthly' ? '#ffd700' : '#222',
+                          color: planType === 'monthly' ? '#000' : '#fff',
+                          border: '1px solid #555',
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                      }}
+                  >
+                      {t.optionMonthly}
+                  </button>
+                  <button 
+                      onClick={() => { setPlanType('yearly'); setShowBrick(false); }}
+                      style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '5px',
+                          background: planType === 'yearly' ? '#ffd700' : '#222',
+                          color: planType === 'yearly' ? '#000' : '#fff',
+                          border: '1px solid #555',
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                      }}
+                  >
+                      {t.optionYearly}
+                  </button>
+              </div>
+          </div>
+
           {/* Country Selector */}
           <div style={{margin: '10px 0'}}>
               <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc'}}>{t.countryLabel}</label>
@@ -450,7 +495,10 @@ export default function Premium({ lang }) {
           </ul>
           
           <h3 style={{marginTop: '20px'}}>
-              {country === 'CO' ? t.premiumPriceCO : t.premiumPriceINT}
+              {country === 'CO' 
+                  ? (planType === 'yearly' ? t.premiumPriceCO_Yearly : t.premiumPriceCO_Monthly)
+                  : (planType === 'yearly' ? t.premiumPriceINT_Yearly : t.premiumPriceINT_Monthly)
+              }
           </h3>
           
           {/* PAYMENT FORM OR ACTIVE STATUS */}

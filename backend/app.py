@@ -497,13 +497,9 @@ def check_license():
                         return jsonify({"premium": True, "source": "sqlite_fallback"})
 
                 elif is_premium:
-                     # Legacy users (no expiration date) -> Treat as Lifetime or require migration?
-                     # For this transition, we'll assume they need to migrate or we gave them 30 days default elsewhere.
-                     # But if you promised Lifetime before, return True. 
-                     # If not, return False (Expired).
-                     # Let's assume Legacy = Lifetime for now to avoid angering old users, OR return False.
-                     # Given the user prompt asked to switch to monthly, we should probably check.
-                     pass 
+                     # Legacy users (no expiration date) -> Treat as Lifetime
+                     print(f"Legacy Lifetime user confirmed: {email}")
+                     return jsonify({"premium": True, "source": "sqlite_legacy", "expiration": "lifetime"})
 
         # 2. Check Firestore (Cloud Source of Truth)
         if db and uid:
@@ -620,18 +616,39 @@ def restore_purchase():
         if found_payment:
             payment_id = str(found_payment.get("id"))
             payer_email_actual = found_payment.get("payer", {}).get("email")
-            print(f"Found approved payment {payment_id} for payer {payer_email_actual}")
+            
+            # Check for plan type to determine expiration
+            metadata = found_payment.get("metadata", {})
+            plan_type = metadata.get("plan_type")
+            expiration_date = None
+            
+            if plan_type:
+                date_created = found_payment.get("date_created")
+                if date_created:
+                    try:
+                        # Attempt to parse ISO format (e.g. 2023-01-01T12:00:00.000-05:00)
+                        # We use fromisoformat which supports offsets in Python 3.7+
+                        dt = datetime.fromisoformat(date_created)
+                        days = 365 if plan_type == "yearly" else 30
+                        expiration_date = dt + timedelta(days=days)
+                        # Remove timezone for SQLite compatibility (store as naive UTC/Local)
+                        expiration_date = expiration_date.replace(tzinfo=None)
+                    except Exception as e:
+                        print(f"Error parsing date {date_created}: {e}")
+
+            print(f"Found approved payment {payment_id} for payer {payer_email_actual} (Plan: {plan_type}, Exp: {expiration_date})")
             
             # Activate in SQLite (Link to the ACCOUNT email, not necessarily the payer email)
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO licenses (email, is_premium, payment_id)
-                    VALUES (?, 1, ?)
+                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date)
+                    VALUES (?, 1, ?, ?)
                     ON CONFLICT(email) DO UPDATE SET
                     is_premium=1,
-                    payment_id=excluded.payment_id
-                """, (account_email, payment_id))
+                    payment_id=excluded.payment_id,
+                    expiration_date=excluded.expiration_date
+                """, (account_email, payment_id, expiration_date))
                 conn.commit()
                 
             # Activate in Firestore
@@ -643,13 +660,16 @@ def restore_purchase():
                     'paymentId': payment_id,
                     'method': 'MercadoPago_Restore_Manual',
                     'email': account_email,
-                    'payer_email': payer_email_actual # Record who actually paid
+                    'payer_email': payer_email_actual, # Record who actually paid
+                    'planType': plan_type,
+                    'expirationDate': expiration_date
                 }, merge=True)
                 
             return jsonify({
                 "status": "restored", 
                 "message": f"Premium restored! Linked payment {payment_id} to {account_email}",
-                "payment_id": payment_id
+                "payment_id": payment_id,
+                "expiration": expiration_date
             })
         else:
             return jsonify({

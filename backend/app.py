@@ -923,6 +923,23 @@ def restore_purchase():
 
             print(f"Found approved payment {payment_id} for payer {payer_email_actual} (Plan: {plan_type}, Exp: {expiration_date})")
             
+            # SECURITY CHECK: Ensure this payment ID is not already used by ANOTHER account
+            with sqlite3.connect(DB_NAME) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT email FROM licenses WHERE payment_id = ?", (payment_id,))
+                existing_owner = cursor.fetchone()
+                
+                if existing_owner:
+                    existing_email = existing_owner[0]
+                    if existing_email != account_email:
+                        print(f"SECURITY ALERT: Payment {payment_id} already used by {existing_email}. Blocked attempt by {account_email}")
+                        msg = f"Este ID de pago ya está asociado a otra cuenta ({existing_email}). Contáctanos si crees que es un error."
+                        return jsonify({
+                            "status": "error",
+                            "message": msg,
+                            "error": msg
+                        }), 403
+            
             # Activate in SQLite (Link to the ACCOUNT email, not necessarily the payer email)
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()

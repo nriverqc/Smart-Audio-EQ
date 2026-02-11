@@ -924,6 +924,8 @@ def restore_purchase():
             print(f"Found approved payment {payment_id} for payer {payer_email_actual} (Plan: {plan_type}, Exp: {expiration_date})")
             
             # SECURITY CHECK: Ensure this payment ID is not already used by ANOTHER account
+            
+            # 1. Check SQLite
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT email FROM licenses WHERE payment_id = ?", (payment_id,))
@@ -932,13 +934,41 @@ def restore_purchase():
                 if existing_owner:
                     existing_email = existing_owner[0]
                     if existing_email != account_email:
-                        print(f"SECURITY ALERT: Payment {payment_id} already used by {existing_email}. Blocked attempt by {account_email}")
+                        print(f"SECURITY ALERT (SQLite): Payment {payment_id} already used by {existing_email}. Blocked attempt by {account_email}")
                         msg = f"Este ID de pago ya está asociado a otra cuenta ({existing_email}). Contáctanos si crees que es un error."
                         return jsonify({
                             "status": "error",
                             "message": msg,
                             "error": msg
                         }), 403
+
+            # 2. Check Firestore (Global Source of Truth)
+            if db:
+                try:
+                    # Query users who have this paymentId
+                    users_ref = db.collection('usuarios')
+                    query = users_ref.where('paymentId', '==', payment_id).limit(1)
+                    docs = query.stream()
+                    
+                    for doc in docs:
+                        data = doc.to_dict()
+                        existing_email = data.get('email')
+                        existing_uid = data.get('uid')
+                        
+                        # Verify it's not the same user (check email or uid)
+                        if existing_email and existing_email != account_email:
+                            print(f"SECURITY ALERT (Firestore): Payment {payment_id} already used by {existing_email}. Blocked attempt by {account_email}")
+                            msg = f"Este ID de pago ya está asociado a otra cuenta ({existing_email}). Contáctanos si crees que es un error."
+                            return jsonify({
+                                "status": "error",
+                                "message": msg,
+                                "error": msg
+                            }), 403
+                except Exception as e:
+                    print(f"Firestore Security Check Error: {e}")
+                    # Decide if we fail open or closed. For security, maybe log but proceed if SQLite didn't catch it?
+                    # Or fail safe? Let's log and proceed but maybe user should know.
+                    pass
             
             # Activate in SQLite (Link to the ACCOUNT email, not necessarily the payer email)
             with sqlite3.connect(DB_NAME) as conn:

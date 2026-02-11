@@ -1,0 +1,200 @@
+Sección 1: Integración con PayPal Subscriptions
+Usa las APIs de Catálogos y Suscripciones de PayPal. Integra con tus API Keys existentes (Client ID y Access Token).
+1.1 Verificación de API Keys Existentes
+Antes de integrar suscripciones, verifica que tus keys funcionen:
+
+Prueba de Autenticación: Envía una llamada GET simple a un endpoint protegido.Ejemplo en Python (usando tus keys integradas):Pythonimport requests
+
+# Tus keys ya integradas (ejemplo: de variables de entorno)
+ACCESS_TOKEN = "TU_ACCESS_TOKEN_AQUI"  # Reemplaza con tu valor real
+
+url = "https://api-m.sandbox.paypal.com/v1/identity/generate-token"  # Endpoint de prueba
+headers = {
+    "Authorization": f"Bearer {ACCESS_TOKEN}",
+    "Content-Type": "application/json"
+}
+
+response = requests.get(url, headers=headers)
+if response.status_code == 200:
+    print("API Keys verificadas correctamente.")
+else:
+    print(f"Error en verificación: {response.status_code} - {response.text}")
+Resultado esperado: Código 200 si tus keys son válidas. Si no, regenera el Access Token.
+
+1.2 Crear un Producto
+Crea un producto para asociarlo al plan de suscripción. Usa tu Access Token.
+Endpoint: POST /v1/catalogs/products
+Ejemplo de Código (Python, integrando tus keys):
+Pythonimport requests
+import uuid  # Para generar Request-ID único
+
+ACCESS_TOKEN = "TU_ACCESS_TOKEN_AQUI"
+url = "https://api-m.sandbox.paypal.com/v1/catalogs/products"
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {ACCESS_TOKEN}",
+    "PayPal-Request-Id": str(uuid.uuid4())  # ID único para evitar duplicados
+}
+data = {
+    "name": "Servicio de Streaming de Video",
+    "description": "Un servicio de streaming de video",
+    "type": "SERVICE",
+    "category": "SOFTWARE",
+    "image_url": "https://example.com/streaming.jpg",
+    "home_url": "https://example.com/home"
+}
+
+response = requests.post(url, headers=headers, json=data)
+if response.status_code == 201:
+    product_id = response.json()["id"]
+    print(f"Producto creado: ID = {product_id}")
+else:
+    print(f"Error: {response.status_code} - {response.text}")
+
+Verificación: Revisa el ID devuelto. Usa este ID en el siguiente paso.
+Modificaciones: Ajusta name, description, etc., según tu producto.
+
+1.3 Crear un Plan de Suscripción
+Crea el plan con ciclos de facturación, tarifas, etc. Incluye verificación de pago fallido.
+Endpoint: POST /v1/billing/plans
+Ejemplo de Código (Python):
+Pythonimport requests
+import uuid
+
+ACCESS_TOKEN = "TU_ACCESS_TOKEN_AQUI"
+PRODUCT_ID = "TU_PRODUCT_ID_AQUI"  # Del paso anterior
+url = "https://api-m.sandbox.paypal.com/v1/billing/plans"
+headers = {
+    "Accept": "application/json",
+    "Authorization": f"Bearer {ACCESS_TOKEN}",
+    "Content-Type": "application/json",
+    "PayPal-Request-Id": str(uuid.uuid4())
+}
+data = {
+    "product_id": PRODUCT_ID,
+    "name": "Plan Básico",
+    "description": "Plan básico",
+    "billing_cycles": [
+        {
+            "frequency": {"interval_unit": "MONTH", "interval_count": 1},
+            "tenure_type": "TRIAL",
+            "sequence": 1,
+            "total_cycles": 1
+        },
+        {
+            "frequency": {"interval_unit": "MONTH", "interval_count": 1},
+            "tenure_type": "REGULAR",
+            "sequence": 2,
+            "total_cycles": 12,
+            "pricing_scheme": {"fixed_price": {"value": "10", "currency_code": "USD"}}
+        }
+    ],
+    "payment_preferences": {
+        "auto_bill_outstanding": True,
+        "setup_fee": {"value": "10", "currency_code": "USD"},
+        "setup_fee_failure_action": "CONTINUE",
+        "payment_failure_threshold": 3
+    },
+    "taxes": {"percentage": "10", "inclusive": False}
+}
+
+response = requests.post(url, headers=headers, json=data)
+if response.status_code == 201:
+    plan_id = response.json()["id"]
+    print(f"Plan creado: ID = {plan_id}")
+else:
+    print(f"Error: {response.status_code} - {response.text}")
+
+Verificación: El plan aparece en tu cuenta sandbox. Estado: "ACTIVE".
+Modificaciones: Ajusta ciclos, precios, moneda (solo una por plan).
+
+1.4 Crear Botón de Pago
+Integra el SDK de JavaScript en tu sitio web para botones.
+Código HTML/JS (integra tu Client ID):
+HTML<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <script src="https://www.paypal.com/sdk/js?client-id=TU_CLIENT_ID_AQUI&vault=true&intent=subscription"></script>
+    <div id="paypal-button-container"></div>
+    <script>
+        paypal.Buttons({
+            createSubscription: function(data, actions) {
+                return actions.subscription.create({
+                    'plan_id': 'TU_PLAN_ID_AQUI'  // Del paso anterior
+                });
+            },
+            onApprove: function(data, actions) {
+                alert('Suscripción creada exitosamente: ' + data.subscriptionID);
+                // Aquí puedes verificar en tu backend (llama a una API tuya para registrar)
+            }
+        }).render('#paypal-button-container');
+    </script>
+</body>
+</html>
+
+Verificación: Carga la página, haz clic en el botón, inicia sesión con credenciales sandbox personales. Confirma en https://www.sandbox.paypal.com/myaccount/autopay/connect/ (comprador) y https://www.sandbox.paypal.com/billing/subscriptions (vendedor).
+
+1.5 Pruebas y Verificación Completa
+
+Flujo de Prueba: Simula compra, verifica fondos en cuentas sandbox.
+Manejo de Errores: Usa webhooks para notificaciones (configura en tu cuenta PayPal).
+Verificación Post-Integración: Llama a GET /v1/billing/subscriptions/{subscription_id} con tu Access Token para detalles.
+
+
+Sección 2: Integración con Mercado Pago (Suscripciones via Preapproval)
+Mercado Pago usa "preapprovals" para suscripciones. Integra con tu Access Token existente.
+2.1 Verificación de API Keys
+Ejemplo en Python:
+Pythonimport requests
+
+ACCESS_TOKEN = "TU_ACCESS_TOKEN_MERCADOPAGO_AQUI"
+url = "https://api.mercadopago.com/v1/account"  # Endpoint de prueba
+headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+
+response = requests.get(url, headers=headers)
+if response.status_code == 200:
+    print("API Keys de Mercado Pago verificadas.")
+else:
+    print(f"Error: {response.status_code}")
+2.2 Crear una Suscripción
+Endpoint: POST /preapproval
+Ejemplo de Código (Python):
+Pythonimport requests
+
+ACCESS_TOKEN = "TU_ACCESS_TOKEN_AQUI"
+url = "https://api.mercadopago.com/preapproval"
+headers = {
+    "Authorization": f"Bearer {ACCESS_TOKEN}",
+    "Content-Type": "application/json"
+}
+data = {
+    "preapproval_plan_id": "TU_PLAN_ID_OPCIONAL_AQUI",  # Opcional si usas plan
+    "reason": "Suscripción a Servicio Básico",
+    "external_reference": "REF_INTERNA_TUYA",
+    "payer_email": "email_del_comprador@ejemplo.com",  # Requerido
+    # Otros campos: auto_recurring (frecuencia, monto), etc.
+    "auto_recurring": {
+        "frequency": 1,
+        "frequency_type": "months",
+        "transaction_amount": 10,
+        "currency_id": "USD"
+    }
+}
+
+response = requests.post(url, headers=headers, json=data)
+if response.status_code == 201:
+    print("Suscripción creada:", response.json())
+else:
+    print(f"Error: {response.status_code} - {response.text}")
+
+Verificación: Usa el ID devuelto para consultas (GET /preapproval/{id}).
+Modificaciones: Agrega auto_recurring para recurrencia sin plan.
+
+2.3 Pruebas y Verificación
+
+Prueba con emails sandbox.
+Verifica en el panel de Mercado Pago: Facturas generadas automáticamente.
+Errores comunes: 400 (parámetros inválidos), 401 (keys malas).

@@ -78,52 +78,49 @@ export default function Premium({ lang }) {
                               loginWithGoogle();
                               return actions.reject();
                           }
+                          if (!paypalPlans[planType]) {
+                              alert("Error: PayPal Plan ID not loaded. Please refresh.");
+                              return actions.reject();
+                          }
                           return actions.resolve();
                       },
-                      createOrder: (data, actions) => {
+                      createSubscription: (data, actions) => {
                           const currentUser = userRef.current;
-                          return actions.order.create({
-                              purchase_units: [{
-                                  amount: {
-                                      value: planType === 'yearly' ? '49.99' : '4.99'
-                                  },
-                                  description: `Smart Audio EQ Premium (${planType})`,
-                                  custom_id: currentUser.uid // Attach Firebase UID
-                              }]
+                          return actions.subscription.create({
+                              'plan_id': paypalPlans[planType],
+                              'custom_id': currentUser.uid
                           });
                       },
                       onApprove: (data, actions) => {
-                          return actions.order.capture().then((details) => {
-                              const currentUser = userRef.current;
-                              console.log("PayPal Approved:", details);
-                              setLoading(true);
-                              
-                              // Register license in backend
-                              fetch(`${API_BASE}/register-paypal`, {
-                                  method: 'POST',
-                                  headers: {'Content-Type': 'application/json'},
-                                  body: JSON.stringify({
-                                      email: currentUser.email,
-                                      uid: currentUser.uid,
-                                      orderID: data.orderID,
-                                      plan_type: planType
-                                  })
+                          console.log("PayPal Subscription Approved:", data);
+                          setLoading(true);
+                          
+                          // Register license in backend
+                          fetch(`${API_BASE}/register-paypal`, {
+                              method: 'POST',
+                              headers: {'Content-Type': 'application/json'},
+                              body: JSON.stringify({
+                                  email: userRef.current.email,
+                                  uid: userRef.current.uid,
+                                  subscriptionID: data.subscriptionID,
+                                  orderID: data.orderID, // Just in case
+                                  plan_type: planType
                               })
-                              .then(res => res.json())
-                              .then(response => {
-                                  if (response.status === 'approved') {
-                                      alert(lang === 'es' ? '¡Pago exitoso! Tu cuenta Premium ha sido activada.' : 'Payment successful! Your Premium account has been activated.');
-                                      refreshUser();
-                                  } else {
-                                      alert('Error activating license: ' + (response.error || 'Unknown'));
-                                  }
-                              })
-                              .catch(err => {
-                                  console.error(err);
-                                  alert('Network error activating license');
-                              })
-                              .finally(() => setLoading(false));
-                          });
+                          })
+                          .then(res => res.json())
+                          .then(response => {
+                              if (response.status === 'approved' || response.success) {
+                                  alert(lang === 'es' ? '¡Suscripción activada! Tu cuenta Premium está lista.' : 'Subscription activated! Your Premium account is ready.');
+                                  refreshUser();
+                              } else {
+                                  alert('Error activating license: ' + (response.error || 'Unknown'));
+                              }
+                          })
+                          .catch(err => {
+                              console.error(err);
+                              alert('Network error activating license');
+                          })
+                          .finally(() => setLoading(false));
                       },
                       onError: (err) => {
                           console.error("PayPal Error:", err);
@@ -138,6 +135,19 @@ export default function Premium({ lang }) {
   }, [country, lang, loginWithGoogle, sdkReady, refreshUser, planType]); // Added planType dependency
 
   const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
+  const [paypalPlans, setPaypalPlans] = useState({});
+
+  useEffect(() => {
+      // Fetch Plans from Backend
+      fetch(`${API_BASE}/get-plans`)
+          .then(res => res.json())
+          .then(data => {
+              if (data.paypal) {
+                  setPaypalPlans(data.paypal);
+              }
+          })
+          .catch(err => console.error("Error fetching plans:", err));
+  }, []);
 
   const texts = {
     es: {
@@ -279,115 +289,39 @@ export default function Premium({ lang }) {
       }
   };
 
-  const createPreference = async () => {
+  const createMPSubscription = async () => {
     if (!user.uid) {
         alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
         loginWithGoogle();
         return;
     }
-    const email = user.email; // Use user email directly
-    if (!email || !email.includes('@')) {
-      alert('Email invalid');
-      return;
-    }
-
-    setLoading(true);
-    setErrorMsg('');
     
+    setLoading(true);
     try {
-        const res = await fetch(`${API_BASE}/create-payment`, {
+        const res = await fetch(`${API_BASE}/create-mp-subscription`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                email: email, 
-                uid: user.uid, // Send UID
-                price: planType === 'yearly' ? 204000 : 20000, 
-                item: `Smart Audio EQ Premium (${planType === 'yearly' ? 'Yearly' : 'Monthly'})`,
+            body: JSON.stringify({
+                email: user.email,
+                uid: user.uid,
                 plan_type: planType
             })
         });
         const data = await res.json();
-        if (data.preference_id) {
-            console.log("Preference created:", data.preference_id);
-            setPreferenceId(data.preference_id);
-            setShowBrick(true);
+        if (data.init_point) {
+            window.location.href = data.init_point;
         } else {
-            setErrorMsg('Error creating preference: ' + (data.error || 'Unknown error') + ' | ' + JSON.stringify(data.details || {}));
+            alert('Error creating subscription: ' + (data.error || 'Unknown'));
         }
-    } catch (err) {
-        setErrorMsg('Network error: ' + err.message);
+    } catch (e) {
+        console.error(e);
+        alert('Network error');
     } finally {
         setLoading(false);
     }
   };
 
-  const handleBrickSubmit = async ({ formData }) => {
-     setLoading(true);
-     // Add UID to the data sent to backend
-     const requestData = {
-         ...formData,
-         uid: user.uid,
-         email: user.email // Ensure email is explicit
-     };
-
-     return new Promise((resolve, reject) => {
-         fetch(`${API_BASE}/process_payment`, {
-             method: 'POST',
-             headers: {
-                 'Content-Type': 'application/json',
-             },
-             body: JSON.stringify(requestData),
-         })
-         .then((response) => response.json())
-         .then((response) => {
-             // Receive the payment result
-             if (response.status === 'approved') {
-                 alert(t.successMessage);
-                 refreshUser();
-                 resolve();
-             } else if (response.status === 'in_process' || response.status === 'pending') {
-                 // Handle PSE / Ticket redirects
-                 if (response.transaction_details && response.transaction_details.external_resource_url) {
-                     window.location.href = response.transaction_details.external_resource_url;
-                     resolve();
-                 } else {
-                     // Generic pending message (e.g. waiting for cash payment)
-                     alert(lang === 'es' 
-                        ? 'Pago iniciado. Por favor completa el proceso en la entidad seleccionada.' 
-                        : 'Payment initiated. Please complete the process at the selected institution.');
-                     resolve();
-                 }
-             } else {
-                 alert(t.errorMessage + " Status: " + response.status);
-                 reject();
-             }
-         })
-         .catch((error) => {
-             console.error(error);
-             alert(t.errorMessage);
-             reject();
-         })
-         .finally(() => setLoading(false));
-     });
-  };
-
-  const initialization = React.useMemo(() => {
-    console.log("Initializing Brick with Preference ID:", preferenceId);
-    return {
-      preferenceId: preferenceId,
-      amount: planType === 'yearly' ? 204000 : 20000, 
-    };
-  }, [preferenceId, planType]);
-
-  const customization = React.useMemo(() => ({
-    paymentMethods: {
-      creditCard: "all",
-      debitCard: "all",
-      ticket: "all",
-      bankTransfer: "all",
-      mercadoPago: "all",
-    },
-  }), []);
+  /* REMOVED LEGACY BRICK LOGIC */
 
   return (
     <div style={{textAlign: 'center', padding: '50px 0'}}>
@@ -531,60 +465,27 @@ export default function Premium({ lang }) {
 
               {/* PAYMENT OPTIONS */}
               {country === 'CO' ? (
-                  // MERCADO PAGO
-                  !showBrick ? (
-                      <>
-                          {errorMsg && <div style={{color: 'red', marginBottom: '10px'}}>{errorMsg}</div>}
-                          <button 
-                            className="btn-premium" 
-                            style={{width: '100%', marginTop: '10px', opacity: loading ? 0.5 : 1}}
-                            disabled={loading}
-                            onClick={() => {
-                                if (!email || !email.includes('@')) {
-                                    alert(lang === 'es' ? 'Por favor ingresa un email válido.' : 'Please enter a valid email.');
-                                    return;
-                                }
-                                createPreference();
-                            }}
-                          >
-                            {loading ? t.processingLabel : t.buyLabel}
-                          </button>
-                          
-                          <button 
-                              onClick={restorePurchase} 
-                              disabled={loading}
-                              style={{
-                                  marginTop: '15px', 
-                                  background: 'transparent', 
-                                  border: '1px solid #555', 
-                                  color: '#ccc', 
-                                  padding: '8px 12px', 
-                                  borderRadius: '5px', 
-                                  cursor: 'pointer',
-                                  fontSize: '0.9rem',
-                                  width: '100%'
-                              }}
-                          >
-                              {lang === 'es' ? '¿Ya pagaste? Verificar estado' : 'Already paid? Check status'}
-                          </button>
-                      </>
-                  ) : (
-                      <div style={{marginTop: '20px'}}>
-                          <p style={{color: '#ccc', marginBottom: '10px'}}>{t.loadingLabel}</p>
-                          <Payment
-                              initialization={initialization}
-                              customization={customization}
-                              onSubmit={handleBrickSubmit}
-                          />
-                          <button 
-                            onClick={() => setShowBrick(false)}
-                            style={{marginTop: '10px', background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', textDecoration: 'underline'}}
-                          >
-                            {lang === 'es' ? 'Cancelar / Cambiar método' : 'Cancel / Change method'}
-                          </button>
-                      </div>
-                  )
-              ) : (
+                <button 
+                  className="cta-button" 
+                  onClick={createMPSubscription} 
+                  disabled={loading}
+                  style={{
+                      background: '#009ee3', 
+                      color: 'white', 
+                      padding: '15px 30px', 
+                      border: 'none', 
+                      borderRadius: '5px', 
+                      fontSize: '1.2rem', 
+                      cursor: 'pointer', 
+                      fontWeight: 'bold',
+                      boxShadow: '0 4px 15px rgba(0, 158, 227, 0.4)',
+                      width: '100%',
+                      marginTop: '10px'
+                  }}
+                >
+                  {loading ? t.processingLabel : (lang === 'es' ? 'Suscribirse con MercadoPago' : 'Subscribe with MercadoPago')}
+                </button>
+            ) : (
                   // PAYPAL
                   <div style={{marginTop: '20px'}}>
                       <div id="paypal-container-8M45H2NRA2N92"></div>

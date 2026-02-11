@@ -9,7 +9,9 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         { src: 'manifest.json', dest: '.' },
-        { src: 'premium_landing.html', dest: '.' }
+        { src: 'Icono Ecualizador.png', dest: '.' },
+        { src: 'premium_landing.html', dest: '.' },
+        { src: '_locales', dest: '.' }
       ]
     })
   ],

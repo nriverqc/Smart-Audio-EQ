@@ -1,0 +1,42 @@
+{
+  "extName": {
+    "message": "Equalizer - Smart Audio EQ",
+    "description": "The name of the extension"
+  },
+  "extDescription": {
+    "message": "Audio Equalizer for YouTube, Spotify Web, and more.",
+    "description": "Description of the extension"
+  },
+  "visitWebsite": {
+    "message": "Visit Website",
+    "description": "Tooltip for the logo/title"
+  },
+  "loginSync": {
+    "message": "Login / Sync",
+    "description": "Button text to login"
+  },
+  "syncStatus": {
+    "message": "Sync Status",
+    "description": "Tooltip for sync button"
+  },
+  "signInText": {
+    "message": "Sign in on our website to sync:",
+    "description": "Text prompting user to sign in"
+  },
+  "premiumBadge": {
+    "message": "PRO",
+    "description": "Premium badge text"
+  },
+  "freeBadge": {
+    "message": "Free",
+    "description": "Free badge text"
+  },
+  "premiumStatus": {
+    "message": "• PREMIUM 💎",
+    "description": "Premium status text"
+  },
+  "freeStatus": {
+    "message": "• Free",
+    "description": "Free status text"
+  }
+}

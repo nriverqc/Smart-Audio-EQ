@@ -152,32 +152,34 @@ export default function App() {
     });
   };
 
+  const t = (key) => chrome.i18n.getMessage(key);
+
   return (
     <div>
       <div className="controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div 
             onClick={openMainPage} 
             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-            title="Visit Website"
+            title={t("visitWebsite")}
         >
-            <img src={logo} alt="Smart Audio EQ" style={{ height: '50px', objectFit: 'contain' }} />
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>{t("extName")}</h3>
             <span className="beta-badge" style={{fontSize: '0.6em', marginLeft: '8px', verticalAlign: 'middle'}}>BETA</span>
         </div>
-        {isPremium && <span className="premium-badge">PRO</span>}
+        {isPremium && <span className="premium-badge">{t("premiumBadge")}</span>}
       </div>
 
       {userEmail ? (
         <div style={{fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '10px', background: '#222', padding: '5px', borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'}}>
             <span>👤 <span style={{color: '#fff'}}>{userEmail}</span></span>
             {isPremium ? (
-                <span style={{color: '#ffd700', fontWeight: 'bold'}}>• PREMIUM 💎</span>
+                <span style={{color: '#ffd700', fontWeight: 'bold'}}>{t("premiumStatus")}</span>
             ) : (
-                <span style={{color: '#ccc'}}>• Free</span>
+                <span style={{color: '#ccc'}}>{t("freeStatus")}</span>
             )}
             <button 
                 onClick={refreshStatus} 
                 disabled={loading}
-                title="Sync Status"
+                title={t("syncStatus")}
                 style={{
                     background: 'transparent',
                     border: '1px solid #666',
@@ -194,15 +196,15 @@ export default function App() {
         </div>
       ) : (
          <div style={{textAlign: 'center', marginBottom: '10px'}}>
-             <p style={{fontSize: '0.8rem', color: '#aaa', marginBottom: '5px'}}>Sign in on our website to sync:</p>
+             <p style={{fontSize: '0.8rem', color: '#aaa', marginBottom: '5px'}}>{t("signInText")}</p>
              <button onClick={handleLogin} style={{background: '#4285F4', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem'}}>
-                 Login / Sync
+                 {t("loginSync")}
              </button>
              <div style={{marginTop: '6px'}}>
                <button 
                  onClick={refreshStatus}
                  disabled={loading}
-                 title="Sync Status"
+                 title={t("syncStatus")}
                  style={{
                    background: 'transparent',
                    border: '1px solid #666',

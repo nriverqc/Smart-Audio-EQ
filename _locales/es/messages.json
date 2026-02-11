@@ -1,0 +1,42 @@
+{
+  "extName": {
+    "message": "Equalizer - Smart Audio EQ",
+    "description": "El nombre de la extensión"
+  },
+  "extDescription": {
+    "message": "Ecualizador de audio para YouTube, Spotify Web y más.",
+    "description": "Descripción de la extensión"
+  },
+  "visitWebsite": {
+    "message": "Visitar Sitio Web",
+    "description": "Tooltip para el logo/título"
+  },
+  "loginSync": {
+    "message": "Iniciar Sesión / Sincronizar",
+    "description": "Texto del botón para iniciar sesión"
+  },
+  "syncStatus": {
+    "message": "Sincronizar Estado",
+    "description": "Tooltip para el botón de sincronización"
+  },
+  "signInText": {
+    "message": "Inicia sesión en nuestro sitio para sincronizar:",
+    "description": "Texto invitando al usuario a iniciar sesión"
+  },
+  "premiumBadge": {
+    "message": "PRO",
+    "description": "Texto del distintivo Premium"
+  },
+  "freeBadge": {
+    "message": "Gratis",
+    "description": "Texto del distintivo Gratis"
+  },
+  "premiumStatus": {
+    "message": "• PREMIUM 💎",
+    "description": "Texto de estado Premium"
+  },
+  "freeStatus": {
+    "message": "• Gratis",
+    "description": "Texto de estado Gratis"
+  }
+}

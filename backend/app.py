@@ -75,17 +75,8 @@ else:
 # PayPal Configuration
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
 PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
-PAYPAL_API_BASE = "https://api-m.paypal.com" # Change to live for production, sandbox for testing. Defaults to live if not specified? 
-# NOTE: User asked for sandbox testing instructions, so we should probably default to Sandbox URL or make it configurable.
-# But existing code used api-m.paypal.com which is LIVE. 
-# The Integración.txt uses api-m.sandbox.paypal.com.
-# I will use an environment variable or default to SANDBOX for now if not set, or just stick to what was there and let user configure.
-# Let's make it configurable.
-PAYPAL_ENV = os.getenv("PAYPAL_ENV", "sandbox") # Default to sandbox for safety as requested
-if PAYPAL_ENV == "sandbox":
-    PAYPAL_API_BASE = "https://api-m.sandbox.paypal.com"
-else:
-    PAYPAL_API_BASE = "https://api-m.paypal.com"
+# FORCE LIVE ENVIRONMENT
+PAYPAL_API_BASE = "https://api-m.paypal.com"
 
 def get_paypal_access_token():
     try:
@@ -130,6 +121,21 @@ def get_or_create_paypal_plan(product_id, plan_name, interval_unit, amount):
         "Accept": "application/json",
         "PayPal-Request-Id": str(uuid.uuid4())
     }
+
+    # Check if plan already exists in PayPal (Simple List Check)
+    try:
+        list_resp = requests.get(f"{PAYPAL_API_BASE}/v1/billing/plans?page_size=20&status=ACTIVE", headers={"Authorization": f"Bearer {token}"})
+        if list_resp.status_code == 200:
+            existing_plans = list_resp.json().get("plans", [])
+            for p in existing_plans:
+                if p.get("name") == plan_name and p.get("status") == "ACTIVE":
+                    print(f"Found existing PayPal Plan: {plan_name} ({p['id']})")
+                    plans[plan_key] = p['id']
+                    with open(plans_file, 'w') as f:
+                        json.dump(plans, f)
+                    return p['id']
+    except Exception as e:
+        print(f"Error checking existing plans: {e}")
     
     data = {
         "product_id": product_id,

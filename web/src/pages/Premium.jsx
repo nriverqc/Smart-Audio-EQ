@@ -53,7 +53,8 @@ export default function Premium({ lang }) {
                  return;
              }
              const script = document.createElement("script");
-             script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
+             // Add intent=subscription and vault=true for Subscription flow
+             script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=subscription&vault=true`;
              script.async = true;
              script.onload = () => {
                  setSdkReady(true);

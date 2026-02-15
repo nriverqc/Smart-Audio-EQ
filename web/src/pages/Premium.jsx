@@ -170,6 +170,7 @@ export default function Premium({ lang }) {
       ],
       premiumItems: [
         '✨ Todo lo del plan Gratis',
+        '✨ Ecualizador de 15 bandas',
         '✨ Presets Personalizados Ilimitados',
         '✨ Presets Pro (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Sincronización en la Nube (Tus presets en todos lados)',
@@ -214,6 +215,7 @@ export default function Premium({ lang }) {
       ],
       premiumItems: [
         '✨ Everything in Free plan',
+        '✨ 15-Band Equalizer',
         '✨ Unlimited Custom Presets',
         '✨ Pro Presets (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Cloud Sync (Your presets everywhere)',

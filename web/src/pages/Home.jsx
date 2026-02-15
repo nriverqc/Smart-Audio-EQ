@@ -49,7 +49,14 @@ export default function Home({ lang }) {
           {t.description}
         </p>
         <div style={{display: 'flex', gap: '20px', justifyContent: 'center'}}>
-          <button className="btn-primary">{t.addButton}</button>
+          <a 
+            className="btn-primary" 
+            href="https://chromewebstore.google.com/detail/aohaefkkofgkbneodjflnacpipdnfeng?utm_source=item-share-cb"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t.addButton}
+          </a>
           <Link to="/premium" className="btn-premium">{t.premiumButton}</Link>
         </div>
       </div>

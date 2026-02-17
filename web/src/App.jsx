@@ -25,7 +25,7 @@ function AppContent() {
 
   // REPLACE THIS WITH YOUR ACTUAL EXTENSION ID from chrome://extensions
   // e.g. "abcdefghijklmnop..."
-  const EXTENSION_ID = "edblkdnmdjodkbolefojlgdfkmbkplpf"; 
+  const EXTENSION_ID = "aohaefkkofgkbneodjflnacpipdnfeng"; 
 
   const syncWithExtension = (userData) => {
     // Save to localStorage for Content Script to read

@@ -3,7 +3,6 @@ import sqlite3
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import mercadopago
 from dotenv import load_dotenv
 import json
 import firebase_admin
@@ -23,6 +22,9 @@ resend.api_key = os.getenv("RESEND_API_KEY", "re_hkj5p2Fs_BBLyhPFKEPcSyqCbtuJeJ6
 
 # Database setup
 DB_NAME = "licenses.db"
+
+# App Pass Configuration
+APP_PASS_CODE = os.getenv("APP_PASS_CODE", "SMART-AUDIO-PRO-2026")
 
 # Initialize Firebase Admin
 # NOTE: You must add your serviceAccountKey.json file to the backend folder!
@@ -65,13 +67,6 @@ def init_db():
 # Initialize DB on start
 init_db()
 
-# Initialize MercadoPago
-mp_access_token = os.getenv("MP_ACCESS_TOKEN")
-if not mp_access_token:
-    print("WARNING: MP_ACCESS_TOKEN is not set. Payment features will fail.")
-else:
-    sdk = mercadopago.SDK(mp_access_token)
-
 # PayPal Configuration
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
 PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
@@ -94,11 +89,7 @@ def get_paypal_access_token():
 # --- SUBSCRIPTION HELPERS ---
 
 def get_or_create_paypal_plan(product_id, plan_name, interval_unit, amount):
-    """Creates a PayPal plan if it doesn't exist (simplified: always creates for now to ensure ID availability, or we could cache)"""
-    # For efficiency, we should check if we already have a plan ID stored.
-    # But without a persistent config store for plan IDs, we'll just create one if we can't find it by name (listing plans is pagination heavy).
-    # To avoid creating duplicates every restart, we can store IDs in a simple JSON file.
-    
+    """Creates a PayPal plan if it doesn't exist"""
     plans_file = "paypal_plans.json"
     plans = {}
     if os.path.exists(plans_file):
@@ -176,8 +167,7 @@ def setup_paypal_products_and_plans():
     if not token: return {}
     
     # 1. Product
-    product_id = "SMART_AUDIO_EQ_PREMIUM_V1" # Fixed ID if possible, or we search/create
-    # Note: You can't set ID on creation easily without patch. Let's checks if we have one stored.
+    product_id = "SMART_AUDIO_EQ_PREMIUM_V1"
     
     plans_file = "paypal_plans.json"
     store = {}
@@ -211,9 +201,9 @@ def setup_paypal_products_and_plans():
             
     product_id = store["product_id"]
     
-    # 2. Plans
-    monthly_id = get_or_create_paypal_plan(product_id, "Smart Audio EQ Premium (Monthly)", "MONTH", "4.99")
-    yearly_id = get_or_create_paypal_plan(product_id, "Smart Audio EQ Premium (Yearly)", "YEAR", "49.99")
+    # 2. Plans - Updated Pricing to $0.99
+    monthly_id = get_or_create_paypal_plan(product_id, "Smart Audio EQ Premium (Monthly)", "MONTH", "0.99")
+    yearly_id = get_or_create_paypal_plan(product_id, "Smart Audio EQ Premium (Yearly)", "YEAR", "10.10")
     
     return {"monthly": monthly_id, "yearly": yearly_id}
 
@@ -250,366 +240,14 @@ def verify_paypal_order(order_id):
 
 @app.route("/")
 def home():
-    return "Smart Audio EQ API is running with SQLite (v2.0 - Subscriptions)"
+    return "Smart Audio EQ API is running with SQLite (v3.0 - PayPal Only + App Pass)"
 
 @app.route("/get-plans", methods=["GET"])
 def get_plans():
     """Returns the available subscription plans"""
     return jsonify({
-        "paypal": PAYPAL_PLANS,
-        "mercadopago": {
-            "monthly": {"price": 20000, "currency": "COP"},
-            "yearly": {"price": 204000, "currency": "COP"}
-        }
+        "paypal": PAYPAL_PLANS
     })
-
-@app.route("/create-mp-subscription", methods=["POST"])
-def create_mp_subscription():
-    if not mp_access_token:
-         return jsonify({"error": "Payment service unavailable (Configuration error)"}), 503
-    
-    data = request.json or {}
-    email = data.get("email")
-    uid = data.get("uid")
-    plan_type = data.get("plan_type", "monthly") # 'monthly' or 'yearly'
-    
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
-
-    frontend_url = os.getenv("FRONTEND_URL", "https://smart-audio-eq.pages.dev")
-    backend_url = os.getenv("BACKEND_URL", "https://smart-audio-eq-1.onrender.com")
-
-    # Pricing Logic
-    if plan_type == "yearly":
-        amount = 204000
-        reason = "Smart Audio EQ Premium (Anual)"
-        frequency = 12
-    else:
-        amount = 20000
-        reason = "Smart Audio EQ Premium (Mensual)"
-        frequency = 1
-    
-    print(f"Creating MP Subscription for {email} (UID: {uid}) - {plan_type}")
-
-    preapproval_data = {
-        "reason": reason,
-        "external_reference": email,
-        "payer_email": email,
-        "auto_recurring": {
-            "frequency": frequency,
-            "frequency_type": "months",
-            "transaction_amount": amount,
-            "currency_id": "COP"
-        },
-        "back_url": f"{frontend_url}/premium",
-        "status": "pending",
-        "metadata": {
-            "uid": uid,
-            "plan_type": plan_type,
-            "email": email
-        }
-    }
-    
-    try:
-        # We use requests directly as the SDK might not cover preapproval fully or clearly
-        headers = {
-            "Authorization": f"Bearer {mp_access_token}",
-            "Content-Type": "application/json"
-        }
-        resp = requests.post("https://api.mercadopago.com/preapproval", headers=headers, json=preapproval_data)
-        
-        if resp.status_code == 201:
-            result = resp.json()
-            return jsonify({
-                "init_point": result.get("init_point"),
-                "id": result.get("id")
-            })
-        else:
-            print(f"MP Preapproval Error: {resp.text}")
-            return jsonify({"error": "Failed to create subscription", "details": resp.json()}), resp.status_code
-
-    except Exception as e:
-        print(f"MP Exception: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/create-payment", methods=["POST"])
-def create_payment():
-    if not mp_access_token:
-         return jsonify({"error": "Payment service unavailable (Configuration error)"}), 503
-    
-    data = request.json or {}
-    email = data.get("email")
-    uid = data.get("uid")
-    plan_type = data.get("plan_type", "monthly") # 'monthly' or 'yearly'
-    
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
-
-    frontend_url = os.getenv("FRONTEND_URL", "https://smart-audio-eq.pages.dev")
-    backend_url = os.getenv("BACKEND_URL", "https://smart-audio-eq-1.onrender.com")
-
-    # Pricing Logic
-    if plan_type == "yearly":
-        price = 204000
-        title = "Smart Audio EQ Premium (Anual)"
-    else:
-        price = 20000
-        title = "Smart Audio EQ Premium (Mensual)"
-    
-    print(f"Creating preference for {email} (UID: {uid}) with price {price} ({plan_type})")
-
-    preference_data = {
-        "items": [
-            {
-                "title": title,
-                "quantity": 1,
-                "currency_id": "COP", 
-                "unit_price": price, 
-            }
-        ],
-        "payer": {
-            "email": email
-        },
-        "metadata": {
-            "uid": uid,
-            "email": email,
-            "plan_type": plan_type
-        },
-        "external_reference": email, # Fallback
-        "notification_url": f"{backend_url}/webhook/mercadopago",
-        "back_urls": {
-            "success": f"{frontend_url}/premium",
-            "failure": f"{frontend_url}/premium",
-            "pending": f"{frontend_url}/premium",
-        },
-        "auto_return": "approved",
-        "payment_methods": {
-            "excluded_payment_types": [],
-            "installments": 12
-        },
-    }
-
-    try:
-        preference_response = sdk.preference().create(preference_data)
-        
-        # Log full response for debugging
-        print("MercadoPago Response:", json.dumps(preference_response, default=str))
-
-        # Check if request was successful
-        if preference_response.get("status") not in [200, 201]:
-             print(f"MP Error Status: {preference_response.get('status')}")
-             return jsonify({
-                 "error": "MercadoPago API Error", 
-                 "details": preference_response.get("response", "No details")
-             }), 500
-
-        response_body = preference_response.get("response", {})
-        payment_url = response_body.get("init_point")
-        preference_id = response_body.get("id")
-        
-        if not preference_id:
-             return jsonify({
-                 "error": "No preference_id in response", 
-                 "details": response_body
-             }), 500
-             
-        return jsonify({
-            "payment_url": payment_url, # Optional if using Bricks
-            "preference_id": preference_id
-        })
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/process_payment", methods=["POST"])
-def process_payment():
-    if not mp_access_token:
-         return jsonify({"error": "Payment service unavailable (Configuration error)"}), 503
-    try:
-        data = request.json
-        print("Processing Brick Payment:", data)
-
-        frontend_url = os.getenv("FRONTEND_URL", "https://smart-audio-eq.pages.dev")
-        backend_url = os.getenv("BACKEND_URL", "https://smart-audio-eq-1.onrender.com")
-
-        payment_data = {
-            "transaction_amount": float(data.get("transaction_amount")),
-            "token": data.get("token"),
-            "description": data.get("description", "Smart Audio EQ Premium"),
-            "installments": int(data.get("installments", 1)),
-            "payment_method_id": data.get("payment_method_id"),
-            "notification_url": f"{backend_url}/webhook/mercadopago",
-            "metadata": {
-                "uid": data.get("uid"),
-                "email": data["payer"]["email"]
-            },
-            "payer": {
-                "email": data["payer"]["email"],
-                "identification": {
-                    "type": data["payer"]["identification"]["type"],
-                    "number": data["payer"]["identification"]["number"]
-                },
-                # Some payment methods like PSE need entity_type
-                "entity_type": data["payer"].get("entity_type") 
-            },
-            "external_reference": data["payer"]["email"], # LINK TO EMAIL
-            # REQUIRED FOR PSE / 3DS
-            "callback_url": f"{frontend_url}/premium", 
-            "additional_info": {
-                "ip_address": request.remote_addr or "127.0.0.1"
-            }
-        }
-        
-        # Clean up None values to avoid API errors
-        if payment_data["payer"].get("entity_type") is None:
-             del payment_data["payer"]["entity_type"]
-
-        if data.get("issuer_id"):
-            payment_data["issuer_id"] = int(data["issuer_id"])
-            
-        # Add transaction_details if present (Required for PSE to pass financial_institution)
-        if data.get("transaction_details"):
-            payment_data["transaction_details"] = data["transaction_details"]
-
-        payment_response = sdk.payment().create(payment_data)
-        payment = payment_response["response"]
-        
-        print("Payment Status:", payment.get("status"))
-
-        # If approved immediately, save to DB
-        if payment.get("status") == "approved":
-             email = payment.get("external_reference")
-             payment_id = str(payment.get("id"))
-             uid = data.get("uid") # Get UID from request
-             
-             with sqlite3.connect(DB_NAME) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO licenses (email, is_premium, payment_id)
-                    VALUES (?, 1, ?)
-                    ON CONFLICT(email) DO UPDATE SET
-                    is_premium=1,
-                    payment_id=excluded.payment_id
-                """, (email, payment_id))
-                conn.commit()
-             
-             # Update Firestore
-             if db and uid:
-                try:
-                    user_ref = db.collection('usuarios').document(uid)
-                    user_ref.set({
-                        'isPremium': True,
-                        'lastPayment': firestore.SERVER_TIMESTAMP,
-                        'paymentId': payment_id,
-                        'method': 'MercadoPago_Brick',
-                        'email': email
-                    }, merge=True)
-                    print(f"Firestore updated for user {uid}")
-                except Exception as e:
-                    print(f"Error updating Firestore: {e}")
-
-        return jsonify(payment)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/webhook/mercadopago", methods=["POST"])
-def webhook():
-    try:
-        data = request.json
-        print("Received webhook:", data)
-        
-        payment_id = data.get("data", {}).get("id")
-        action = data.get("action")
-        type = data.get("type")
-
-        if action == "payment.created" or type == "payment":
-            # Fetch payment details from MercadoPago to verify status
-            payment_info = sdk.payment().get(payment_id)
-            payment = payment_info.get("response", {})
-            
-            status = payment.get("status")
-            external_reference = payment.get("external_reference") # This is the EMAIL
-            metadata = payment.get("metadata", {})
-            uid = metadata.get("uid")
-            
-            print(f"Payment {payment_id} status: {status} for email: {external_reference} uid: {uid}")
-
-            if status == "approved":
-                # Determine Plan Type and Expiration
-                plan_type = metadata.get("plan_type", "monthly")
-                days_to_add = 365 if plan_type == "yearly" else 30
-                expiration_date = datetime.now() + timedelta(days=days_to_add)
-                
-                # Update SQLite
-                with sqlite3.connect(DB_NAME) as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        INSERT INTO licenses (email, is_premium, payment_id, expiration_date)
-                        VALUES (?, 1, ?, ?)
-                        ON CONFLICT(email) DO UPDATE SET
-                        is_premium=1,
-                        payment_id=excluded.payment_id,
-                        expiration_date=excluded.expiration_date
-                    """, (external_reference, payment_id, expiration_date))
-                    conn.commit()
-                
-                # Update Firestore
-                if db and uid:
-                    try:
-                        user_ref = db.collection('usuarios').document(uid)
-                        user_ref.set({
-                            'isPremium': True,
-                            'lastPayment': firestore.SERVER_TIMESTAMP,
-                            'expirationDate': expiration_date,
-                            'planType': plan_type,
-                            'paymentId': payment_id,
-                            'method': 'MercadoPago',
-                            'email': external_reference
-                        }, merge=True)
-                        print(f"Firestore updated for user {uid}")
-                    except Exception as e:
-                        print(f"Error updating Firestore: {e}")
-                elif db and external_reference:
-                    # Try to find user by email if UID missing (unlikely if passed correctly)
-                    print(f"UID missing in metadata. Searching Firestore for email: {external_reference}")
-                    try:
-                        users_ref = db.collection('usuarios')
-                        query = users_ref.where('email', '==', external_reference).limit(1).stream()
-                        
-                        found = False
-                        for doc in query:
-                            found = True
-                            user_ref = doc.reference
-                            user_ref.set({
-                                'isPremium': True,
-                                'lastPayment': firestore.SERVER_TIMESTAMP,
-                                'expirationDate': expiration_date,
-                                'planType': plan_type,
-                                'paymentId': payment_id,
-                                'method': 'MercadoPago_Webhook_EmailFallback',
-                                'email': external_reference
-                            }, merge=True)
-                            print(f"Firestore updated for user {doc.id} (found by email)")
-                            break
-                        
-                        if not found:
-                             print(f"No user found with email {external_reference} to update.")
-                             
-                    except Exception as e:
-                        print(f"Error searching/updating Firestore by email: {e}")
-
-                print(f"License activated for {external_reference} until {expiration_date}")
-
-        return jsonify({"status": "received"}), 200
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
 
 @app.route("/register-paypal", methods=["POST"])
 def register_paypal():
@@ -697,10 +335,6 @@ def register_paypal():
         verified, result = verify_paypal_order(order_id)
         if not verified:
             print(f"PayPal Verification Failed: {result}")
-            # NOTE: For now, we are soft-failing to avoid blocking users if verification fails 
-            # due to API issues, but logging the error. 
-            # In strict production, you might want to uncomment the next line:
-            # return jsonify({"error": f"Payment verification failed: {result}"}), 400
         else:
             print(f"PayPal Payment Verified: {result.get('id')}")
         
@@ -741,6 +375,59 @@ def register_paypal():
     except Exception as e:
         import traceback
         traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/verify-app-pass", methods=["POST"])
+def verify_app_pass():
+    """Verifies an App Pass code and activates Premium"""
+    try:
+        data = request.json or {}
+        email = data.get("email")
+        uid = data.get("uid")
+        code = data.get("code")
+        
+        if not email or not uid or not code:
+            return jsonify({"error": "Faltan datos (email, uid o código)"}), 400
+            
+        if code.strip().upper() == APP_PASS_CODE.strip().upper():
+            # Activate Premium (Lifetime for App Pass?)
+            # Let's say 10 years for "App Pass" to effectively make it permanent but with an end date just in case
+            expiration_date = datetime.now() + timedelta(days=3650) 
+            
+            # Save to SQLite
+            with sqlite3.connect(DB_NAME) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date)
+                    VALUES (?, 1, ?, ?)
+                    ON CONFLICT(email) DO UPDATE SET
+                    is_premium=1,
+                    payment_id=excluded.payment_id,
+                    expiration_date=excluded.expiration_date
+                """, (email, f"APP_PASS_{uuid.uuid4().hex[:8]}", expiration_date))
+                conn.commit()
+                
+            # Sync to Firestore
+            if db:
+                try:
+                    user_ref = db.collection('usuarios').document(uid)
+                    user_ref.set({
+                        'isPremium': True,
+                        'lastPayment': firestore.SERVER_TIMESTAMP,
+                        'expirationDate': expiration_date,
+                        'method': 'App_Pass',
+                        'email': email
+                    }, merge=True)
+                    print(f"Firestore updated for App Pass user {uid}")
+                except Exception as e:
+                    print(f"Firebase Update Error: {e}")
+                    
+            return jsonify({"status": "success", "message": "Premium activado con App Pass!"})
+        else:
+            return jsonify({"error": "Código de App Pass inválido"}), 403
+            
+    except Exception as e:
+        print(f"App Pass Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/check-license", methods=["GET"])
@@ -855,164 +542,10 @@ def sync_user():
 
 @app.route("/restore-purchase", methods=["POST"])
 def restore_purchase():
-    """Manually checks MercadoPago for approved payments for a given email or payment ID"""
-    if not mp_access_token:
-         return jsonify({"error": "Payment service unavailable"}), 503
-         
-    try:
-        data = request.json
-        account_email = data.get("email") # The logged-in user's email
-        uid = data.get("uid")
-        
-        # Optional: User can provide the specific email they paid with OR a Payment ID
-        payer_email = data.get("payer_email") or account_email
-        payment_id_input = data.get("payment_id")
-
-        if not account_email:
-            return jsonify({"error": "Account email required"}), 400
-            
-        print(f"Restoring purchase for Account: {account_email} (UID: {uid}) | Search: {payer_email} / ID: {payment_id_input}")
-        
-        found_payment = None
-
-        # 1. Search by Payment ID (Most accurate)
-        if payment_id_input:
-            try:
-                payment_info = sdk.payment().get(int(payment_id_input))
-                payment = payment_info.get("response", {})
-                if payment.get("status") == "approved":
-                    found_payment = payment
-            except Exception as e:
-                print(f"Error searching by ID {payment_id_input}: {e}")
-
-        # 2. Search by Email (Fallback)
-        if not found_payment and payer_email:
-            filters = {
-                "status": "approved",
-                "payer.email": payer_email,
-                "sort": "date_created",
-                "criteria": "desc"
-            }
-            search_result = sdk.payment().search(filters)
-            results = search_result.get("response", {}).get("results", [])
-            if results:
-                found_payment = results[0] # Most recent
-
-        if found_payment:
-            payment_id = str(found_payment.get("id"))
-            payer_email_actual = found_payment.get("payer", {}).get("email")
-            
-            # Check for plan type to determine expiration
-            metadata = found_payment.get("metadata", {})
-            plan_type = metadata.get("plan_type")
-            expiration_date = None
-            
-            if plan_type:
-                date_created = found_payment.get("date_created")
-                if date_created:
-                    try:
-                        # Attempt to parse ISO format (e.g. 2023-01-01T12:00:00.000-05:00)
-                        # We use fromisoformat which supports offsets in Python 3.7+
-                        dt = datetime.fromisoformat(date_created)
-                        days = 365 if plan_type == "yearly" else 30
-                        expiration_date = dt + timedelta(days=days)
-                        # Remove timezone for SQLite compatibility (store as naive UTC/Local)
-                        expiration_date = expiration_date.replace(tzinfo=None)
-                    except Exception as e:
-                        print(f"Error parsing date {date_created}: {e}")
-
-            print(f"Found approved payment {payment_id} for payer {payer_email_actual} (Plan: {plan_type}, Exp: {expiration_date})")
-            
-            # SECURITY CHECK: Ensure this payment ID is not already used by ANOTHER account
-            
-            # 1. Check SQLite
-            with sqlite3.connect(DB_NAME) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT email FROM licenses WHERE payment_id = ?", (payment_id,))
-                existing_owner = cursor.fetchone()
-                
-                if existing_owner:
-                    existing_email = existing_owner[0]
-                    if existing_email != account_email:
-                        print(f"SECURITY ALERT (SQLite): Payment {payment_id} already used by {existing_email}. Blocked attempt by {account_email}")
-                        msg = f"Este ID de pago ya está asociado a otra cuenta ({existing_email}). Contáctanos si crees que es un error."
-                        return jsonify({
-                            "status": "error",
-                            "message": msg,
-                            "error": msg
-                        }), 403
-
-            # 2. Check Firestore (Global Source of Truth)
-            if db:
-                try:
-                    # Query users who have this paymentId
-                    users_ref = db.collection('usuarios')
-                    query = users_ref.where('paymentId', '==', payment_id).limit(1)
-                    docs = query.stream()
-                    
-                    for doc in docs:
-                        data = doc.to_dict()
-                        existing_email = data.get('email')
-                        existing_uid = data.get('uid')
-                        
-                        # Verify it's not the same user (check email or uid)
-                        if existing_email and existing_email != account_email:
-                            print(f"SECURITY ALERT (Firestore): Payment {payment_id} already used by {existing_email}. Blocked attempt by {account_email}")
-                            msg = f"Este ID de pago ya está asociado a otra cuenta ({existing_email}). Contáctanos si crees que es un error."
-                            return jsonify({
-                                "status": "error",
-                                "message": msg,
-                                "error": msg
-                            }), 403
-                except Exception as e:
-                    print(f"Firestore Security Check Error: {e}")
-                    # Decide if we fail open or closed. For security, maybe log but proceed if SQLite didn't catch it?
-                    # Or fail safe? Let's log and proceed but maybe user should know.
-                    pass
-            
-            # Activate in SQLite (Link to the ACCOUNT email, not necessarily the payer email)
-            with sqlite3.connect(DB_NAME) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date)
-                    VALUES (?, 1, ?, ?)
-                    ON CONFLICT(email) DO UPDATE SET
-                    is_premium=1,
-                    payment_id=excluded.payment_id,
-                    expiration_date=excluded.expiration_date
-                """, (account_email, payment_id, expiration_date))
-                conn.commit()
-                
-            # Activate in Firestore
-            if db and uid:
-                user_ref = db.collection('usuarios').document(uid)
-                user_ref.set({
-                    'isPremium': True,
-                    'lastPayment': firestore.SERVER_TIMESTAMP,
-                    'paymentId': payment_id,
-                    'method': 'MercadoPago_Restore_Manual',
-                    'email': account_email,
-                    'payer_email': payer_email_actual, # Record who actually paid
-                    'planType': plan_type,
-                    'expirationDate': expiration_date
-                }, merge=True)
-                
-            return jsonify({
-                "status": "restored", 
-                "message": f"Premium restored! Linked payment {payment_id} to {account_email}",
-                "payment_id": payment_id,
-                "expiration": expiration_date
-            })
-        else:
-            return jsonify({
-                "status": "not_found",
-                "message": "No approved payments found for the provided details."
-            })
-            
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+    """Checks for existing Premium status (simplified for PayPal/AppPass)"""
+    # This route is now simpler as we check SQLite/Firestore in check-license
+    # But we can keep it for manual "restore" button logic if needed.
+    return jsonify({"status": "check_license_instead", "message": "Use check-license endpoint"})
 
 @app.route("/api/support", methods=["POST"])
 def support():

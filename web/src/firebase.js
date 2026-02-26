@@ -1,21 +1,16 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
-// Your web app's Firebase configuration
+// Firebase configuration using environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyCL9Ha0xcECnHPsz-yRVXmxuGbR8asX9g8",
-  authDomain: "tallerautenticacion-7bd7b.firebaseapp.com",
-  projectId: "tallerautenticacion-7bd7b",
-  storageBucket: "tallerautenticacion-7bd7b.firebasestorage.app",
-  messagingSenderId: "225297427363",
-  appId: "1:225297427363:web:49e39e3e7db7effc4e8816",
-  measurementId: "G-DDQ2KDRJM7"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
-
-export { app, auth, googleProvider };
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();

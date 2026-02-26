@@ -32,11 +32,8 @@ export default function Premium({ lang }) {
       
       // Dynamically load PayPal SDK if not already loaded
       if (!window.paypal) {
-          const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-          if (!clientId) {
-              console.error("PayPal Client ID not found in env vars");
-              return;
-          }
+          // Use provided client ID directly for subscription flow
+          const clientId = "AX9bU7jKcw7KBb3Ks4Z9ectLcdxkOsoVK-0hFxG2UlcWyojn9kOU31Nt-f2T9r5AiFVLN0QHVAWl1ok_";
           const script = document.createElement("script");
           // Add intent=subscription and vault=true for Subscription flow
           script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=subscription&vault=true`;
@@ -138,8 +135,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Gratis',
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$0.99 USD / mes',
-      premiumPriceINT_Yearly: '$10.10 USD / año',
+      premiumPriceINT_Monthly: '$0.99 1er mes, luego $1.99/mes',
+      premiumPriceINT_Yearly: '$16.99 USD / año (30% DCTO)',
       freeItems: [
         '✅ Ecualizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -183,8 +180,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Free',
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$0.99 USD / month',
-      premiumPriceINT_Yearly: '$10.10 USD / year',
+      premiumPriceINT_Monthly: '$0.99 1st month, then $1.99/mo',
+      premiumPriceINT_Yearly: '$16.99 USD / year (30% OFF)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basic presets (Flat, Rock, Pop, etc.)',
@@ -228,8 +225,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Grátis',
       freePrice: '$0 / para sempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$0.99 USD / mês',
-      premiumPriceINT_Yearly: '$10.10 USD / ano',
+      premiumPriceINT_Monthly: '$0.99 no 1º mês, depois $1.99/mês',
+      premiumPriceINT_Yearly: '$16.99 USD / ano (30% OFF)',
       freeItems: [
         '✅ Equalizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -273,8 +270,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Kostenlos',
       freePrice: '$0 / für immer',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$0.99 USD / Monat',
-      premiumPriceINT_Yearly: '$10.10 USD / Jahr',
+      premiumPriceINT_Monthly: '$0.99 im 1. Monat, dann $1.99/Monat',
+      premiumPriceINT_Yearly: '$16.99 USD / Jahr (30% RABATT)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basis-Presets (Flat, Rock, Pop, etc.)',
@@ -470,10 +467,24 @@ export default function Premium({ lang }) {
                           color: planType === 'yearly' ? '#000' : '#fff',
                           border: '1px solid #555',
                           cursor: 'pointer',
-                          fontWeight: 'bold'
+                          fontWeight: 'bold',
+                          position: 'relative'
                       }}
                   >
                       {t.optionYearly}
+                      {planType !== 'yearly' && (
+                          <span style={{
+                              position: 'absolute',
+                              top: '-10px',
+                              right: '-5px',
+                              background: '#ff4444',
+                              color: '#fff',
+                              fontSize: '0.6rem',
+                              padding: '2px 5px',
+                              borderRadius: '10px',
+                              border: '1px solid #fff'
+                          }}>30% OFF</span>
+                      )}
                   </button>
               </div>
           </div>

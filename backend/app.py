@@ -166,8 +166,8 @@ def setup_paypal_products_and_plans():
     token = get_paypal_access_token()
     if not token: return {}
     
-    # 1. Product - V2 to force new product creation
-    product_key = "product_id_v2"
+    # 1. Product - V3 for new pricing structure
+    product_key = "product_id_v3"
     
     plans_file = "paypal_plans.json"
     store = {}
@@ -182,11 +182,10 @@ def setup_paypal_products_and_plans():
         # Create Product
         headers = {
             "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "PayPal-Request-Id": str(uuid.uuid4())
+            "Content-Type": "application/json"
         }
         data = {
-            "name": "Smart Audio EQ Premium V2",
+            "name": "Smart Audio EQ Premium V3",
             "type": "SERVICE",
             "category": "SOFTWARE"
         }
@@ -201,11 +200,54 @@ def setup_paypal_products_and_plans():
             
     product_id = store[product_key]
     
-    # 2. Plans - Updated Pricing to $0.99
-    monthly_id = get_or_create_paypal_plan(product_id, "Smart Audio EQ Premium (Monthly)", "MONTH", "0.99")
-    yearly_id = get_or_create_paypal_plan(product_id, "Smart Audio EQ Premium (Yearly)", "YEAR", "10.10")
+    # 2. Plans
+    # Monthly: Use the ID provided by the user (P-3RB49575H08016210NGQH3HY)
+    # Yearly: Create/Get plan for $16.99
     
-    return {"monthly": monthly_id, "yearly": yearly_id}
+    yearly_price = "16.99"
+    yearly_plan_key = f"yearly_plan_{yearly_price}"
+    
+    if yearly_plan_key not in store:
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        # Create Yearly Plan
+        plan_data = {
+            "product_id": product_id,
+            "name": "Smart Audio EQ Premium (Yearly)",
+            "description": "Yearly subscription with 30% discount",
+            "status": "ACTIVE",
+            "billing_cycles": [
+                {
+                    "frequency": { "interval_unit": "YEAR", "interval_count": 1 },
+                    "tenure_type": "REGULAR",
+                    "sequence": 1,
+                    "total_cycles": 0,
+                    "pricing_scheme": {
+                        "fixed_price": { "value": yearly_price, "currency_code": "USD" }
+                    }
+                }
+            ],
+            "payment_preferences": {
+                "auto_bill_outstanding": True,
+                "setup_fee": { "value": "0", "currency_code": "USD" },
+                "setup_fee_failure_action": "CONTINUE",
+                "payment_failure_threshold": 3
+            }
+        }
+        resp = requests.post(f"{PAYPAL_API_BASE}/v1/billing/plans", headers=headers, json=plan_data)
+        if resp.status_code == 201:
+            store[yearly_plan_key] = resp.json()["id"]
+            with open(plans_file, 'w') as f:
+                json.dump(store, f)
+        else:
+            print(f"Error creating yearly plan: {resp.text}")
+
+    return {
+        "monthly": "P-3RB49575H08016210NGQH3HY",
+        "yearly": store.get(yearly_plan_key)
+    }
 
 # Global Plan Cache
 PAYPAL_PLANS = {}

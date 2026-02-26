@@ -468,8 +468,8 @@ def verify_app_pass():
                     'code': clean_code
                 }, merge=True)
 
-            # Activate Premium (Lifetime for Promo Code)
-            expiration_date = datetime.now() + timedelta(days=3650) 
+            # Activate Premium (1 Month for Promo Code)
+            expiration_date = datetime.now() + timedelta(days=30) 
             
             # Save to SQLite
             with sqlite3.connect(DB_NAME) as conn:

@@ -444,9 +444,31 @@ def verify_app_pass():
         if not email or not uid or not code:
             return jsonify({"error": "Faltan datos (email, uid o código)"}), 400
             
-        if code.strip().upper() == APP_PASS_CODE.strip().upper():
-            # Activate Premium (Lifetime for App Pass?)
-            # Let's say 10 years for "App Pass" to effectively make it permanent but with an end date just in case
+        clean_code = code.strip().upper()
+        
+        # Check against single hardcoded promo code
+        if clean_code == APP_PASS_CODE.strip().upper():
+            # Check if used in Firestore
+            if db:
+                promo_ref = db.collection('promo_codes').document(clean_code)
+                promo_doc = promo_ref.get()
+                
+                if promo_doc.exists and promo_doc.to_dict().get('used') is True:
+                    # Allow re-use ONLY if it's the SAME user (restoring purchase)
+                    used_by = promo_doc.to_dict().get('usedBy')
+                    if used_by != uid:
+                        return jsonify({"error": "Este código ya ha sido utilizado por otro usuario."}), 403
+                
+                # Mark as used
+                promo_ref.set({
+                    'used': True,
+                    'usedBy': uid,
+                    'usedByEmail': email,
+                    'dateUsed': firestore.SERVER_TIMESTAMP,
+                    'code': clean_code
+                }, merge=True)
+
+            # Activate Premium (Lifetime for Promo Code)
             expiration_date = datetime.now() + timedelta(days=3650) 
             
             # Save to SQLite
@@ -459,10 +481,10 @@ def verify_app_pass():
                     is_premium=1,
                     payment_id=excluded.payment_id,
                     expiration_date=excluded.expiration_date
-                """, (email, f"APP_PASS_{uuid.uuid4().hex[:8]}", expiration_date))
+                """, (email, f"PROMO_{clean_code}", expiration_date))
                 conn.commit()
                 
-            # Sync to Firestore
+            # Sync to Firestore User Profile
             if db:
                 try:
                     user_ref = db.collection('usuarios').document(uid)
@@ -470,16 +492,15 @@ def verify_app_pass():
                         'isPremium': True,
                         'lastPayment': firestore.SERVER_TIMESTAMP,
                         'expirationDate': expiration_date,
-                        'method': 'App_Pass',
+                        'method': 'Promo_Code',
                         'email': email
                     }, merge=True)
-                    print(f"Firestore updated for App Pass user {uid}")
                 except Exception as e:
                     print(f"Firebase Update Error: {e}")
                     
-            return jsonify({"status": "success", "message": "Premium activado con App Pass!"})
+            return jsonify({"status": "success", "message": "¡Código canjeado correctamente!"})
         else:
-            return jsonify({"error": "Código de App Pass inválido"}), 403
+            return jsonify({"error": "Código inválido"}), 403
             
     except Exception as e:
         print(f"App Pass Error: {e}")

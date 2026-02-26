@@ -99,6 +99,7 @@ function AppContent() {
               displayName: firebaseUser.displayName,
               photoURL: firebaseUser.photoURL,
               isPremium: data.premium, 
+              method: data.method,
               loading: false 
             };
             setUser(updatedUser);
@@ -188,7 +189,7 @@ function AppContent() {
         fetch(`${API_BASE}/check-license?email=${user.email}&uid=${user.uid}`)
         .then(res => res.json())
         .then(data => {
-          setUser(prev => ({ ...prev, isPremium: data.premium }));
+          setUser(prev => ({ ...prev, isPremium: data.premium, method: data.method }));
         });
      }
   };

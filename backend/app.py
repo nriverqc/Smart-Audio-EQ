@@ -50,16 +50,21 @@ def init_db():
                 email TEXT PRIMARY KEY,
                 is_premium BOOLEAN DEFAULT 0,
                 payment_id TEXT,
+                method TEXT,
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 expiration_date TIMESTAMP
             )
         """)
         
-        # Migration: Add expiration_date column if it doesn't exist
+        # Migration: Add columns if they don't exist
         try:
             cursor.execute("ALTER TABLE licenses ADD COLUMN expiration_date TIMESTAMP")
         except sqlite3.OperationalError:
-            # Column already exists
+            pass
+            
+        try:
+            cursor.execute("ALTER TABLE licenses ADD COLUMN method TEXT")
+        except sqlite3.OperationalError:
             pass
             
         conn.commit()
@@ -336,13 +341,14 @@ def register_paypal():
                     with sqlite3.connect(DB_NAME) as conn:
                         cursor = conn.cursor()
                         cursor.execute("""
-                            INSERT INTO licenses (email, is_premium, payment_id, expiration_date) 
-                            VALUES (?, 1, ?, ?)
+                            INSERT INTO licenses (email, is_premium, payment_id, expiration_date, method) 
+                            VALUES (?, 1, ?, ?, ?)
                             ON CONFLICT(email) DO UPDATE SET 
                                 is_premium=1, 
                                 payment_id=excluded.payment_id,
-                                expiration_date=excluded.expiration_date
-                        """, (payer_email, subscription_id, expiration_date))
+                                expiration_date=excluded.expiration_date,
+                                method=excluded.method
+                        """, (payer_email, subscription_id, expiration_date, "PayPal"))
                         conn.commit()
                         
                     # Sync to Firebase
@@ -443,13 +449,14 @@ def verify_official_app_pass():
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date)
-                    VALUES (?, 1, ?, ?)
+                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date, method)
+                    VALUES (?, 1, ?, ?, ?)
                     ON CONFLICT(email) DO UPDATE SET
                     is_premium=1,
                     payment_id=excluded.payment_id,
-                    expiration_date=excluded.expiration_date
-                """, (email, f"OFFICIAL_APP_PASS_{token[:8]}", expiration_date))
+                    expiration_date=excluded.expiration_date,
+                    method=excluded.method
+                """, (email, f"OFFICIAL_APP_PASS_{token[:8]}", expiration_date, "Official_App_Pass"))
                 conn.commit()
                 
             # Sync to Firestore
@@ -517,13 +524,14 @@ def verify_app_pass():
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date)
-                    VALUES (?, 1, ?, ?)
+                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date, method)
+                    VALUES (?, 1, ?, ?, ?)
                     ON CONFLICT(email) DO UPDATE SET
                     is_premium=1,
                     payment_id=excluded.payment_id,
-                    expiration_date=excluded.expiration_date
-                """, (email, f"PROMO_{clean_code}", expiration_date))
+                    expiration_date=excluded.expiration_date,
+                    method=excluded.method
+                """, (email, f"PROMO_{clean_code}", expiration_date, "Promo_Code"))
                 conn.commit()
                 
             # Sync to Firestore User Profile
@@ -560,12 +568,13 @@ def check_license():
         # 1. Check SQLite (Local Fast Cache)
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT is_premium, expiration_date FROM licenses WHERE email = ?", (email,))
+            cursor.execute("SELECT is_premium, expiration_date, method FROM licenses WHERE email = ?", (email,))
             row = cursor.fetchone()
             
             if row:
                 is_premium = bool(row[0])
                 expiration_str = row[1]
+                method = row[2]
                 
                 # Check Expiration Logic
                 if is_premium and expiration_str:
@@ -580,16 +589,16 @@ def check_license():
                             print(f"License expired for {email} on {expiration_date}")
                             return jsonify({"premium": False, "status": "expired", "expiration": expiration_str})
                         else:
-                            return jsonify({"premium": True, "source": "sqlite", "expiration": expiration_str})
+                            return jsonify({"premium": True, "source": "sqlite", "expiration": expiration_str, "method": method})
                     except Exception as e:
                         print(f"Date parsing error: {e}")
                         # Fallback: if date invalid but marked premium, assume valid for now or manual override
-                        return jsonify({"premium": True, "source": "sqlite_fallback"})
+                        return jsonify({"premium": True, "source": "sqlite_fallback", "method": method})
 
                 elif is_premium:
                      # Legacy users (no expiration date) -> Treat as Lifetime
                      print(f"Legacy Lifetime user confirmed: {email}")
-                     return jsonify({"premium": True, "source": "sqlite_legacy", "expiration": "lifetime"})
+                     return jsonify({"premium": True, "source": "sqlite_legacy", "expiration": "lifetime", "method": method})
 
         # 2. Check Firestore (Cloud Source of Truth)
         if db and uid:
@@ -612,15 +621,19 @@ def check_license():
                         cursor = conn.cursor()
                         # If exp_date is None, maybe set a default or leave null
                         exp_str = exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None
+                        method = data.get('method')
                         
                         cursor.execute("""
-                            INSERT INTO licenses (email, is_premium, expiration_date)
-                            VALUES (?, 1, ?)
-                            ON CONFLICT(email) DO UPDATE SET is_premium=1, expiration_date=excluded.expiration_date
-                        """, (email, exp_str))
+                            INSERT INTO licenses (email, is_premium, expiration_date, method)
+                            VALUES (?, 1, ?, ?)
+                            ON CONFLICT(email) DO UPDATE SET 
+                                is_premium=1, 
+                                expiration_date=excluded.expiration_date,
+                                method=excluded.method
+                        """, (email, exp_str, method))
                         conn.commit()
                         
-                    return jsonify({"premium": True, "source": "firestore"})
+                    return jsonify({"premium": True, "source": "firestore", "method": data.get('method')})
                     
         return jsonify({"premium": False})
         

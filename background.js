@@ -6,16 +6,30 @@ import { checkAppPass, activateAppPass, manageAppPass } from '@chrome-stats/app-
 console.log("Smart Audio EQ: Background Service Worker iniciado");
 
 // ===== AUTOMATIC APP PASS CHECK (SDK) =====
+async function notifyWebTabsOfPremium() {
+    try {
+        const tabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
+        tabs.forEach(t => {
+            chrome.tabs.sendMessage(t.id, { type: "PREMIUM_ACTIVADO_EXT" });
+        });
+    } catch (e) { console.log("Error notifying tabs", e); }
+}
+
 async function performAutomaticAppPassCheck() {
   try {
     const response = await checkAppPass();
     if (response.status === 'ok' && response.appPassToken) {
-      console.log('✅ Background: Official App Pass detected! Syncing...');
+      console.log('✅ Background: Official App Pass detected!');
+      
       const storage = await chrome.storage.local.get(['email', 'uid']);
+      await chrome.storage.local.set({ isPremium: true });
+      
+      // Notify open web tabs immediately
+      notifyWebTabsOfPremium();
       
       if (storage.email && storage.uid) {
-        // Verify token with backend
-        const res = await fetch("https://smart-audio-eq-1.onrender.com/verify-official-app-pass", {
+        // Verify token with backend to persist in DB
+        fetch("https://smart-audio-eq-1.onrender.com/verify-official-app-pass", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -23,24 +37,16 @@ async function performAutomaticAppPassCheck() {
             uid: storage.uid,
             token: response.appPassToken
           })
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status === 'success') {
-            await chrome.storage.local.set({ isPremium: true });
-            console.log('💎 Background: Premium activated via official App Pass');
-          }
-        }
-      } else {
-        // User not logged in, but we have a pass. Mark as premium locally anyway
-        await chrome.storage.local.set({ isPremium: true });
+        }).catch(e => console.log("Backend sync failed, but local premium is active"));
       }
+      return true;
     } else {
       console.log('ℹ️ Background: No official App Pass detected:', response.message);
+      return false;
     }
   } catch (e) {
     console.warn('❌ Background: App Pass SDK Check failed:', e.message);
+    return false;
   }
 }
 

@@ -399,13 +399,27 @@ export default function Premium({ lang }) {
 
   /* REMOVED LEGACY BRICK LOGIC */
 
+  const getThanksMessage = () => {
+      const method = user.method || '';
+      if (method.includes('Official_App_Pass') || method.includes('App_Pass')) {
+          return lang === 'es' ? '¡Gracias por usar App Pass! 🚀' : 'Thanks for using App Pass! 🚀';
+      }
+      if (method.includes('PayPal')) {
+          return lang === 'es' ? '¡Gracias por tu suscripción vía PayPal! 💎' : 'Thanks for your PayPal subscription! 💎';
+      }
+      if (method.includes('Promo_Code')) {
+          return lang === 'es' ? '¡Código promocional activado con éxito! 🎉' : 'Promo code successfully activated! 🎉';
+      }
+      return lang === 'es' ? '¡Gracias por ser Premium!' : 'Thank you for being Premium!';
+  };
+
   return (
     <div style={{textAlign: 'center', padding: '50px 0'}}>
       {user.isPremium && (
           <div style={{marginBottom: '50px', padding: '20px', background: 'rgba(0, 210, 255, 0.1)', borderRadius: '10px', border: '1px solid #00d2ff', display: 'inline-block'}}>
               <h1 style={{color: '#ffd700', fontSize: '2.5rem', margin: 0}}>Premium 💎 {lang === 'es' ? 'Activado' : 'Active'}</h1>
               <p style={{fontSize: '1.2rem', marginTop: '10px'}}>
-                  {lang === 'es' ? '¡Gracias por tu compra!' : 'Thank you for your purchase!'}
+                  {getThanksMessage()}
               </p>
               <p style={{color: '#ccc', marginTop: '5px'}}>
                   {lang === 'es' 

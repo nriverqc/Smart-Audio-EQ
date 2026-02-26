@@ -194,7 +194,10 @@ function AppContent() {
   };
 
   const requestExtensionAppPassCheck = () => {
+      console.log("Web: Requesting forced App Pass check...");
       window.postMessage({ type: "CHECK_APP_PASS_REQUEST" }, "*");
+      // Also trigger a local refresh after a short delay to catch the message from extension
+      setTimeout(() => refreshUser(), 2000);
   };
 
   const langLabels = {

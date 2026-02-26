@@ -14,14 +14,28 @@ const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
 function AppContent() {
   const [lang, setLang] = useState('es');
-  const [user, setUser] = useState({ 
-    email: '', 
-    uid: '', 
-    displayName: '', 
-    photoURL: '', 
-    isPremium: false, 
-    loading: true 
-  });
+  
+  // Try to load cached user from localStorage for instant UI feedback
+  const getInitialUser = () => {
+    try {
+        const cached = localStorage.getItem('user_sync_data');
+        if (cached) {
+            const data = JSON.parse(cached);
+            return {
+                email: data.email || '',
+                uid: data.uid || '',
+                displayName: data.nombre || '',
+                photoURL: data.foto || '',
+                isPremium: data.isPremium || false,
+                method: data.method || '',
+                loading: true // Keep loading true until Firebase confirms session
+            };
+        }
+    } catch (e) { console.error("Error loading cache", e); }
+    return { email: '', uid: '', displayName: '', photoURL: '', isPremium: false, loading: true };
+  };
+
+  const [user, setUser] = useState(getInitialUser());
 
   // Automatic Language Detection
   useEffect(() => {
@@ -47,6 +61,7 @@ function AppContent() {
             uid: userData.uid,
             email: userData.email,
             isPremium: userData.isPremium,
+            method: userData.method,
             nombre: userData.displayName,
             foto: userData.photoURL
         }));
@@ -89,21 +104,31 @@ function AppContent() {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         console.log("Sesión activa:", firebaseUser.email);
+        
+        // Initial state from Firebase (merged with cache if available)
+        const baseUser = {
+            email: firebaseUser.email,
+            uid: firebaseUser.uid,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            isPremium: user.isPremium, // Keep current (cached) premium status
+            method: user.method,
+            loading: true
+        };
+        setUser(baseUser);
+
         // Check license in backend
         fetch(`${API_BASE}/check-license?email=${firebaseUser.email}&uid=${firebaseUser.uid}`)
           .then(res => res.json())
           .then(data => {
             const updatedUser = { 
-              email: firebaseUser.email, 
-              uid: firebaseUser.uid,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
+              ...baseUser,
               isPremium: data.premium, 
               method: data.method,
               loading: false 
             };
             setUser(updatedUser);
-            // Sync with extension
+            // Sync with extension and update cache
             syncWithExtension(updatedUser);
 
             // Sync user to Firestore to ensure document exists
@@ -120,20 +145,13 @@ function AppContent() {
           })
           .catch(err => {
             console.error("Error checking license:", err);
-            const fallbackUser = { 
-              email: firebaseUser.email, 
-              uid: firebaseUser.uid,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-              isPremium: false, 
-              loading: false 
-            };
-            setUser(fallbackUser);
-            syncWithExtension(fallbackUser);
+            // If offline, trust the cached premium status for now
+            setUser(prev => ({ ...prev, loading: false }));
           });
       } else {
         console.log("No hay sesión.");
         setUser({ email: '', uid: '', displayName: '', photoURL: '', isPremium: false, loading: false });
+        localStorage.removeItem('user_sync_data');
       }
     });
 
@@ -181,6 +199,7 @@ function AppContent() {
   };
 
   const logout = () => {
+    localStorage.removeItem('user_sync_data');
     signOut(auth);
   };
 

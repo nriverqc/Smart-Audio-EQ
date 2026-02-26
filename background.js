@@ -22,6 +22,7 @@ async function performAutomaticAppPassCheck() {
       console.log('✅ Background: Official App Pass detected!');
       
       const storage = await chrome.storage.local.get(['email', 'uid']);
+      isPremium = true; // Update global variable
       await chrome.storage.local.set({ isPremium: true });
       
       // Notify open web tabs immediately
@@ -42,6 +43,7 @@ async function performAutomaticAppPassCheck() {
       return true;
     } else {
       console.log('ℹ️ Background: No official App Pass detected:', response.message);
+      // We DO NOT set isPremium to false here, because they might have PayPal premium
       return false;
     }
   } catch (e) {
@@ -51,6 +53,27 @@ async function performAutomaticAppPassCheck() {
 }
 
 // Check on startup
+chrome.runtime.onStartup.addListener(() => {
+    console.log("Background: Browser startup. Re-verifying status...");
+    performAutomaticAppPassCheck();
+    // Also try to sync license if we have credentials
+    chrome.storage.local.get(['email', 'uid', 'isPremium'], (res) => {
+        if (res.isPremium) isPremium = true; // Trust local storage first
+        
+        if (res.email && res.uid) {
+            fetch(`https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(res.email)}&uid=${encodeURIComponent(res.uid)}`)
+            .then(r => r.json())
+            .then(data => {
+                // ONLY update if the server actually responds with a boolean
+                if (typeof data.premium === 'boolean') {
+                    isPremium = data.premium;
+                    chrome.storage.local.set({ isPremium: data.premium });
+                }
+            }).catch(e => console.log("Startup license check failed (offline?) - keeping local status"));
+        }
+    });
+});
+
 performAutomaticAppPassCheck();
 // Check every 6 hours
 chrome.alarms.create('check-app-pass', { periodInMinutes: 360 });
@@ -599,7 +622,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             // 4. If we have email, check API
             const apiUrl = `https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(email)}&uid=${encodeURIComponent(uid || '')}`;
             const res = await fetch(apiUrl);
-            if (!res.ok) throw new Error("Server error");
+            if (!res.ok) {
+                // Keep current isPremium status on network errors
+                const current = await chrome.storage.local.get(['isPremium']);
+                sendResponse({ success: true, message: current.isPremium ? "Premium (cached) 💎" : "Status: Free." });
+                return;
+            }
             const data = await res.json();
 
             // 5. Also check Official App Pass SDK as part of sync
@@ -607,8 +635,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
             // Refresh isPremium from storage in case App Pass check updated it
             const finalStorage = await chrome.storage.local.get(['isPremium']);
-            const isNowPremium = !!data.premium || !!finalStorage.isPremium;
+            const isNowPremium = (typeof data.premium === 'boolean' ? data.premium : finalStorage.isPremium) || !!finalStorage.isPremium;
 
+            isPremium = isNowPremium; // Update global variable too
             await chrome.storage.local.set({ isPremium: isNowPremium });
             
             if (isNowPremium) {

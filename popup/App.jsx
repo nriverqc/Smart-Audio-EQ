@@ -12,8 +12,95 @@ export default function App() {
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [appPassCode, setAppPassCode] = useState('');
+  const [lang, setLang] = useState('en');
+
+  const langLabels = {
+    es: { label: 'ES', flag: '🇪🇸' },
+    en: { label: 'EN', flag: '🇺🇸' },
+    pt: { label: 'PT', flag: '🇧🇷' },
+    de: { label: 'DE', flag: '🇩🇪' }
+  };
+
+  const extensionTexts = {
+    es: {
+      visitWebsite: 'Visitar sitio web',
+      extName: 'Smart Audio EQ',
+      premiumBadge: 'PRO',
+      premiumStatus: '• PREMIUM 💎',
+      freeStatus: '• Gratis',
+      syncStatus: 'Sincronizar estado',
+      signInText: 'Inicia sesión en la web para sincronizar:',
+      loginSync: 'Iniciar Sesión',
+      appPassLabel: '¿Tienes un App Pass?',
+      appPassPlaceholder: 'CÓDIGO-APP-PASS',
+      appPassBtn: 'Activar',
+      power: 'Encendido',
+      getPremium: 'Obtener Premium 💎',
+      manageAppPass: 'Gestionar App Pass'
+    },
+    en: {
+      visitWebsite: 'Visit Website',
+      extName: 'Smart Audio EQ',
+      premiumBadge: 'PRO',
+      premiumStatus: '• PREMIUM 💎',
+      freeStatus: '• Free',
+      syncStatus: 'Sync Status',
+      signInText: 'Sign in on our website to sync:',
+      loginSync: 'Login / Sync',
+      appPassLabel: 'Have an App Pass?',
+      appPassPlaceholder: 'APP-PASS-CODE',
+      appPassBtn: 'Activate',
+      power: 'Power',
+      getPremium: 'Get Premium 💎',
+      manageAppPass: 'Manage App Pass'
+    },
+    pt: {
+      visitWebsite: 'Visite o site',
+      extName: 'Smart Audio EQ',
+      premiumBadge: 'PRO',
+      premiumStatus: '• PREMIUM 💎',
+      freeStatus: '• Grátis',
+      syncStatus: 'Status de sincronização',
+      signInText: 'Faça login no site para sincronizar:',
+      loginSync: 'Entrar / Sincronizar',
+      appPassLabel: 'Tem um App Pass?',
+      appPassPlaceholder: 'CÓDIGO-APP-PASS',
+      appPassBtn: 'Ativar',
+      power: 'Energia',
+      getPremium: 'Obter Premium 💎',
+      manageAppPass: 'Gerenciar App Pass'
+    },
+    de: {
+      visitWebsite: 'Website besuchen',
+      extName: 'Smart Audio EQ',
+      premiumBadge: 'PRO',
+      premiumStatus: '• PREMIUM 💎',
+      freeStatus: '• Kostenlos',
+      syncStatus: 'Sync-Status',
+      signInText: 'Anmelden zum Synchronisieren:',
+      loginSync: 'Anmelden / Sync',
+      appPassLabel: 'Hast du einen App Pass?',
+      appPassPlaceholder: 'APP-PASS-CODE',
+      appPassBtn: 'Aktivieren',
+      power: 'Strom',
+      getPremium: 'Premium erhalten 💎',
+      manageAppPass: 'App Pass verwalten'
+    }
+  };
+
+  const t = (key) => {
+    return extensionTexts[lang][key] || extensionTexts['en'][key];
+  };
 
   useEffect(() => {
+    // Detect language
+    const uiLang = chrome.i18n.getUILanguage().split('-')[0];
+    if (langLabels[uiLang]) {
+      setLang(uiLang);
+    } else {
+      setLang('en');
+    }
+
     // Check state from storage and active tab status
     const checkState = () => {
         // 1. Get global settings
@@ -176,8 +263,6 @@ export default function App() {
     });
   };
 
-  const t = (key) => chrome.i18n.getMessage(key);
-
   return (
     <div>
       <div className="controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -189,6 +274,27 @@ export default function App() {
             <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>{t("extName")}</h3>
             <span className="beta-badge" style={{fontSize: '0.6em', marginLeft: '8px', verticalAlign: 'middle'}}>BETA</span>
         </div>
+        
+        {/* Language Switcher in Extension */}
+        <div style={{display: 'flex', gap: '5px'}}>
+            {Object.keys(langLabels).map(l => (
+                <span 
+                    key={l} 
+                    onClick={() => setLang(l)}
+                    style={{
+                        cursor: 'pointer', 
+                        fontSize: '1rem', 
+                        opacity: lang === l ? 1 : 0.3,
+                        filter: lang === l ? 'none' : 'grayscale(100%)',
+                        transition: 'all 0.2s'
+                    }}
+                    title={langLabels[l].label}
+                >
+                    {langLabels[l].flag}
+                </span>
+            ))}
+        </div>
+
         {isPremium && <span className="premium-badge">{t("premiumBadge")}</span>}
       </div>
 
@@ -247,7 +353,7 @@ export default function App() {
       )}
 
       <div className="controls">
-        <span>Power</span>
+        <span>{t("power")}</span>
         <button 
           className={`toggle-btn ${enabled ? 'active' : ''}`}
           onClick={toggleEq}
@@ -308,7 +414,7 @@ export default function App() {
       {!isPremium && (
         <div style={{marginTop: '1rem', textAlign: 'center', borderTop: '1px solid #333', paddingTop: '15px'}}>
           <button onClick={handleGoPremium} style={{background: '#ffcc00', border: 'none', color: '#000', cursor: 'pointer', padding: '8px 15px', borderRadius: '4px', fontWeight: 'bold', width: '100%', marginBottom: '10px'}}>
-            Get Premium 💎
+            {t("getPremium")}
           </button>
           
           <div style={{marginTop: '10px', background: '#222', padding: '10px', borderRadius: '6px', border: '1px solid #444'}}>
@@ -364,7 +470,7 @@ export default function App() {
                 marginBottom: '5px'
               }}
             >
-              🚀 Get Global App Pass
+              🚀 {t("getPremium")} (App Pass)
             </button>
             <p style={{fontSize: '9px', color: '#888', margin: 0}}>
               One pass for many extensions
@@ -387,7 +493,7 @@ export default function App() {
                     cursor: 'pointer'
                 }}
               >
-                  Manage App Pass
+                  {t("manageAppPass")}
               </button>
           </div>
       )}

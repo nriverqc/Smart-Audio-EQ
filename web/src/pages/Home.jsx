@@ -31,6 +31,34 @@ export default function Home({ lang }) {
       f3Title: '🔒 Privacy First',
       f3Text: 'All processing is local. Your audio never leaves your browser.',
     },
+    pt: {
+      titleLine1: 'Melhore o áudio do seu navegador',
+      titleHighlight: 'como um profissional',
+      description:
+        'Smart Audio EQ traz um equalizador real para YouTube, Spotify e qualquer site com áudio.',
+      addButton: 'Adicionar ao Chrome (Grátis)',
+      premiumButton: 'Obter Premium',
+      f1Title: '🎚️ Equalizador de 6 bandas',
+      f1Text: 'Controle preciso de graves, médios e agudos para um som perfeito.',
+      f2Title: '🚀 Latência zero',
+      f2Text: 'Processamento em tempo real mantém o áudio perfeitamente sincronizado com o vídeo.',
+      f3Title: '🔒 Privacidade em primeiro lugar',
+      f3Text: 'Todo o processamento é local. Seu áudio nunca sai do navegador.',
+    },
+    de: {
+      titleLine1: 'Verbessern Sie Ihren Browser-Sound',
+      titleHighlight: 'wie ein Profi',
+      description:
+        'Smart Audio EQ bringt einen echten Equalizer zu YouTube, Spotify und jeder Website mit Audio.',
+      addButton: 'Zu Chrome hinzufügen (Kostenlos)',
+      premiumButton: 'Premium erhalten',
+      f1Title: '🎚️ 6-Band-Equalizer',
+      f1Text: 'Präzise Kontrolle über Bässe, Mitten und Höhen für perfekten Sound.',
+      f2Title: '🚀 Null Latenz',
+      f2Text: 'Echtzeitverarbeitung hält den Ton perfekt mit dem Video synchron.',
+      f3Title: '🔒 Datenschutz an erster Stelle',
+      f3Text: 'Die gesamte Verarbeitung erfolgt lokal. Ihr Audio verlässt nie Ihren Browser.',
+    },
   };
 
   const t = texts[lang] || texts.es;

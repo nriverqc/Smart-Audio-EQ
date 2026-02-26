@@ -23,6 +23,17 @@ function AppContent() {
     loading: true 
   });
 
+  // Automatic Language Detection
+  useEffect(() => {
+    const browserLang = navigator.language.split('-')[0];
+    const supportedLangs = ['es', 'en', 'pt', 'de'];
+    if (supportedLangs.includes(browserLang)) {
+      setLang(browserLang);
+    } else {
+      setLang('en'); // Default to English if not supported
+    }
+  }, []);
+
   // REPLACE THIS WITH YOUR ACTUAL EXTENSION ID from chrome://extensions
   // e.g. "abcdefghijklmnop..."
   const EXTENSION_ID = "aohaefkkofgkbneodjflnacpipdnfeng"; 
@@ -186,6 +197,15 @@ function AppContent() {
       window.postMessage({ type: "CHECK_APP_PASS_REQUEST" }, "*");
   };
 
+  const langLabels = {
+    es: { label: 'ES', flag: '🇪🇸', premium: 'PREMIUM 💎', free: 'GRATIS', home: 'Inicio', goPremium: 'Ir a Premium', footer: 'Todos los derechos reservados.', privacy: 'Política de Privacidad', login: 'Iniciar Sesión' },
+    en: { label: 'EN', flag: '🇺🇸', premium: 'PREMIUM 💎', free: 'FREE', home: 'Home', goPremium: 'Go Premium', footer: 'All rights reserved.', privacy: 'Privacy Policy', login: 'Login' },
+    pt: { label: 'PT', flag: '🇧🇷', premium: 'PREMIUM 💎', free: 'GRÁTIS', home: 'Início', goPremium: 'Ir para Premium', footer: 'Todos os direitos reservados.', privacy: 'Política de Privacidade', login: 'Entrar' },
+    de: { label: 'DE', flag: '🇩🇪', premium: 'PREMIUM 💎', free: 'KOSTENLOS', home: 'Startseite', goPremium: 'Zu Premium wechseln', footer: 'Alle Rechte vorbehalten.', privacy: 'Datenschutz', login: 'Anmelden' }
+  };
+
+  const currentLang = langLabels[lang] || langLabels.en;
+
   return (
     <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, requestExtensionAppPassCheck }}>
       <AdBlockNotice />
@@ -226,7 +246,7 @@ function AppContent() {
                        <div style={{fontSize: '0.8rem', textAlign: 'right'}}>
                            <div style={{color: '#ccc'}}>{user.displayName || user.email.split('@')[0]}</div>
                            <div style={{color: user.isPremium ? '#ffd700' : '#aaa', fontWeight: 'bold', fontSize: '0.7rem'}}>
-                               {user.isPremium ? (lang === 'es' ? 'PREMIUM 💎' : 'PREMIUM 💎') : (lang === 'es' ? 'GRATIS' : 'FREE')}
+                               {user.isPremium ? currentLang.premium : currentLang.free}
                            </div>
                        </div>
                        {user.photoURL ? (
@@ -242,32 +262,40 @@ function AppContent() {
                    </div>
                ) : (
                  <button onClick={loginWithGoogle} className="btn-premium" style={{padding: '5px 10px', fontSize: '0.9rem'}}>
-                    {lang === 'es' ? 'Iniciar Sesión' : 'Login'}
+                    {currentLang.login}
                  </button>
                )}
 
-              <div className="lang-switch">
-                <button
-                  className={lang === 'es' ? 'lang-btn active' : 'lang-btn'}
-                  onClick={() => setLang('es')}
-                >
-                  ES
-                </button>
-                <span className="lang-separator">/</span>
-                <button
-                  className={lang === 'en' ? 'lang-btn active' : 'lang-btn'}
-                  onClick={() => setLang('en')}
-                >
-                  EN
-                </button>
+              {/* Language Switcher with Dropdown/Flags */}
+              <div className="lang-switcher-container" style={{position: 'relative', display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: '8px'}}>
+                {Object.keys(langLabels).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLang(l)}
+                    title={langLabels[l].label}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '1.2rem',
+                      cursor: 'pointer',
+                      opacity: lang === l ? 1 : 0.4,
+                      transform: lang === l ? 'scale(1.2)' : 'scale(1)',
+                      transition: 'all 0.2s ease',
+                      padding: '0 2px'
+                    }}
+                  >
+                    {langLabels[l].flag}
+                  </button>
+                ))}
               </div>
+
               <div>
                 <Link to="/" style={{ marginRight: '20px', color: '#fff', textDecoration: 'none' }}>
-                  {lang === 'es' ? 'Inicio' : 'Home'}
+                  {currentLang.home}
                 </Link>
                 {!user.isPremium && (
                     <Link to="/premium" className="btn-premium">
-                    {lang === 'es' ? 'Ir a Premium' : 'Go Premium'}
+                    {currentLang.goPremium}
                     </Link>
                 )}
               </div>
@@ -281,10 +309,10 @@ function AppContent() {
           </Routes>
 
           <footer>
-            <p>© 2026 Smart Audio EQ. {lang === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.2 (20k)</span></p>
+            <p>© 2026 Smart Audio EQ. {currentLang.footer} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.2 (20k)</span></p>
             <p style={{ fontSize: '0.8rem', marginTop: '5px' }}>
               <Link to="/privacy" style={{ color: '#aaa', textDecoration: 'none' }}>
-                {lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}
+                {currentLang.privacy}
               </Link>
             </p>
           </footer>

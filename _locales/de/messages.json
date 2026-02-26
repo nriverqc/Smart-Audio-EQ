@@ -1,0 +1,54 @@
+{
+  "extName": {
+    "message": "Equalizer - Smart Audio EQ",
+    "description": "The name of the extension"
+  },
+  "extDescription": {
+    "message": "Audio-Equalizer für YouTube, Spotify Web und mehr.",
+    "description": "Description of the extension"
+  },
+  "visitWebsite": {
+    "message": "Website besuchen",
+    "description": "Tooltip for the logo/title"
+  },
+  "loginSync": {
+    "message": "Anmelden / Synchronisieren",
+    "description": "Button text to login"
+  },
+  "syncStatus": {
+    "message": "Sync-Status",
+    "description": "Tooltip for sync button"
+  },
+  "signInText": {
+    "message": "Melden Sie sich auf unserer Website an, um zu synchronisieren:",
+    "description": "Text prompting user to sign in"
+  },
+  "premiumBadge": {
+    "message": "PRO",
+    "description": "Premium badge text"
+  },
+  "freeBadge": {
+    "message": "Kostenlos",
+    "description": "Free badge text"
+  },
+  "premiumStatus": {
+    "message": "• PREMIUM 💎",
+    "description": "Premium status text"
+  },
+  "freeStatus": {
+    "message": "• Kostenlos",
+    "description": "Free status text"
+  },
+  "appPassLabel": {
+    "message": "Hast du einen App Pass?",
+    "description": "Label for App Pass field"
+  },
+  "appPassPlaceholder": {
+    "message": "APP-PASS-CODE",
+    "description": "Placeholder for App Pass field"
+  },
+  "appPassBtn": {
+    "message": "Aktivieren",
+    "description": "Button to activate App Pass"
+  }
+}

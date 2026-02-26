@@ -4,7 +4,7 @@ import { UserContext } from '../App';
 const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
 export default function Premium({ lang }) {
-  const { user, refreshUser, loginWithGoogle } = useContext(UserContext);
+  const { user, refreshUser, loginWithGoogle, requestExtensionAppPassCheck } = useContext(UserContext);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -171,9 +171,11 @@ export default function Premium({ lang }) {
       optionMonthly: 'Mensual',
       optionYearly: 'Anual (Ahorra más del 15%)',
       paypalNote: 'Nota: Después de pagar en PayPal, tu cuenta se activará automáticamente en unos minutos. Si no, contáctanos.',
-      appPassLabel: '¿Tienes un App Pass? Ingresa el código aquí:',
-      appPassPlaceholder: 'CÓDIGO-APP-PASS',
-      appPassBtn: 'Activar con App Pass'
+      appPassLabel: 'App Pass (Oficial):',
+      appPassBtnAuto: 'Verificar automáticamente desde la extensión',
+      appPassManualLabel: '¿Tienes un código promocional o manual?',
+      appPassPlaceholder: 'CÓDIGO-PROMO',
+      appPassBtn: 'Activar código'
     },
     en: {
       title: 'Unlock the full power',
@@ -214,9 +216,11 @@ export default function Premium({ lang }) {
       optionMonthly: 'Monthly',
       optionYearly: 'Yearly (Save more than 15%)',
       paypalNote: 'Note: After paying on PayPal, your account will be activated automatically within a few minutes. If not, contact us.',
-      appPassLabel: 'Do you have an App Pass? Enter code here:',
-      appPassPlaceholder: 'APP-PASS-CODE',
-      appPassBtn: 'Activate with App Pass'
+      appPassLabel: 'App Pass (Official):',
+      appPassBtnAuto: 'Verify automatically via extension',
+      appPassManualLabel: 'Have a promo or manual code?',
+      appPassPlaceholder: 'PROMO-CODE',
+      appPassBtn: 'Activate code'
     },
   };
 
@@ -432,8 +436,29 @@ export default function Premium({ lang }) {
 
               {/* APP PASS SECTION */}
               <div style={{marginTop: '30px', borderTop: '1px solid #333', paddingTop: '20px', textAlign: 'left'}}>
-                  <label style={{display: 'block', marginBottom: '10px', fontSize: '0.9rem', color: '#ffd700', fontWeight: 'bold'}}>
+                  <label style={{display: 'block', marginBottom: '10px', fontSize: '0.9rem', color: '#00d2ff', fontWeight: 'bold'}}>
                       {t.appPassLabel}
+                  </label>
+                  <button 
+                      onClick={requestExtensionAppPassCheck}
+                      disabled={loading}
+                      style={{
+                          width: '100%',
+                          padding: '12px',
+                          borderRadius: '5px',
+                          border: 'none',
+                          background: 'linear-gradient(45deg, #00d2ff, #00a8cc)',
+                          color: '#000',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          marginBottom: '20px'
+                      }}
+                  >
+                      {t.appPassBtnAuto}
+                  </button>
+
+                  <label style={{display: 'block', marginBottom: '10px', fontSize: '0.8rem', color: '#aaa'}}>
+                      {t.appPassManualLabel}
                   </label>
                   <div style={{display: 'flex', gap: '10px'}}>
                       <input 
@@ -445,7 +470,7 @@ export default function Premium({ lang }) {
                               flex: 1,
                               padding: '10px',
                               borderRadius: '5px',
-                              border: '1px solid #ffd700',
+                              border: '1px solid #555',
                               background: '#111',
                               color: '#fff',
                               fontSize: '1rem'
@@ -458,8 +483,8 @@ export default function Premium({ lang }) {
                               padding: '10px 20px',
                               borderRadius: '5px',
                               border: 'none',
-                              background: '#ffd700',
-                              color: '#000',
+                              background: '#444',
+                              color: '#fff',
                               fontWeight: 'bold',
                               cursor: 'pointer',
                               whiteSpace: 'nowrap'

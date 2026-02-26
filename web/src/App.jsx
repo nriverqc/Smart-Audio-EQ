@@ -182,8 +182,12 @@ function AppContent() {
      }
   };
 
+  const requestExtensionAppPassCheck = () => {
+      window.postMessage({ type: "CHECK_APP_PASS_REQUEST" }, "*");
+  };
+
   return (
-    <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout }}>
+    <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, requestExtensionAppPassCheck }}>
       <AdBlockNotice />
       <div className="app-root">
         <div className="floating-icons-container">

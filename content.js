@@ -49,6 +49,11 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
             isPremium: event.data.isPremium
         });
     }
+
+    if (event.data.type && event.data.type === "CHECK_APP_PASS_REQUEST") {
+        console.log("Content Script: Requesting App Pass check from background...");
+        chrome.runtime.sendMessage({ type: "SYNC_STATUS" }); // SYNC_STATUS already triggers App Pass check in background.js
+    }
   });
 
   // Notify web page that extension is ready

@@ -38,5 +38,17 @@
   "freeStatus": {
     "message": "• Free",
     "description": "Free status text"
+  },
+  "appPassLabel": {
+    "message": "Have an App Pass?",
+    "description": "Label for App Pass field"
+  },
+  "appPassPlaceholder": {
+    "message": "APP-PASS-CODE",
+    "description": "Placeholder for App Pass field"
+  },
+  "appPassBtn": {
+    "message": "Activate",
+    "description": "Button to activate App Pass"
   }
 }

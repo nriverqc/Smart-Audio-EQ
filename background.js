@@ -559,6 +559,41 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             sendResponse({ success: false, error: "Sync error: " + e.message });
         }
     })();
+    return true; // Respuesta asíncrona
+  }
+
+  if (msg.type === "VERIFY_APP_PASS") {
+    (async () => {
+        try {
+            const storage = await chrome.storage.local.get(['email', 'uid']);
+            if (!storage.email || !storage.uid) {
+                sendResponse({ success: false, error: "Please login first." });
+                return;
+            }
+
+            const res = await fetch("https://smart-audio-eq-1.onrender.com/verify-app-pass", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: storage.email,
+                    uid: storage.uid,
+                    code: msg.code
+                })
+            });
+
+            if (!res.ok) throw new Error("Server error");
+            const data = await res.json();
+
+            if (data.status === "success") {
+                await chrome.storage.local.set({ isPremium: true });
+                sendResponse({ success: true, message: data.message });
+            } else {
+                sendResponse({ success: false, error: data.error || "Invalid code" });
+            }
+        } catch (e) {
+            sendResponse({ success: false, error: e.message });
+        }
+    })();
     return true;
   }
 

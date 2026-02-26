@@ -11,6 +11,7 @@ export default function App() {
   const [currentPreset, setCurrentPreset] = useState('flat');
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [appPassCode, setAppPassCode] = useState('');
 
   useEffect(() => {
     // Check state from storage and active tab status
@@ -99,6 +100,21 @@ export default function App() {
   const handleGoPremium = () => {
     // Open the REAL premium page via background
     chrome.runtime.sendMessage({ type: 'OPEN_PREMIUM_PAGE' });
+  };
+
+  const handleAppPassVerify = () => {
+      if (!appPassCode.trim()) return;
+      setLoading(true);
+      chrome.runtime.sendMessage({ type: 'VERIFY_APP_PASS', code: appPassCode.trim() }, (response) => {
+          setLoading(false);
+          if (response && response.success) {
+              alert(response.message);
+              setIsPremium(true);
+              setAppPassCode('');
+          } else {
+              alert(response ? response.error : "Verification failed");
+          }
+      });
   };
 
   const handlePresetChange = (e) => {
@@ -282,10 +298,46 @@ export default function App() {
       )}
 
       {!isPremium && (
-        <div style={{marginTop: '1rem', textAlign: 'center'}}>
-          <button onClick={handleGoPremium} style={{background: 'none', border: '1px solid #ffcc00', color: '#ffcc00', cursor: 'pointer', padding: '5px 10px', borderRadius: '4px'}}>
+        <div style={{marginTop: '1rem', textAlign: 'center', borderTop: '1px solid #333', paddingTop: '15px'}}>
+          <button onClick={handleGoPremium} style={{background: '#ffcc00', border: 'none', color: '#000', cursor: 'pointer', padding: '8px 15px', borderRadius: '4px', fontWeight: 'bold', width: '100%', marginBottom: '10px'}}>
             Get Premium 💎
           </button>
+          
+          <div style={{marginTop: '10px', background: '#222', padding: '10px', borderRadius: '6px', border: '1px solid #444'}}>
+            <p style={{fontSize: '0.75rem', color: '#aaa', margin: '0 0 8px 0'}}>{t("appPassLabel")}</p>
+            <div style={{display: 'flex', gap: '5px'}}>
+              <input 
+                type="text" 
+                placeholder={t("appPassPlaceholder")}
+                value={appPassCode}
+                onChange={(e) => setAppPassCode(e.target.value.toUpperCase())}
+                style={{
+                  flex: 1,
+                  background: '#111',
+                  border: '1px solid #555',
+                  color: '#fff',
+                  fontSize: '11px',
+                  padding: '5px',
+                  borderRadius: '4px'
+                }}
+              />
+              <button 
+                onClick={handleAppPassVerify}
+                disabled={loading || !appPassCode.trim()}
+                style={{
+                  background: '#444',
+                  color: '#fff',
+                  border: '1px solid #666',
+                  padding: '5px 10px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  cursor: 'pointer'
+                }}
+              >
+                {t("appPassBtn")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -38,5 +38,17 @@
   "freeStatus": {
     "message": "• Gratis",
     "description": "Texto de estado Gratis"
+  },
+  "appPassLabel": {
+    "message": "¿Tienes un App Pass?",
+    "description": "Etiqueta para el campo de App Pass"
+  },
+  "appPassPlaceholder": {
+    "message": "CÓDIGO-APP-PASS",
+    "description": "Placeholder para el campo de App Pass"
+  },
+  "appPassBtn": {
+    "message": "Activar",
+    "description": "Botón para activar App Pass"
   }
 }

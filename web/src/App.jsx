@@ -101,6 +101,11 @@ function AppContent() {
   };
 
   useEffect(() => {
+    if (!auth) {
+      console.error("Firebase Auth not initialized");
+      setUser(prev => ({ ...prev, loading: false }));
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         console.log("Sesión activa:", firebaseUser.email);
@@ -188,6 +193,10 @@ function AppContent() {
   }, [user.isPremium, user.email, user.uid]);
 
   const loginWithGoogle = () => {
+    if (!auth || !googleProvider) {
+      alert("Error: Firebase no está configurado correctamente.");
+      return;
+    }
     signInWithPopup(auth, googleProvider)
       .then(() => {
         // User info handled by onAuthStateChanged

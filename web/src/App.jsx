@@ -204,6 +204,7 @@ function AppContent() {
     de: { label: 'Deutsch', flag: '/flags/de.svg', premium: 'PREMIUM 💎', free: 'KOSTENLOS', home: 'Startseite', goPremium: 'Zu Premium wechseln', footer: 'Alle Rechte vorbehalten.', privacy: 'Datenschutz', login: 'Anmelden' }
   };
 
+  const currentLang = langLabels[lang] || langLabels.en;
   const [showLangMenu, setShowLangMenu] = useState(false);
 
   // Close dropdown when clicking outside

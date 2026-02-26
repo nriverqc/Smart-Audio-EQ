@@ -28,7 +28,9 @@ function AppContent() {
   const EXTENSION_ID = "aohaefkkofgkbneodjflnacpipdnfeng"; 
 
   const syncWithExtension = (userData) => {
-    // Save to localStorage for Content Script to read
+    console.log("Web: Syncing with extension...", userData.email, "Premium:", userData.isPremium);
+    
+    // 1. Update localStorage (for Content Script initial check)
     try {
         localStorage.setItem('user_sync_data', JSON.stringify({
             uid: userData.uid,
@@ -41,7 +43,7 @@ function AppContent() {
         console.error("Error saving to localStorage:", e);
     }
 
-    // 1. Send via Window Message (for Content Script)
+    // 2. Relay via Window Message (for Content Script bridge)
     window.postMessage({
         type: "LOGIN_EXITOSO",
         uid: userData.uid,
@@ -49,32 +51,25 @@ function AppContent() {
         isPremium: userData.isPremium
     }, "*");
 
-    // 2. Send via Runtime Message (Directly to Extension Background if allowed)
+    // 3. Direct Runtime Message (if ID matches)
     if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage) {
         try {
-            // Using "LOGIN_SUCCESS" to match user request, but keeping "LOGIN_EXITOSO" structure support in background
             window.chrome.runtime.sendMessage(EXTENSION_ID, {
-                type: "LOGIN_SUCCESS", // User preferred name
-                accion: "SYNC_USER",   // Fallback name
+                type: "LOGIN_EXITOSO",
+                accion: "SYNC_USER",
                 uid: userData.uid,
                 email: userData.email,
                 isPremium: userData.isPremium,
-                user: { // Nesting user object as per user example
-                    uid: userData.uid,
-                    email: userData.email,
-                    isPremium: userData.isPremium
-                },
-                nombre: userData.displayName || '',
-                foto: userData.photoURL || ''
+                user: userData
             }, (response) => {
                  if (window.chrome.runtime.lastError) {
-                     console.log("Extension not found or not installed.");
+                     console.log("Extension direct sync failed (expected in dev mode if ID differs)");
                  } else {
-                     console.log("Extension response:", response);
+                     console.log("Extension direct sync success:", response);
                  }
             });
         } catch (e) {
-            console.log("Could not sync with extension directly:", e);
+            console.log("Could not send direct message:", e);
         }
     }
   };
@@ -146,27 +141,21 @@ function AppContent() {
            console.log("Web: No user session to send.");
         }
       }
+      if (event.data.type === "PREMIUM_ACTIVADO_EXT") {
+        console.log("Web: Extension reported Premium activation! Refreshing...");
+        refreshUser();
+      }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, [user]);
 
-  // Ensure data is always in localStorage when user is logged in
+  // Ensure data is synced whenever user state changes
   useEffect(() => {
     if (user.email && user.uid) {
-        try {
-            localStorage.setItem('user_sync_data', JSON.stringify({
-                uid: user.uid,
-                email: user.email,
-                isPremium: user.isPremium,
-                nombre: user.displayName,
-                foto: user.photoURL
-            }));
-        } catch (e) {
-            console.error("Error saving to localStorage:", e);
-        }
+        syncWithExtension(user);
     }
-  }, [user]);
+  }, [user.isPremium, user.email, user.uid]);
 
   const loginWithGoogle = () => {
     signInWithPopup(auth, googleProvider)

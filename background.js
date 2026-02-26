@@ -586,6 +586,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
             if (data.status === "success") {
                 await chrome.storage.local.set({ isPremium: true });
+                
+                // Notify open web tabs about the new Premium status
+                try {
+                    const tabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
+                    tabs.forEach(t => {
+                        chrome.tabs.sendMessage(t.id, { type: "PREMIUM_ACTIVADO_EXT" });
+                    });
+                } catch (e) { console.log("Failed to notify web tabs", e); }
+
                 sendResponse({ success: true, message: data.message });
             } else {
                 sendResponse({ success: false, error: data.error || "Invalid code" });

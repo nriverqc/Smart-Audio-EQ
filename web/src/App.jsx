@@ -187,10 +187,12 @@ function AppContent() {
 
   // Ensure data is synced whenever user state changes
   useEffect(() => {
-    if (user.email && user.uid) {
+    // Only sync if we have a user AND we are not in the initial "loading" phase
+    // OR if we already know the user is premium (from cache)
+    if (user.email && user.uid && (!user.loading || user.isPremium)) {
         syncWithExtension(user);
     }
-  }, [user.isPremium, user.email, user.uid]);
+  }, [user.isPremium, user.email, user.uid, user.loading]);
 
   const loginWithGoogle = () => {
     if (!auth || !googleProvider) {

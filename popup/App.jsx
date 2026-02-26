@@ -102,6 +102,14 @@ export default function App() {
     chrome.runtime.sendMessage({ type: 'OPEN_PREMIUM_PAGE' });
   };
 
+  const handleActivateOfficialAppPass = () => {
+      chrome.runtime.sendMessage({ type: 'ACTIVATE_OFFICIAL_APP_PASS' });
+  };
+
+  const handleManageOfficialAppPass = () => {
+      chrome.runtime.sendMessage({ type: 'MANAGE_OFFICIAL_APP_PASS' });
+  };
+
   const handleAppPassVerify = () => {
       if (!appPassCode.trim()) return;
       setLoading(true);
@@ -305,7 +313,9 @@ export default function App() {
           
           <div style={{marginTop: '10px', background: '#222', padding: '10px', borderRadius: '6px', border: '1px solid #444'}}>
             <p style={{fontSize: '0.75rem', color: '#aaa', margin: '0 0 8px 0'}}>{t("appPassLabel")}</p>
-            <div style={{display: 'flex', gap: '5px'}}>
+            
+            {/* Manual Code Input */}
+            <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
               <input 
                 type="text" 
                 placeholder={t("appPassPlaceholder")}
@@ -337,8 +347,49 @@ export default function App() {
                 {t("appPassBtn")}
               </button>
             </div>
+
+            {/* Official App Pass SDK Button */}
+            <button 
+              onClick={handleActivateOfficialAppPass}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(45deg, #00d2ff, #00a8cc)',
+                color: '#000',
+                border: 'none',
+                padding: '8px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                marginBottom: '5px'
+              }}
+            >
+              🚀 Get Global App Pass
+            </button>
+            <p style={{fontSize: '9px', color: '#888', margin: 0}}>
+              One pass for many extensions
+            </p>
           </div>
         </div>
+      )}
+      
+      {isPremium && (
+          <div style={{marginTop: '10px', textAlign: 'center'}}>
+              <button 
+                onClick={handleManageOfficialAppPass}
+                style={{
+                    background: 'transparent',
+                    border: '1px solid #444',
+                    color: '#888',
+                    fontSize: '10px',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                }}
+              >
+                  Manage App Pass
+              </button>
+          </div>
       )}
     </div>
   );

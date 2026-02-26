@@ -377,6 +377,61 @@ def register_paypal():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/verify-official-app-pass", methods=["POST"])
+def verify_official_app_pass():
+    """Verifies an official App Pass token from joinapppass.com"""
+    try:
+        data = request.json or {}
+        email = data.get("email")
+        uid = data.get("uid")
+        token = data.get("token")
+        
+        if not email or not uid or not token:
+            return jsonify({"error": "Faltan datos (email, uid o token)"}), 400
+            
+        # Verify with official App Pass API
+        headers = {"app-pass-token": token}
+        resp = requests.get("https://joinapppass.com/api/check-app-pass", headers=headers)
+        
+        if resp.status_code == 200:
+            # Official validation successful
+            expiration_date = datetime.now() + timedelta(days=30) # Monthly check
+            
+            # Save to SQLite
+            with sqlite3.connect(DB_NAME) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date)
+                    VALUES (?, 1, ?, ?)
+                    ON CONFLICT(email) DO UPDATE SET
+                    is_premium=1,
+                    payment_id=excluded.payment_id,
+                    expiration_date=excluded.expiration_date
+                """, (email, f"OFFICIAL_APP_PASS_{token[:8]}", expiration_date))
+                conn.commit()
+                
+            # Sync to Firestore
+            if db:
+                try:
+                    user_ref = db.collection('usuarios').document(uid)
+                    user_ref.set({
+                        'isPremium': True,
+                        'lastPayment': firestore.SERVER_TIMESTAMP,
+                        'expirationDate': expiration_date,
+                        'method': 'Official_App_Pass',
+                        'email': email
+                    }, merge=True)
+                except Exception as e:
+                    print(f"Firebase Update Error: {e}")
+                    
+            return jsonify({"status": "success", "message": "¡App Pass oficial verificado!"})
+        else:
+            return jsonify({"error": "Token de App Pass inválido o expirado"}), 403
+            
+    except Exception as e:
+        print(f"Official App Pass Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/verify-app-pass", methods=["POST"])
 def verify_app_pass():
     """Verifies an App Pass code and activates Premium"""

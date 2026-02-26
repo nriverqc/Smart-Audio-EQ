@@ -1,7 +1,56 @@
+import { checkAppPass, activateAppPass, manageAppPass } from '@chrome-stats/app-pass-sdk';
+
 // Service Worker con gestión de Offscreen Document
 // Migrado para cumplir con Manifest V3 y evitar problemas de CSP/Autoplay
 
 console.log("Smart Audio EQ: Background Service Worker iniciado");
+
+// ===== AUTOMATIC APP PASS CHECK (SDK) =====
+async function performAutomaticAppPassCheck() {
+  try {
+    const response = await checkAppPass();
+    if (response.status === 'ok' && response.appPassToken) {
+      console.log('✅ Background: Official App Pass detected! Syncing...');
+      const storage = await chrome.storage.local.get(['email', 'uid']);
+      
+      if (storage.email && storage.uid) {
+        // Verify token with backend
+        const res = await fetch("https://smart-audio-eq-1.onrender.com/verify-official-app-pass", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: storage.email,
+            uid: storage.uid,
+            token: response.appPassToken
+          })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'success') {
+            await chrome.storage.local.set({ isPremium: true });
+            console.log('💎 Background: Premium activated via official App Pass');
+          }
+        }
+      } else {
+        // User not logged in, but we have a pass. Mark as premium locally anyway
+        await chrome.storage.local.set({ isPremium: true });
+      }
+    } else {
+      console.log('ℹ️ Background: No official App Pass detected:', response.message);
+    }
+  } catch (e) {
+    console.warn('❌ Background: App Pass SDK Check failed:', e.message);
+  }
+}
+
+// Check on startup
+performAutomaticAppPassCheck();
+// Check every 6 hours
+chrome.alarms.create('check-app-pass', { periodInMinutes: 360 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'check-app-pass') performAutomaticAppPassCheck();
+});
 
 // ===== GESTIÓN DE OFFSCREEN DOCUMENT =====
 let creating; // Promesa para evitar condiciones de carrera
@@ -547,9 +596,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             if (!res.ok) throw new Error("Server error");
             const data = await res.json();
 
-            await chrome.storage.local.set({ isPremium: !!data.premium });
+            // 5. Also check Official App Pass SDK as part of sync
+            await performAutomaticAppPassCheck();
+
+            // Refresh isPremium from storage in case App Pass check updated it
+            const finalStorage = await chrome.storage.local.get(['isPremium']);
+            const isNowPremium = !!data.premium || !!finalStorage.isPremium;
+
+            await chrome.storage.local.set({ isPremium: isNowPremium });
             
-            if (data.premium) {
+            if (isNowPremium) {
                 sendResponse({ success: true, message: "Premium status synced! 💎" });
             } else {
                 sendResponse({ success: true, message: "Status: Free. If you bought Premium, please wait a minute." });
@@ -603,6 +659,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             sendResponse({ success: false, error: e.message });
         }
     })();
+    return true;
+  }
+
+  if (msg.type === "ACTIVATE_OFFICIAL_APP_PASS") {
+    activateAppPass().then(res => sendResponse(res)).catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
+
+  if (msg.type === "MANAGE_OFFICIAL_APP_PASS") {
+    manageAppPass().then(() => sendResponse({ success: true })).catch(e => sendResponse({ success: false, error: e.message }));
     return true;
   }
 

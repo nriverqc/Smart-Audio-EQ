@@ -166,8 +166,8 @@ def setup_paypal_products_and_plans():
     token = get_paypal_access_token()
     if not token: return {}
     
-    # 1. Product
-    product_id = "SMART_AUDIO_EQ_PREMIUM_V1"
+    # 1. Product - V2 to force new product creation
+    product_key = "product_id_v2"
     
     plans_file = "paypal_plans.json"
     store = {}
@@ -178,7 +178,7 @@ def setup_paypal_products_and_plans():
         except:
             pass
             
-    if "product_id" not in store:
+    if product_key not in store:
         # Create Product
         headers = {
             "Authorization": f"Bearer {token}",
@@ -186,20 +186,20 @@ def setup_paypal_products_and_plans():
             "PayPal-Request-Id": str(uuid.uuid4())
         }
         data = {
-            "name": "Smart Audio EQ Premium",
+            "name": "Smart Audio EQ Premium V2",
             "type": "SERVICE",
             "category": "SOFTWARE"
         }
         resp = requests.post(f"{PAYPAL_API_BASE}/v1/catalogs/products", headers=headers, json=data)
         if resp.status_code == 201:
-            store["product_id"] = resp.json()["id"]
+            store[product_key] = resp.json()["id"]
             with open(plans_file, 'w') as f:
                 json.dump(store, f)
         else:
             print(f"Error creating product: {resp.text}")
             return {}
             
-    product_id = store["product_id"]
+    product_id = store[product_key]
     
     # 2. Plans - Updated Pricing to $0.99
     monthly_id = get_or_create_paypal_plan(product_id, "Smart Audio EQ Premium (Monthly)", "MONTH", "0.99")

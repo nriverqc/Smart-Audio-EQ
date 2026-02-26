@@ -1,29 +1,16 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
-// Firebase configuration using environment variables
+// Firebase configuration (Hardcoded for stability)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || process.env.VITE_FIREBASE_APP_ID || ""
+  apiKey: "AIzaSyCL9Ha0xcECnHPsz-yRVXmxuGbR8asX9g8",
+  authDomain: "tallerautenticacion-7bd7b.firebaseapp.com",
+  projectId: "tallerautenticacion-7bd7b",
+  storageBucket: "tallerautenticacion-7bd7b.firebasestorage.app",
+  messagingSenderId: "836371529124",
+  appId: "1:836371529124:web:0f5e7f1a8c2d9e3b4f5a6b"
 };
 
-let app;
-let auth;
-let googleProvider;
-
-try {
-    if (!firebaseConfig.apiKey) {
-        console.warn("Firebase API Key missing. Authentication will not work.");
-    }
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    googleProvider = new GoogleAuthProvider();
-} catch (error) {
-    console.error("Firebase initialization failed:", error);
-}
-
-export { auth, googleProvider };
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();

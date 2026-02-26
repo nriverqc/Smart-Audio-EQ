@@ -15,11 +15,13 @@ export default function App() {
   const [lang, setLang] = useState('en');
 
   const langLabels = {
-    es: { label: 'ES', flag: '🇪🇸' },
-    en: { label: 'EN', flag: '🇺🇸' },
-    pt: { label: 'PT', flag: '🇧🇷' },
-    de: { label: 'DE', flag: '🇩🇪' }
+    es: { label: 'Español', flag: '../flags/es.svg' },
+    en: { label: 'English', flag: '../flags/en.svg' },
+    pt: { label: 'Português', flag: '../flags/pt.svg' },
+    de: { label: 'Deutsch', flag: '../flags/de.svg' }
   };
+
+  const [showLangMenu, setShowLangMenu] = useState(false);
 
   const extensionTexts = {
     es: {
@@ -275,24 +277,68 @@ export default function App() {
             <span className="beta-badge" style={{fontSize: '0.6em', marginLeft: '8px', verticalAlign: 'middle'}}>BETA</span>
         </div>
         
-        {/* Language Switcher in Extension */}
-        <div style={{display: 'flex', gap: '5px'}}>
-            {Object.keys(langLabels).map(l => (
-                <span 
-                    key={l} 
-                    onClick={() => setLang(l)}
-                    style={{
-                        cursor: 'pointer', 
-                        fontSize: '1rem', 
-                        opacity: lang === l ? 1 : 0.3,
-                        filter: lang === l ? 'none' : 'grayscale(100%)',
-                        transition: 'all 0.2s'
-                    }}
-                    title={langLabels[l].label}
-                >
-                    {langLabels[l].flag}
-                </span>
-            ))}
+        {/* Language Switcher in Extension - Dropdown with Flags */}
+        <div 
+            style={{ position: 'relative' }}
+            onMouseEnter={() => setShowLangMenu(true)}
+            onMouseLeave={() => setShowLangMenu(false)}
+        >
+            <button
+                style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem'
+                }}
+            >
+                <img src={langLabels[lang].flag} alt={lang} style={{ width: '16px', height: 'auto', borderRadius: '1px' }} />
+                <span style={{ fontSize: '0.6rem' }}>▼</span>
+            </button>
+
+            {showLangMenu && (
+                <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    background: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '4px',
+                    marginTop: '2px',
+                    overflow: 'hidden',
+                    zIndex: 1000,
+                    minWidth: '100px',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+                }}>
+                    {Object.keys(langLabels).map((l) => (
+                        <button
+                            key={l}
+                            onClick={() => { setLang(l); setShowLangMenu(false); }}
+                            style={{
+                                width: '100%',
+                                background: lang === l ? 'rgba(0, 210, 255, 0.1)' : 'transparent',
+                                border: 'none',
+                                color: lang === l ? '#00d2ff' : '#fff',
+                                padding: '6px 10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem',
+                                textAlign: 'left'
+                            }}
+                        >
+                            <img src={langLabels[l].flag} alt={l} style={{ width: '14px', height: 'auto', borderRadius: '1px' }} />
+                            {langLabels[l].label}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
 
         {isPremium && <span className="premium-badge">{t("premiumBadge")}</span>}

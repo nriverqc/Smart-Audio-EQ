@@ -11,7 +11,8 @@ export default defineConfig({
         { src: 'manifest.json', dest: '.' },
         { src: 'IconoEcualizador.png', dest: '.' },
         { src: 'premium_landing.html', dest: '.' },
-        { src: '_locales', dest: '.' }
+        { src: '_locales', dest: '.' },
+        { src: 'flags', dest: '.' }
       ]
     })
   ],

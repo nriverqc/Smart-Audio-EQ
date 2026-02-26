@@ -198,13 +198,14 @@ function AppContent() {
   };
 
   const langLabels = {
-    es: { label: 'ES', flag: '🇪🇸', premium: 'PREMIUM 💎', free: 'GRATIS', home: 'Inicio', goPremium: 'Ir a Premium', footer: 'Todos los derechos reservados.', privacy: 'Política de Privacidad', login: 'Iniciar Sesión' },
-    en: { label: 'EN', flag: '🇺🇸', premium: 'PREMIUM 💎', free: 'FREE', home: 'Home', goPremium: 'Go Premium', footer: 'All rights reserved.', privacy: 'Privacy Policy', login: 'Login' },
-    pt: { label: 'PT', flag: '🇧🇷', premium: 'PREMIUM 💎', free: 'GRÁTIS', home: 'Início', goPremium: 'Ir para Premium', footer: 'Todos os direitos reservados.', privacy: 'Política de Privacidade', login: 'Entrar' },
-    de: { label: 'DE', flag: '🇩🇪', premium: 'PREMIUM 💎', free: 'KOSTENLOS', home: 'Startseite', goPremium: 'Zu Premium wechseln', footer: 'Alle Rechte vorbehalten.', privacy: 'Datenschutz', login: 'Anmelden' }
+    es: { label: 'Español', flag: '/flags/es.svg', premium: 'PREMIUM 💎', free: 'GRATIS', home: 'Inicio', goPremium: 'Ir a Premium', footer: 'Todos los derechos reservados.', privacy: 'Política de Privacidad', login: 'Iniciar Sesión' },
+    en: { label: 'English', flag: '/flags/en.svg', premium: 'PREMIUM 💎', free: 'FREE', home: 'Home', goPremium: 'Go Premium', footer: 'All rights reserved.', privacy: 'Privacy Policy', login: 'Login' },
+    pt: { label: 'Português', flag: '/flags/pt.svg', premium: 'PREMIUM 💎', free: 'GRÁTIS', home: 'Início', goPremium: 'Ir para Premium', footer: 'Todos os direitos reservados.', privacy: 'Política de Privacidade', login: 'Entrar' },
+    de: { label: 'Deutsch', flag: '/flags/de.svg', premium: 'PREMIUM 💎', free: 'KOSTENLOS', home: 'Startseite', goPremium: 'Zu Premium wechseln', footer: 'Alle Rechte vorbehalten.', privacy: 'Datenschutz', login: 'Anmelden' }
   };
 
   const currentLang = langLabels[lang] || langLabels.en;
+  const [showLangMenu, setShowLangMenu] = useState(false);
 
   return (
     <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, requestExtensionAppPassCheck }}>
@@ -267,26 +268,71 @@ function AppContent() {
                )}
 
               {/* Language Switcher with Dropdown/Flags */}
-              <div className="lang-switcher-container" style={{position: 'relative', display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '5px 10px', borderRadius: '8px'}}>
-                {Object.keys(langLabels).map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => setLang(l)}
-                    title={langLabels[l].label}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '1.2rem',
-                      cursor: 'pointer',
-                      opacity: lang === l ? 1 : 0.4,
-                      transform: lang === l ? 'scale(1.2)' : 'scale(1)',
-                      transition: 'all 0.2s ease',
-                      padding: '0 2px'
-                    }}
-                  >
-                    {langLabels[l].flag}
-                  </button>
-                ))}
+              <div 
+                className="lang-switcher-container" 
+                style={{ position: 'relative' }}
+                onMouseEnter={() => setShowLangMenu(true)}
+                onMouseLeave={() => setShowLangMenu(false)}
+              >
+                <button
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    minWidth: '120px'
+                  }}
+                >
+                  <img src={currentLang.flag} alt={currentLang.label} style={{ width: '20px', height: 'auto', borderRadius: '2px' }} />
+                  {currentLang.label}
+                  <span style={{ fontSize: '0.7rem' }}>▼</span>
+                </button>
+                
+                {showLangMenu && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    background: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '8px',
+                    marginTop: '5px',
+                    overflow: 'hidden',
+                    zIndex: 1000,
+                    minWidth: '160px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                  }}>
+                    {Object.keys(langLabels).map((l) => (
+                      <button
+                        key={l}
+                        onClick={() => { setLang(l); setShowLangMenu(false); }}
+                        style={{
+                          width: '100%',
+                          background: lang === l ? 'rgba(0, 210, 255, 0.1)' : 'transparent',
+                          border: 'none',
+                          color: lang === l ? '#00d2ff' : '#fff',
+                          padding: '10px 15px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          textAlign: 'left',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <img src={langLabels[l].flag} alt={langLabels[l].label} style={{ width: '18px', height: 'auto', borderRadius: '1px' }} />
+                        {langLabels[l].label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>

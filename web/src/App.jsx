@@ -204,8 +204,18 @@ function AppContent() {
     de: { label: 'Deutsch', flag: '/flags/de.svg', premium: 'PREMIUM 💎', free: 'KOSTENLOS', home: 'Startseite', goPremium: 'Zu Premium wechseln', footer: 'Alle Rechte vorbehalten.', privacy: 'Datenschutz', login: 'Anmelden' }
   };
 
-  const currentLang = langLabels[lang] || langLabels.en;
   const [showLangMenu, setShowLangMenu] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showLangMenu && !event.target.closest('.lang-switcher-container')) {
+        setShowLangMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showLangMenu]);
 
   return (
     <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, requestExtensionAppPassCheck }}>
@@ -271,10 +281,9 @@ function AppContent() {
               <div 
                 className="lang-switcher-container" 
                 style={{ position: 'relative' }}
-                onMouseEnter={() => setShowLangMenu(true)}
-                onMouseLeave={() => setShowLangMenu(false)}
               >
                 <button
+                  onClick={() => setShowLangMenu(!showLangMenu)}
                   style={{
                     background: 'rgba(255,255,255,0.1)',
                     border: '1px solid rgba(255,255,255,0.2)',
@@ -291,18 +300,17 @@ function AppContent() {
                 >
                   <img src={currentLang.flag} alt={currentLang.label} style={{ width: '20px', height: 'auto', borderRadius: '2px' }} />
                   {currentLang.label}
-                  <span style={{ fontSize: '0.7rem' }}>▼</span>
+                  <span style={{ fontSize: '0.7rem', transition: 'transform 0.2s', transform: showLangMenu ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
                 </button>
                 
                 {showLangMenu && (
                   <div style={{
                     position: 'absolute',
-                    top: '100%',
+                    top: 'calc(100% + 5px)',
                     right: 0,
                     background: '#1a1a1a',
                     border: '1px solid #333',
                     borderRadius: '8px',
-                    marginTop: '5px',
                     overflow: 'hidden',
                     zIndex: 1000,
                     minWidth: '160px',

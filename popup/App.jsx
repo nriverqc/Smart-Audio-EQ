@@ -23,6 +23,17 @@ export default function App() {
 
   const [showLangMenu, setShowLangMenu] = useState(false);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showLangMenu && !event.target.closest('.lang-switcher-container')) {
+        setShowLangMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showLangMenu]);
+
   const extensionTexts = {
     es: {
       visitWebsite: 'Visitar sitio web',
@@ -279,11 +290,11 @@ export default function App() {
         
         {/* Language Switcher in Extension - Dropdown with Flags */}
         <div 
+            className="lang-switcher-container"
             style={{ position: 'relative' }}
-            onMouseEnter={() => setShowLangMenu(true)}
-            onMouseLeave={() => setShowLangMenu(false)}
         >
             <button
+                onClick={() => setShowLangMenu(!showLangMenu)}
                 style={{
                     background: 'rgba(255,255,255,0.1)',
                     border: '1px solid rgba(255,255,255,0.2)',

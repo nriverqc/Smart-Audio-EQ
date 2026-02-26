@@ -564,6 +564,9 @@ def check_license():
     if not email:
         return jsonify({"premium": False, "error": "No email provided"})
         
+    # Force sync logic to trigger Render deploy
+    print(f"Checking license for: {email} (v1.0.5)")
+
     try:
         # 1. Check SQLite (Local Fast Cache)
         with sqlite3.connect(DB_NAME) as conn:

@@ -36,7 +36,8 @@ export default function Premium({ lang }) {
           const clientId = "AX9bU7jKcw7KBb3Ks4Z9ectLcdxkOsoVK-0hFxG2UlcWyojn9kOU31Nt-f2T9r5AiFVLN0QHVAWl1ok_";
           const script = document.createElement("script");
           // Add intent=subscription and vault=true for Subscription flow
-          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=subscription&vault=true`;
+          // v=1.0.5 ensures no cache
+          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=subscription&vault=true&v=1.0.5`;
           script.async = true;
           script.onload = () => {
               setSdkReady(true);

@@ -629,75 +629,43 @@ def check_license():
     print(f"Checking license for: {email} (v1.0.5)")
 
     try:
-        # 1. Check SQLite (Local Fast Cache)
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT is_premium, expiration_date, method FROM licenses WHERE email = ?", (email,))
-            row = cursor.fetchone()
-            
-            if row:
-                is_premium = bool(row[0])
-                expiration_str = row[1]
-                method = row[2]
-                
-                # Check Expiration Logic
-                if is_premium and expiration_str:
-                    try:
-                        # Handle timestamp formats (sometimes has microseconds, sometimes not)
-                        if "." in expiration_str:
-                             expiration_date = datetime.strptime(expiration_str, "%Y-%m-%d %H:%M:%S.%f")
-                        else:
-                             expiration_date = datetime.strptime(expiration_str, "%Y-%m-%d %H:%M:%S")
-                             
-                        if datetime.now() > expiration_date:
-                            print(f"License expired for {email} on {expiration_date}")
-                            return jsonify({"premium": False, "status": "expired", "expiration": expiration_str})
-                        else:
-                            return jsonify({"premium": True, "source": "sqlite", "expiration": expiration_str, "method": method})
-                    except Exception as e:
-                        print(f"Date parsing error: {e}")
-                        # Fallback: if date invalid but marked premium, assume valid for now or manual override
-                        return jsonify({"premium": True, "source": "sqlite_fallback", "method": method})
-
-                elif is_premium:
-                     # Legacy users (no expiration date) -> Treat as Lifetime
-                     print(f"Legacy Lifetime user confirmed: {email}")
-                     return jsonify({"premium": True, "source": "sqlite_legacy", "expiration": "lifetime", "method": method})
-
-        # 2. Check Firestore (Cloud Source of Truth)
+        # 1. Check Firestore FIRST if UID is provided (Admin override)
         if db and uid:
             user_ref = db.collection('usuarios').document(uid)
             doc = user_ref.get()
             if doc.exists:
                 data = doc.to_dict()
+                if data.get('isPremium') is False:
+                    # Sync FALSE back to SQLite
+                    with sqlite3.connect(DB_NAME) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("UPDATE licenses SET is_premium=0 WHERE email=?", (email,))
+                        conn.commit()
+                    return jsonify({"premium": False, "source": "firestore_override"})
+                
                 if data.get('isPremium') is True:
-                    # Check Expiration in Firestore
+                    # Logic for expiration...
                     exp_date = data.get('expirationDate')
                     if exp_date:
-                        # Firestore timestamp to datetime
-                        # Note: Firestore returns a datetime object with timezone usually
                         now = datetime.now(exp_date.tzinfo)
                         if now > exp_date:
                              return jsonify({"premium": False, "status": "expired_firestore"})
                     
-                    # Sync back to SQLite
+                    # Sync TRUE back to SQLite
                     with sqlite3.connect(DB_NAME) as conn:
                         cursor = conn.cursor()
-                        # If exp_date is None, maybe set a default or leave null
                         exp_str = exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None
                         method = data.get('method')
-                        
                         cursor.execute("""
                             INSERT INTO licenses (email, is_premium, expiration_date, method)
                             VALUES (?, 1, ?, ?)
-                            ON CONFLICT(email) DO UPDATE SET 
-                                is_premium=1, 
-                                expiration_date=excluded.expiration_date,
-                                method=excluded.method
+                            ON CONFLICT(email) DO UPDATE SET is_premium=1, expiration_date=excluded.expiration_date, method=excluded.method
                         """, (email, exp_str, method))
                         conn.commit()
-                        
                     return jsonify({"premium": True, "source": "firestore", "method": data.get('method')})
+
+        # 2. Check SQLite (Local Fast Cache) as fallback
+        with sqlite3.connect(DB_NAME) as conn:
                     
         return jsonify({"premium": False})
         

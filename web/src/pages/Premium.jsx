@@ -70,20 +70,19 @@ export default function Premium({ lang }) {
       // 3. Wait for SDK Ready
       if (!sdkReady || !window.paypal) return;
       
-      // Fallback plans if backend hasn't responded yet (Only for Production Fallback)
-      const currentPlans = {
-          monthly: paypalPlans.monthly,
-          yearly: paypalPlans.yearly
-      };
-
-      const planId = currentPlans[planType];
+      const planId = paypalPlans[planType];
       const container = document.getElementById(containerId);
 
       if (container && planId) {
-          container.innerHTML = ""; // Clear
+          container.innerHTML = ""; 
           try {
               window.paypal.Buttons({
-                  style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
+                  style: { 
+                      shape: 'rect', 
+                      color: 'gold', 
+                      layout: 'vertical', 
+                      label: 'subscribe' 
+                  },
                   onClick: (data, actions) => {
                       if (!userRef.current?.uid) {
                           alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
@@ -93,9 +92,9 @@ export default function Premium({ lang }) {
                       return actions.resolve();
                   },
                   createSubscription: (data, actions) => {
+                      console.log("Creating subscription for plan:", planId);
                       return actions.subscription.create({
-                          'plan_id': planId,
-                          'custom_id': userRef.current.uid || "GUEST"
+                          'plan_id': planId
                       });
                   },
                   onApprove: (data, actions) => {
@@ -113,16 +112,17 @@ export default function Premium({ lang }) {
                       .then(res => res.json())
                       .then(response => {
                           if (response.status === 'approved' || response.success) {
-                              alert(lang === 'es' ? '¡Suscripción activada!' : 'Subscription activated!');
+                              alert(lang === 'es' ? '¡Suscripción activada! Tu cuenta Premium está lista.' : 'Subscription activated! Your Premium account is ready.');
                               refreshUser();
                           }
                       })
+                      .catch(err => console.error("Register error:", err))
                       .finally(() => setLoading(false));
                   },
                   onError: (err) => {
                       console.error("PayPal Error:", err);
                       if (!err.message?.includes("render")) {
-                          setErrorMsg("PayPal check error. Please refresh.");
+                          setErrorMsg("PayPal rejected the transaction. Please try a different card or contact PayPal support.");
                       }
                   }
               }).render("#" + containerId);

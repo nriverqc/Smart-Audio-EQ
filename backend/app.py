@@ -178,7 +178,7 @@ def setup_paypal_products_and_plans():
     """Ensures PayPal Product and Plans exist (Sandbox only) or returns Live IDs"""
     if PAYPAL_MODE == "live":
         return {
-            "monthly": "P-3RB49575H08016210NGQH3HY",
+            "monthly": "P-76T91245ND5768919NGQ332Q",
             "yearly": "P-2CF9953081150004HNGGNT6A"
         }
 

@@ -93,13 +93,7 @@ export default function Premium({ lang }) {
                       console.log("Creating subscription for plan:", paypalPlans[planType]);
                       return actions.subscription.create({
                           'plan_id': paypalPlans[planType],
-                          'custom_id': currentUser.uid,
-                          'subscriber': {
-                              'email_address': currentUser.email
-                          },
-                          'application_context': {
-                              'user_action': 'SUBSCRIBE_NOW'
-                          }
+                          'custom_id': currentUser.uid || "GUEST"
                       });
                   },
                   onApprove: (data, actions) => {

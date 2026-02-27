@@ -175,7 +175,13 @@ def get_or_create_paypal_plan(product_id, plan_name, interval_unit, amount):
         return None
 
 def setup_paypal_products_and_plans():
-    """Ensures PayPal Product and Plans exist"""
+    """Ensures PayPal Product and Plans exist (Sandbox only) or returns Live IDs"""
+    if PAYPAL_MODE == "live":
+        return {
+            "monthly": "P-3RB49575H08016210NGQH3HY",
+            "yearly": "P-2CF9953081150004HNGGNT6A"
+        }
+
     token = get_paypal_access_token()
     if not token: return {}
     
@@ -214,25 +220,19 @@ def setup_paypal_products_and_plans():
     product_id = store[product_key]
     
     # 2. Plans
-    # Monthly: Use the ID provided by the user (P-3RB49575H08016210NGQH3HY)
-    # Yearly: Create/Get plan for $16.99
-    
     yearly_price = "16.99"
-    monthly_price = "0.99" # For Sandbox generation
+    monthly_price = "0.99"
     
     yearly_plan_key = f"yearly_plan_{yearly_price}"
     monthly_plan_key = f"monthly_plan_{monthly_price}"
     
+    # Generate Yearly Plan for Sandbox if needed
     if yearly_plan_key not in store:
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-        # Create Yearly Plan
+        headers = { "Authorization": f"Bearer {token}", "Content-Type": "application/json" }
         plan_data = {
             "product_id": product_id,
-            "name": "Smart Audio EQ Premium (Yearly)",
-            "description": "Yearly subscription with 30% discount",
+            "name": "Smart Audio EQ Premium (Yearly Sandbox)",
+            "description": "Yearly subscription",
             "status": "ACTIVE",
             "billing_cycles": [
                 {
@@ -240,9 +240,7 @@ def setup_paypal_products_and_plans():
                     "tenure_type": "REGULAR",
                     "sequence": 1,
                     "total_cycles": 0,
-                    "pricing_scheme": {
-                        "fixed_price": { "value": yearly_price, "currency_code": "USD" }
-                    }
+                    "pricing_scheme": { "fixed_price": { "value": yearly_price, "currency_code": "USD" } }
                 }
             ],
             "payment_preferences": {
@@ -257,15 +255,10 @@ def setup_paypal_products_and_plans():
             store[yearly_plan_key] = resp.json()["id"]
             with open(plans_file, 'w') as f:
                 json.dump(store, f)
-        else:
-            print(f"Error creating yearly plan: {resp.text}")
 
     # Generate Monthly Plan for Sandbox if needed
-    if PAYPAL_MODE == "sandbox" and monthly_plan_key not in store:
-         headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
+    if monthly_plan_key not in store:
+         headers = { "Authorization": f"Bearer {token}", "Content-Type": "application/json" }
          plan_data = {
             "product_id": product_id,
             "name": "Smart Audio EQ Premium (Monthly Sandbox)",
@@ -277,9 +270,7 @@ def setup_paypal_products_and_plans():
                     "tenure_type": "REGULAR",
                     "sequence": 1,
                     "total_cycles": 0,
-                    "pricing_scheme": {
-                        "fixed_price": { "value": monthly_price, "currency_code": "USD" }
-                    }
+                    "pricing_scheme": { "fixed_price": { "value": monthly_price, "currency_code": "USD" } }
                 }
             ],
             "payment_preferences": {
@@ -295,14 +286,6 @@ def setup_paypal_products_and_plans():
             with open(plans_file, 'w') as f:
                 json.dump(store, f)
 
-    if PAYPAL_MODE == "live":
-        # Force exact Production Plan IDs provided by user
-        return {
-            "monthly": "P-3RB49575H08016210NGQH3HY",
-            "yearly": "P-2CF9953081150004HNGGNT6A"
-        }
-        
-    # Sandbox: Use auto-created plans
     return {
         "monthly": store.get(monthly_plan_key),
         "yearly": store.get(yearly_plan_key)

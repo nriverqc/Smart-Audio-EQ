@@ -57,7 +57,8 @@ export default function Premium({ lang }) {
       if (!window.paypal && !document.getElementById('paypal-sdk-script')) {
           const script = document.createElement("script");
           script.id = 'paypal-sdk-script';
-          script.src = `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&vault=true&intent=subscription`;
+          // Add cache buster v=1.0.7
+          script.src = `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&vault=true&intent=subscription&v=1.0.7`;
           script.setAttribute('data-sdk-integration-source', 'button-factory');
           script.async = true;
           script.onload = () => setSdkReady(true);

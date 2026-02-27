@@ -98,6 +98,7 @@ export default function Premium({ lang }) {
                       });
                   },
                   onApprove: (data, actions) => {
+                      console.log("✅ PayPal Approved! Subscription ID:", data.subscriptionID);
                       setLoading(true);
                       fetch(`${API_BASE}/register-paypal`, {
                           method: 'POST',
@@ -120,10 +121,15 @@ export default function Premium({ lang }) {
                       .finally(() => setLoading(false));
                   },
                   onError: (err) => {
-                      console.error("PayPal Error:", err);
-                      if (!err.message?.includes("render")) {
-                          setErrorMsg("PayPal rejected the transaction. Please try a different card or contact PayPal support.");
-                      }
+                      console.error("❌ PayPal ERROR Detallado:", err);
+                      // This will help the user see the exact error in the browser console
+                      if (err.message && err.message.includes("render")) return;
+                      
+                      let msg = lang === 'es' 
+                        ? "Error de PayPal. Por favor, revisa la consola (F12) para más detalles."
+                        : "PayPal Error. Please check the console (F12) for more details.";
+                        
+                      setErrorMsg(msg);
                   }
               }).render("#" + containerId);
           } catch (e) {

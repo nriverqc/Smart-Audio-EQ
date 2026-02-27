@@ -30,45 +30,35 @@ export default function Premium({ lang }) {
   useEffect(() => {
       const containerId = "paypal-button-container";
       
-      // We need Plans loaded before we can load the SDK with plan-id
-      if (!paypalPlans.monthly || !paypalPlans.yearly) return;
-
-      const currentPlanId = paypalPlans[planType];
-      
-      // Force reload SDK with the specific plan-id to avoid "preapproved payments" error
-      const existingScript = document.getElementById('paypal-sdk-script');
-      if (existingScript && existingScript.getAttribute('data-plan-id') !== currentPlanId) {
-          existingScript.remove();
-          // Remove global paypal object to force a clean reload
-          if (window.paypal) {
-              const scriptTags = document.querySelectorAll('script[src*="paypal.com/sdk/js"]');
-              scriptTags.forEach(s => s.remove());
-              delete window.paypal;
-          }
-          setSdkReady(false);
-      }
-
-      if (!window.paypal) {
+      // 1. Load SDK if not present
+      if (!window.paypal && !document.getElementById('paypal-sdk-script')) {
           const clientId = "AX9bU7jKcw7KBb3Ks4Z9ectLcdxkOsoVK-0hFxG2UlcWyojn9kOU31Nt-f2T9r5AiFVLN0QHVAWl1ok_";
           const script = document.createElement("script");
           script.id = 'paypal-sdk-script';
-          script.setAttribute('data-plan-id', currentPlanId);
-          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription&plan-id=${currentPlanId}`;
+          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
           script.setAttribute('data-sdk-integration-source', 'button-factory');
           script.async = true;
           script.onload = () => setSdkReady(true);
           script.onerror = () => setErrorMsg("Error loading PayPal SDK.");
           document.body.appendChild(script);
-          return; 
-      } else {
+      } else if (window.paypal) {
           setSdkReady(true);
       }
 
-      if (!sdkReady) return;
+      // 2. Wait for SDK and Plans
+      if (!sdkReady || !window.paypal) return;
+      
+      // Fallback plans if backend hasn't responded yet
+      const currentPlans = {
+          monthly: paypalPlans.monthly || "P-3RB49575H08016210NGQH3HY",
+          yearly: paypalPlans.yearly || "P-32D28642BE654032HNGQR56A"
+      };
 
+      const planId = currentPlans[planType];
       const container = document.getElementById(containerId);
-      if (container && window.paypal) {
-          container.innerHTML = ""; 
+
+      if (container && planId) {
+          container.innerHTML = ""; // Clear
           try {
               window.paypal.Buttons({
                   style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
@@ -82,14 +72,12 @@ export default function Premium({ lang }) {
                   },
                   createSubscription: (data, actions) => {
                       return actions.subscription.create({
-                          'plan_id': currentPlanId,
+                          'plan_id': planId,
                           'custom_id': userRef.current.uid || "GUEST"
                       });
                   },
                   onApprove: (data, actions) => {
-                      console.log("PayPal Subscription Approved:", data);
                       setLoading(true);
-                      
                       fetch(`${API_BASE}/register-paypal`, {
                           method: 'POST',
                           headers: {'Content-Type': 'application/json'},
@@ -97,37 +85,30 @@ export default function Premium({ lang }) {
                               email: userRef.current.email,
                               uid: userRef.current.uid,
                               subscriptionID: data.subscriptionID,
-                              orderID: data.orderID,
                               plan_type: planType
                           })
                       })
                       .then(res => res.json())
                       .then(response => {
                           if (response.status === 'approved' || response.success) {
-                              alert(lang === 'es' ? '¡Suscripción activada! Tu cuenta Premium está lista.' : 'Subscription activated! Your Premium account is ready.');
+                              alert(lang === 'es' ? '¡Suscripción activada!' : 'Subscription activated!');
                               refreshUser();
-                          } else {
-                              alert('Error activating license: ' + (response.error || 'Unknown'));
                           }
-                      })
-                      .catch(err => {
-                          console.error(err);
-                          alert('Network error activating license');
                       })
                       .finally(() => setLoading(false));
                   },
                   onError: (err) => {
                       console.error("PayPal Error:", err);
-                      // Don't show the error if it's just a render issue that might be transient
-                      if (err.message && err.message.includes("render")) return;
-                      setErrorMsg("PayPal Error: " + (err.message || "Could not initialize PayPal buttons."));
+                      if (!err.message?.includes("render")) {
+                          setErrorMsg("PayPal check error. Please refresh.");
+                      }
                   }
               }).render("#" + containerId);
           } catch (e) {
-              console.error("PayPal Render Error:", e);
+              console.error("PayPal Buttons Error:", e);
           }
       }
-  }, [lang, loginWithGoogle, sdkReady, refreshUser, planType, paypalPlans]); 
+  }, [lang, sdkReady, planType, paypalPlans, loginWithGoogle, refreshUser]);
 
 
   useEffect(() => {

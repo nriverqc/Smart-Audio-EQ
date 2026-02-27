@@ -251,7 +251,7 @@ def setup_paypal_products_and_plans():
 
     return {
         "monthly": "P-3RB49575H08016210NGQH3HY",
-        "yearly": store.get(yearly_plan_key, "P-6X852392NH9583019NGQRZZA")
+        "yearly": "P-32D28642BE654032HNGQR56A"
     }
 
 # Global Plan Cache

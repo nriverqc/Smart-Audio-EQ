@@ -30,23 +30,34 @@ export default function Premium({ lang }) {
   useEffect(() => {
       const containerId = "paypal-button-container";
       
-      // Dynamically load PayPal SDK if not already loaded
+      // We need Plans loaded before we can load the SDK with plan-id
+      if (!paypalPlans.monthly || !paypalPlans.yearly) return;
+
+      const currentPlanId = paypalPlans[planType];
+      
+      // Force reload SDK with the specific plan-id to avoid "preapproved payments" error
+      const existingScript = document.getElementById('paypal-sdk-script');
+      if (existingScript && existingScript.getAttribute('data-plan-id') !== currentPlanId) {
+          existingScript.remove();
+          // Remove global paypal object to force a clean reload
+          if (window.paypal) {
+              const scriptTags = document.querySelectorAll('script[src*="paypal.com/sdk/js"]');
+              scriptTags.forEach(s => s.remove());
+              delete window.paypal;
+          }
+          setSdkReady(false);
+      }
+
       if (!window.paypal) {
-          console.log("Premium: Loading PayPal SDK...");
           const clientId = "AX9bU7jKcw7KBb3Ks4Z9ectLcdxkOsoVK-0hFxG2UlcWyojn9kOU31Nt-f2T9r5AiFVLN0QHVAWl1ok_";
           const script = document.createElement("script");
-          // Match the exact URL provided by PayPal button factory
-          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+          script.id = 'paypal-sdk-script';
+          script.setAttribute('data-plan-id', currentPlanId);
+          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription&plan-id=${currentPlanId}`;
           script.setAttribute('data-sdk-integration-source', 'button-factory');
           script.async = true;
-          script.onload = () => {
-              console.log("Premium: PayPal SDK Loaded");
-              setSdkReady(true);
-          };
-          script.onerror = (e) => {
-              console.error("Premium: PayPal SDK Load Error", e);
-              setErrorMsg("Error loading PayPal SDK. Please try refreshing the page or using a different browser (Chrome/Edge recommended).");
-          };
+          script.onload = () => setSdkReady(true);
+          script.onerror = () => setErrorMsg("Error loading PayPal SDK.");
           document.body.appendChild(script);
           return; 
       } else {
@@ -54,46 +65,25 @@ export default function Premium({ lang }) {
       }
 
       if (!sdkReady) return;
-      if (!paypalPlans.monthly && !paypalPlans.yearly) {
-          console.log("Premium: Waiting for PayPal Plans from backend...");
-          return; 
-      }
 
       const container = document.getElementById(containerId);
       if (container && window.paypal) {
-          console.log("Premium: Rendering PayPal Buttons for plan:", planType, "PlanID:", paypalPlans[planType]);
           container.innerHTML = ""; 
           try {
               window.paypal.Buttons({
-                  style: {
-                      shape: 'rect',
-                      color: 'gold',
-                      layout: 'vertical',
-                      label: 'subscribe'
-                  },
+                  style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
                   onClick: (data, actions) => {
-                      const currentUser = userRef.current;
-                      if (!currentUser || !currentUser.uid) {
+                      if (!userRef.current?.uid) {
                           alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
                           loginWithGoogle();
-                          return actions.reject();
-                      }
-                      if (!paypalPlans[planType]) {
-                          alert(lang === 'es' ? 'Error: ID de plan no cargado. Reintenta en unos segundos.' : "Error: PayPal Plan ID not loaded. Please wait.");
                           return actions.reject();
                       }
                       return actions.resolve();
                   },
                   createSubscription: (data, actions) => {
-                      const currentUser = userRef.current;
-                      if (!paypalPlans[planType]) {
-                          console.error("No Plan ID found for", planType);
-                          return actions.reject();
-                      }
-                      console.log("Creating subscription for plan:", paypalPlans[planType]);
                       return actions.subscription.create({
-                          'plan_id': paypalPlans[planType],
-                          'custom_id': currentUser.uid || "GUEST"
+                          'plan_id': currentPlanId,
+                          'custom_id': userRef.current.uid || "GUEST"
                       });
                   },
                   onApprove: (data, actions) => {

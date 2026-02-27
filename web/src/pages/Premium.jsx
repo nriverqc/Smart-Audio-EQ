@@ -57,6 +57,7 @@ export default function Premium({ lang }) {
       if (!window.paypal && !document.getElementById('paypal-sdk-script')) {
           const script = document.createElement("script");
           script.id = 'paypal-sdk-script';
+          // Ensure exact URL parameters for Subscription flow
           script.src = `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&vault=true&intent=subscription`;
           script.setAttribute('data-sdk-integration-source', 'button-factory');
           script.async = true;
@@ -122,7 +123,14 @@ export default function Premium({ lang }) {
                   },
                   onError: (err) => {
                       console.error("❌ PayPal ERROR Detallado:", err);
-                      // This will help the user see the exact error in the browser console
+                      
+                      // Check for specific error codes if available
+                      if (err && err.message) {
+                          if (err.message.includes("400")) {
+                              console.error("⚠️ Error 400: Posible problema de configuración (Plan ID vs Client ID, Moneda, Reference Transactions)");
+                          }
+                      }
+
                       if (err.message && err.message.includes("render")) return;
                       
                       let msg = lang === 'es' 

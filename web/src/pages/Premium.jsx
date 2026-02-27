@@ -26,16 +26,38 @@ export default function Premium({ lang }) {
       emailRef.current = email;
   }, [email]);
 
+  const [paypalClientId, setPaypalClientId] = useState('');
+
+  useEffect(() => {
+      // Fetch Plans and Config from Backend
+      fetch(`${API_BASE}/get-plans`)
+          .then(res => res.json())
+          .then(data => {
+              if (data.paypal) {
+                  setPaypalPlans(data.paypal);
+              }
+              if (data.paypal_client_id) {
+                  setPaypalClientId(data.paypal_client_id);
+              }
+              if (data.paypal_mode === 'sandbox') {
+                  console.log("⚠️ Running in PayPal SANDBOX Mode");
+              }
+          })
+          .catch(err => console.error("Error fetching plans:", err));
+  }, []);
+
   // PayPal Effect
   useEffect(() => {
       const containerId = "paypal-button-container";
       
-      // 1. Load SDK if not present
+      // 1. Wait for Client ID and Plans
+      if (!paypalClientId || (!paypalPlans.monthly && !paypalPlans.yearly)) return;
+      
+      // 2. Load SDK if not present
       if (!window.paypal && !document.getElementById('paypal-sdk-script')) {
-          const clientId = "AX9bU7jKcw7KBb3Ks4Z9ectLcdxkOsoVK-0hFxG2UlcWyojn9kOU31Nt-f2T9r5AiFVLN0QHVAWl1ok_";
           const script = document.createElement("script");
           script.id = 'paypal-sdk-script';
-          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+          script.src = `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&vault=true&intent=subscription`;
           script.setAttribute('data-sdk-integration-source', 'button-factory');
           script.async = true;
           script.onload = () => setSdkReady(true);
@@ -45,13 +67,13 @@ export default function Premium({ lang }) {
           setSdkReady(true);
       }
 
-      // 2. Wait for SDK and Plans
+      // 3. Wait for SDK Ready
       if (!sdkReady || !window.paypal) return;
       
-      // Fallback plans if backend hasn't responded yet
+      // Fallback plans if backend hasn't responded yet (Only for Production Fallback)
       const currentPlans = {
-          monthly: paypalPlans.monthly || "P-3RB49575H08016210NGQH3HY",
-          yearly: paypalPlans.yearly || "P-32D28642BE654032HNGQR56A"
+          monthly: paypalPlans.monthly,
+          yearly: paypalPlans.yearly
       };
 
       const planId = currentPlans[planType];
@@ -108,20 +130,7 @@ export default function Premium({ lang }) {
               console.error("PayPal Buttons Error:", e);
           }
       }
-  }, [lang, sdkReady, planType, paypalPlans, loginWithGoogle, refreshUser]);
-
-
-  useEffect(() => {
-      // Fetch Plans from Backend
-      fetch(`${API_BASE}/get-plans`)
-          .then(res => res.json())
-          .then(data => {
-              if (data.paypal) {
-                  setPaypalPlans(data.paypal);
-              }
-          })
-          .catch(err => console.error("Error fetching plans:", err));
-  }, []);
+  }, [lang, sdkReady, planType, paypalPlans, loginWithGoogle, refreshUser, paypalClientId]);
 
   const texts = {
     es: {

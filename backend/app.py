@@ -73,10 +73,18 @@ def init_db():
 init_db()
 
 # PayPal Configuration
-PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
-PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
-# FORCE LIVE ENVIRONMENT
-PAYPAL_API_BASE = "https://api-m.paypal.com"
+PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox") # 'sandbox' or 'live'
+
+if PAYPAL_MODE == "live":
+    PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID_LIVE")
+    PAYPAL_SECRET = os.getenv("PAYPAL_SECRET_LIVE")
+    PAYPAL_API_BASE = "https://api-m.paypal.com"
+else:
+    PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID_SANDBOX")
+    PAYPAL_SECRET = os.getenv("PAYPAL_SECRET_SANDBOX")
+    PAYPAL_API_BASE = "https://api-m.sandbox.paypal.com"
+
+print(f"PayPal Mode: {PAYPAL_MODE}")
 
 def get_paypal_access_token():
     try:
@@ -249,9 +257,17 @@ def setup_paypal_products_and_plans():
         else:
             print(f"Error creating yearly plan: {resp.text}")
 
+    if PAYPAL_MODE == "live":
+        # Force exact Production Plan IDs provided by user
+        return {
+            "monthly": "P-3RB49575H08016210NGQH3HY",
+            "yearly": "P-2CF9953081150004HNGGNT6A"
+        }
+        
+    # Sandbox: Use auto-created plans
     return {
-        "monthly": "P-3RB49575H08016210NGQH3HY",
-        "yearly": "P-32D28642BE654032HNGQR56A"
+        "monthly": store.get(monthly_plan_key),
+        "yearly": store.get(yearly_plan_key)
     }
 
 # Global Plan Cache
@@ -291,9 +307,11 @@ def home():
 
 @app.route("/get-plans", methods=["GET"])
 def get_plans():
-    """Returns the available subscription plans"""
+    """Returns the available subscription plans and correct client ID"""
     return jsonify({
-        "paypal": PAYPAL_PLANS
+        "paypal": PAYPAL_PLANS,
+        "paypal_client_id": PAYPAL_CLIENT_ID,
+        "paypal_mode": PAYPAL_MODE
     })
 
 @app.route("/paypal-webhook", methods=["POST"])

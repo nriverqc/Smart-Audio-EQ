@@ -666,7 +666,32 @@ def check_license():
 
         # 2. Check SQLite (Local Fast Cache) as fallback
         with sqlite3.connect(DB_NAME) as conn:
-                    
+            cursor = conn.cursor()
+            cursor.execute("SELECT is_premium, expiration_date, method FROM licenses WHERE email = ?", (email,))
+            row = cursor.fetchone()
+            
+            if row:
+                is_premium = bool(row[0])
+                expiration_str = row[1]
+                method = row[2]
+                
+                if is_premium and expiration_str:
+                    try:
+                        if "." in expiration_str:
+                             expiration_date = datetime.strptime(expiration_str, "%Y-%m-%d %H:%M:%S.%f")
+                        else:
+                             expiration_date = datetime.strptime(expiration_str, "%Y-%m-%d %H:%M:%S")
+                             
+                        if datetime.now() > expiration_date:
+                            return jsonify({"premium": False, "status": "expired", "expiration": expiration_str})
+                        else:
+                            return jsonify({"premium": True, "source": "sqlite", "expiration": expiration_str, "method": method})
+                    except Exception as e:
+                        return jsonify({"premium": True, "source": "sqlite_fallback", "method": method})
+
+                elif is_premium:
+                     return jsonify({"premium": True, "source": "sqlite_legacy", "expiration": "lifetime", "method": method})
+
         return jsonify({"premium": False})
         
     except Exception as e:

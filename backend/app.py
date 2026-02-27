@@ -218,7 +218,10 @@ def setup_paypal_products_and_plans():
     # Yearly: Create/Get plan for $16.99
     
     yearly_price = "16.99"
+    monthly_price = "0.99" # For Sandbox generation
+    
     yearly_plan_key = f"yearly_plan_{yearly_price}"
+    monthly_plan_key = f"monthly_plan_{monthly_price}"
     
     if yearly_plan_key not in store:
         headers = {
@@ -256,6 +259,41 @@ def setup_paypal_products_and_plans():
                 json.dump(store, f)
         else:
             print(f"Error creating yearly plan: {resp.text}")
+
+    # Generate Monthly Plan for Sandbox if needed
+    if PAYPAL_MODE == "sandbox" and monthly_plan_key not in store:
+         headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+         plan_data = {
+            "product_id": product_id,
+            "name": "Smart Audio EQ Premium (Monthly Sandbox)",
+            "description": "Monthly subscription",
+            "status": "ACTIVE",
+            "billing_cycles": [
+                {
+                    "frequency": { "interval_unit": "MONTH", "interval_count": 1 },
+                    "tenure_type": "REGULAR",
+                    "sequence": 1,
+                    "total_cycles": 0,
+                    "pricing_scheme": {
+                        "fixed_price": { "value": monthly_price, "currency_code": "USD" }
+                    }
+                }
+            ],
+            "payment_preferences": {
+                "auto_bill_outstanding": True,
+                "setup_fee": { "value": "0", "currency_code": "USD" },
+                "setup_fee_failure_action": "CONTINUE",
+                "payment_failure_threshold": 3
+            }
+        }
+         resp = requests.post(f"{PAYPAL_API_BASE}/v1/billing/plans", headers=headers, json=plan_data)
+         if resp.status_code == 201:
+            store[monthly_plan_key] = resp.json()["id"]
+            with open(plans_file, 'w') as f:
+                json.dump(store, f)
 
     if PAYPAL_MODE == "live":
         # Force exact Production Plan IDs provided by user

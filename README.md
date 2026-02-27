@@ -137,6 +137,22 @@ FLASK_ENV=production
 - `POST /register-paypal` - Registrar compra de PayPal
 - `GET /check-license` - Verificar si usuario es Premium
 
+## Seguridad y Escaneo (Risk Score)
+
+El porcentaje de riesgo, los colores y los números que aparecen en los informes de escaneo (como los de **Chrome Stats** o el **Security Scanner** de la Web Store) provienen de un análisis automatizado basado en los siguientes criterios:
+
+### 📊 ¿De dónde sale el puntaje?
+1. **Permisos Solicitados:** La extensión utiliza permisos potentes como `tabCapture` (para procesar el audio) y `scripting`. Estos permisos elevan el puntaje técnico de riesgo porque tienen acceso a los datos del navegador, aunque son necesarios para el funcionamiento del ecualizador.
+2. **Conexiones Externas:** El escaneo detecta comunicaciones con nuestro servidor en Render (`smart-audio-eq-1.onrender.com`) y Firebase para la validación de licencias.
+3. **Transparencia del Código:** Se evalúa si el código está minificado o es legible. Nuestro código es abierto y sigue las mejores prácticas de Manifest V3.
+
+### 🎨 Significado de los Colores
+- 🟢 **Verde (0% - 25%):** Riesgo Bajo. La extensión es considerada segura y cumple con todas las políticas estándar.
+- 🟡 **Amarillo (26% - 60%):** Riesgo Moderado. Es el estado normal para extensiones de audio o herramientas de sistema, debido al uso de APIs de captura de medios.
+- 🔴 **Rojo (> 60%):** Riesgo Alto. Indica que la extensión solicita permisos excesivos o tiene comportamientos sospechosos (No es el caso de Smart Audio EQ).
+
+> **Nota:** Un puntaje de riesgo por encima de 0% no significa que la extensión sea maliciosa, sino que tiene la **capacidad técnica** de realizar tareas avanzadas (como capturar audio), lo cual es el propósito principal de esta herramienta.
+
 ## Licencia
 
 ISC

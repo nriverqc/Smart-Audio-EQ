@@ -37,6 +37,7 @@ export default function Premium({ lang }) {
           const script = document.createElement("script");
           // Match the exact URL provided by PayPal button factory
           script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+          script.setAttribute('data-sdk-integration-source', 'button-factory');
           script.async = true;
           script.onload = () => {
               console.log("Premium: PayPal SDK Loaded");
@@ -92,7 +93,13 @@ export default function Premium({ lang }) {
                       console.log("Creating subscription for plan:", paypalPlans[planType]);
                       return actions.subscription.create({
                           'plan_id': paypalPlans[planType],
-                          'custom_id': currentUser.uid
+                          'custom_id': currentUser.uid,
+                          'subscriber': {
+                              'email_address': currentUser.email
+                          },
+                          'application_context': {
+                              'user_action': 'SUBSCRIBE_NOW'
+                          }
                       });
                   },
                   onApprove: (data, actions) => {

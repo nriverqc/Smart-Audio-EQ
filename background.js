@@ -777,23 +777,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 // ===== MENSAJES EXTERNOS (WEB) =====
-chrome.runtime.onMessageExternal.addListener(
-  function(request, sender, sendResponse) {
-    if (request.type === "LOGIN_EXITOSO" || request.accion === "SYNC_USER") {
-      console.log("Background (External): Sync desde:", sender.url);
-      const uid = request.uid || (request.user && request.user.uid);
-      const email = request.email || (request.user && request.user.email);
-      const isPremium = request.isPremium || (request.user && request.user.isPremium);
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+    if (message.type === "USER_SYNC" || message.type === "LOGIN_EXITOSO" || message.accion === "SYNC_USER") {
+        const email = message.email || (message.user && message.user.email);
+        const uid = message.uid || (message.user && message.user.uid);
+        const webPremium = message.isPremium || (message.user && message.user.isPremium) || false;
+        
+        console.log("Background: Sync received from Web", { email, isPremium: webPremium });
 
-      chrome.storage.local.set({
-        uid: uid,
-        email: email,
-        isPremium: isPremium
-      }, () => {
-        console.log("Background (External): Datos sincronizados");
-        sendResponse({ status: "OK" });
-      });
-      return true;
+        // Logic: Extension is Premium if Web says so OR if it already has an App Pass
+        chrome.storage.local.get(['isPremium'], async (res) => {
+            // Check App Pass again just to be sure
+            const appPassStatus = await performAutomaticAppPassCheck();
+            const finalPremiumStatus = webPremium || appPassStatus || false;
+
+            chrome.storage.local.set({ 
+                email: email || '', 
+                uid: uid || '', 
+                isPremium: finalPremiumStatus 
+            });
+
+            isPremium = finalPremiumStatus;
+            sendResponse({ status: "OK", premium: isPremium });
+        });
+        return true; 
     }
-  }
-);
+});

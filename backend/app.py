@@ -296,6 +296,11 @@ def get_plans():
         "paypal": PAYPAL_PLANS
     })
 
+@app.route("/paypal-webhook", methods=["POST"])
+def paypal_webhook():
+    """Dummy webhook to avoid FAIL_SOFT errors in PayPal dashboard"""
+    return jsonify({"status": "received"}), 200
+
 @app.route("/register-paypal", methods=["POST"])
 def register_paypal():
     try:

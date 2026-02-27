@@ -85,9 +85,13 @@ export default function Premium({ lang }) {
                   },
                   createSubscription: (data, actions) => {
                       const currentUser = userRef.current;
+                      if (!paypalPlans[planType]) {
+                          console.error("No Plan ID found for", planType);
+                          return actions.reject();
+                      }
+                      console.log("Creating subscription for plan:", paypalPlans[planType]);
                       return actions.subscription.create({
                           'plan_id': paypalPlans[planType],
-                          'quantity': 1,
                           'custom_id': currentUser.uid
                       });
                   },

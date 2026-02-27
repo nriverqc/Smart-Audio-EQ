@@ -28,14 +28,15 @@ export default function Premium({ lang }) {
 
   // PayPal Effect
   useEffect(() => {
-      const containerId = "paypal-container-8M45H2NRA2N92";
+      const containerId = "paypal-button-container";
       
       // Dynamically load PayPal SDK if not already loaded
       if (!window.paypal) {
           console.log("Premium: Loading PayPal SDK...");
           const clientId = "AX9bU7jKcw7KBb3Ks4Z9ectLcdxkOsoVK-0hFxG2UlcWyojn9kOU31Nt-f2T9r5AiFVLN0QHVAWl1ok_";
           const script = document.createElement("script");
-          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=subscription&vault=true&v=1.0.6`;
+          // Match the exact URL provided by PayPal button factory
+          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
           script.async = true;
           script.onload = () => {
               console.log("Premium: PayPal SDK Loaded");
@@ -43,7 +44,7 @@ export default function Premium({ lang }) {
           };
           script.onerror = (e) => {
               console.error("Premium: PayPal SDK Load Error", e);
-              setErrorMsg("Error loading PayPal SDK. Please check your connection or disable ad-blockers.");
+              setErrorMsg("Error loading PayPal SDK. Please try refreshing the page or using a different browser (Chrome/Edge recommended).");
           };
           document.body.appendChild(script);
           return; 
@@ -54,13 +55,13 @@ export default function Premium({ lang }) {
       if (!sdkReady) return;
       if (!paypalPlans.monthly && !paypalPlans.yearly) {
           console.log("Premium: Waiting for PayPal Plans from backend...");
-          return; // Wait for plans
+          return; 
       }
 
       const container = document.getElementById(containerId);
       if (container && window.paypal) {
           console.log("Premium: Rendering PayPal Buttons for plan:", planType, "PlanID:", paypalPlans[planType]);
-          container.innerHTML = ""; // Clear previous buttons
+          container.innerHTML = ""; 
           try {
               window.paypal.Buttons({
                   style: {
@@ -86,6 +87,7 @@ export default function Premium({ lang }) {
                       const currentUser = userRef.current;
                       return actions.subscription.create({
                           'plan_id': paypalPlans[planType],
+                          'quantity': 1,
                           'custom_id': currentUser.uid
                       });
                   },
@@ -93,7 +95,6 @@ export default function Premium({ lang }) {
                       console.log("PayPal Subscription Approved:", data);
                       setLoading(true);
                       
-                      // Register license in backend
                       fetch(`${API_BASE}/register-paypal`, {
                           method: 'POST',
                           headers: {'Content-Type': 'application/json'},
@@ -122,14 +123,17 @@ export default function Premium({ lang }) {
                   },
                   onError: (err) => {
                       console.error("PayPal Error:", err);
-                      setErrorMsg("PayPal Error: " + (err.message || "Could not initialize PayPal buttons. Check if your browser blocks PayPal."));
+                      // Don't show the error if it's just a render issue that might be transient
+                      if (err.message && err.message.includes("render")) return;
+                      setErrorMsg("PayPal Error: " + (err.message || "Could not initialize PayPal buttons."));
                   }
               }).render("#" + containerId);
           } catch (e) {
               console.error("PayPal Render Error:", e);
           }
       }
-  }, [lang, loginWithGoogle, sdkReady, refreshUser, planType, paypalPlans]); // Added paypalPlans to dependencies
+  }, [lang, loginWithGoogle, sdkReady, refreshUser, planType, paypalPlans]); 
+
 
   useEffect(() => {
       // Fetch Plans from Backend
@@ -573,7 +577,7 @@ export default function Premium({ lang }) {
 
               {/* PAYPAL */}
               <div style={{marginTop: '20px'}}>
-                  <div id="paypal-container-8M45H2NRA2N92"></div>
+                  <div id="paypal-button-container"></div>
                   <p style={{fontSize: '0.8rem', color: '#aaa', marginTop: '10px'}}>
                       {t.paypalNote}
                   </p>

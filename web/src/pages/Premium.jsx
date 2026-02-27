@@ -32,15 +32,18 @@ export default function Premium({ lang }) {
       
       // Dynamically load PayPal SDK if not already loaded
       if (!window.paypal) {
-          // Use provided client ID directly for subscription flow
+          console.log("Premium: Loading PayPal SDK...");
           const clientId = "AX9bU7jKcw7KBb3Ks4Z9ectLcdxkOsoVK-0hFxG2UlcWyojn9kOU31Nt-f2T9r5AiFVLN0QHVAWl1ok_";
           const script = document.createElement("script");
-          // Add intent=subscription and vault=true for Subscription flow
-          // v=1.0.5 ensures no cache
-          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=subscription&vault=true&v=1.0.5`;
+          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=subscription&vault=true&v=1.0.6`;
           script.async = true;
           script.onload = () => {
+              console.log("Premium: PayPal SDK Loaded");
               setSdkReady(true);
+          };
+          script.onerror = (e) => {
+              console.error("Premium: PayPal SDK Load Error", e);
+              setErrorMsg("Error loading PayPal SDK. Please check your connection or disable ad-blockers.");
           };
           document.body.appendChild(script);
           return; 
@@ -48,13 +51,24 @@ export default function Premium({ lang }) {
           setSdkReady(true);
       }
 
-      if (!sdkReady) return; // Wait for SDK
+      if (!sdkReady) return;
+      if (!paypalPlans.monthly && !paypalPlans.yearly) {
+          console.log("Premium: Waiting for PayPal Plans from backend...");
+          return; // Wait for plans
+      }
 
       const container = document.getElementById(containerId);
       if (container && window.paypal) {
+          console.log("Premium: Rendering PayPal Buttons for plan:", planType, "PlanID:", paypalPlans[planType]);
           container.innerHTML = ""; // Clear previous buttons
           try {
               window.paypal.Buttons({
+                  style: {
+                      shape: 'rect',
+                      color: 'gold',
+                      layout: 'vertical',
+                      label: 'subscribe'
+                  },
                   onClick: (data, actions) => {
                       const currentUser = userRef.current;
                       if (!currentUser || !currentUser.uid) {
@@ -63,7 +77,7 @@ export default function Premium({ lang }) {
                           return actions.reject();
                       }
                       if (!paypalPlans[planType]) {
-                          alert("Error: PayPal Plan ID not loaded. Please refresh.");
+                          alert(lang === 'es' ? 'Error: ID de plan no cargado. Reintenta en unos segundos.' : "Error: PayPal Plan ID not loaded. Please wait.");
                           return actions.reject();
                       }
                       return actions.resolve();
@@ -87,7 +101,7 @@ export default function Premium({ lang }) {
                               email: userRef.current.email,
                               uid: userRef.current.uid,
                               subscriptionID: data.subscriptionID,
-                              orderID: data.orderID, // Just in case
+                              orderID: data.orderID,
                               plan_type: planType
                           })
                       })
@@ -108,14 +122,14 @@ export default function Premium({ lang }) {
                   },
                   onError: (err) => {
                       console.error("PayPal Error:", err);
-                      alert("PayPal Error: " + err.message);
+                      setErrorMsg("PayPal Error: " + (err.message || "Could not initialize PayPal buttons. Check if your browser blocks PayPal."));
                   }
               }).render("#" + containerId);
           } catch (e) {
               console.error("PayPal Render Error:", e);
           }
       }
-  }, [lang, loginWithGoogle, sdkReady, refreshUser, planType]); // Removed country dependency
+  }, [lang, loginWithGoogle, sdkReady, refreshUser, planType, paypalPlans]); // Added paypalPlans to dependencies
 
   useEffect(() => {
       // Fetch Plans from Backend
@@ -435,6 +449,21 @@ export default function Premium({ lang }) {
         <span className="beta-badge" style={{fontSize: '0.4em', verticalAlign: 'middle', marginLeft: '15px'}}>BETA</span>
       </h1>
       <p style={{fontSize: '1.2rem', marginBottom: '40px'}}>{t.subtitle}</p>
+
+      {errorMsg && (
+          <div style={{
+              background: 'rgba(255, 68, 68, 0.1)',
+              border: '1px solid #ff4444',
+              color: '#ff4444',
+              padding: '15px',
+              borderRadius: '8px',
+              marginBottom: '30px',
+              maxWidth: '600px',
+              margin: '0 auto 30px'
+          }}>
+              {errorMsg}
+          </div>
+      )}
 
       <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
         <div className="feature-card" style={{border: '1px solid #333', textAlign: 'left', minWidth: '300px'}}>

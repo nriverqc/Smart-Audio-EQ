@@ -7,7 +7,7 @@ export default function Home({ lang }) {
       titleLine1: 'Mejora el audio de tu navegador',
       titleHighlight: 'como un profesional',
       description:
-        'Smart Audio EQ lleva un ecualizador real a YouTube, Spotify y cualquier otra página con audio.',
+        'Equalizer – Web Audio lleva un ecualizador real a YouTube, Spotify y cualquier otra página con audio.',
       addButton: 'Agregar a Chrome (Gratis)',
       premiumButton: 'Obtener Premium',
       f1Title: '🎚️ Ecualizador de 6 bandas',
@@ -21,7 +21,7 @@ export default function Home({ lang }) {
       titleLine1: 'Boost your browser audio',
       titleHighlight: 'like a pro',
       description:
-        'Smart Audio EQ brings a real equalizer to YouTube, Spotify, and any website with audio.',
+        'Equalizer – Web Audio brings a real equalizer to YouTube, Spotify, and any website with audio.',
       addButton: 'Add to Chrome (Free)',
       premiumButton: 'Get Premium',
       f1Title: '🎚️ 6-Band Equalizer',
@@ -35,7 +35,7 @@ export default function Home({ lang }) {
       titleLine1: 'Melhore o áudio do seu navegador',
       titleHighlight: 'como um profissional',
       description:
-        'Smart Audio EQ traz um equalizador real para YouTube, Spotify e qualquer site com áudio.',
+        'Equalizer – Web Audio traz um equalizador real para YouTube, Spotify e qualquer site com áudio.',
       addButton: 'Adicionar ao Chrome (Grátis)',
       premiumButton: 'Obter Premium',
       f1Title: '🎚️ Equalizador de 6 bandas',
@@ -49,7 +49,7 @@ export default function Home({ lang }) {
       titleLine1: 'Verbessern Sie Ihren Browser-Sound',
       titleHighlight: 'wie ein Profi',
       description:
-        'Smart Audio EQ bringt einen echten Equalizer zu YouTube, Spotify und jeder Website mit Audio.',
+        'Equalizer – Web Audio bringt einen echten Equalizer zu YouTube, Spotify und jeder Website mit Audio.',
       addButton: 'Zu Chrome hinzufügen (Kostenlos)',
       premiumButton: 'Premium erhalten',
       f1Title: '🎚️ 6-Band-Equalizer',

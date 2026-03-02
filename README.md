@@ -1,4 +1,4 @@
-# Smart Audio EQ - Browser Equalizer
+# Equalizer – Web Audio
 
 Un potente ecualizador de audio para navegador web que permite mejorar la calidad de sonido en YouTube, Spotify, y cualquier sitio con contenido de audio.
 
@@ -149,7 +149,7 @@ El porcentaje de riesgo, los colores y los números que aparecen en los informes
 ### 🎨 Significado de los Colores
 - 🟢 **Verde (0% - 25%):** Riesgo Bajo. La extensión es considerada segura y cumple con todas las políticas estándar.
 - 🟡 **Amarillo (26% - 60%):** Riesgo Moderado. Es el estado normal para extensiones de audio o herramientas de sistema, debido al uso de APIs de captura de medios.
-- 🔴 **Rojo (> 60%):** Riesgo Alto. Indica que la extensión solicita permisos excesivos o tiene comportamientos sospechosos (No es el caso de Smart Audio EQ).
+- 🔴 **Rojo (> 60%):** Riesgo Alto. Indica que la extensión solicita permisos excesivos o tiene comportamientos sospechosos (No es el caso de Equalizer – Web Audio).
 
 > **Nota:** Un puntaje de riesgo por encima de 0% no significa que la extensión sea maliciosa, sino que tiene la **capacidad técnica** de realizar tareas avanzadas (como capturar audio), lo cual es el propósito principal de esta herramienta.
 
@@ -159,4 +159,4 @@ ISC
 
 ## Autor
 
-Smart Audio EQ Development Team - 2026
+Equalizer – Web Audio Development Team - 2026

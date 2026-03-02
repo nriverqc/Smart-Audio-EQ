@@ -6,7 +6,7 @@ export default function Privacy({ lang }) {
       title: 'Política de Privacidade',
       updated: 'Última atualização: 26 de fevereiro de 2026',
       intro_h: 'Introdução',
-      intro_p: 'Esta Política de Privacidade descreve como o "Equalizador - Smart Audio EQ" (a "Extensão") coleta, usa e compartilha dados do usuário. A Extensão é uma ferramenta para melhorar o áudio em sites como YouTube, Spotify Web e Netflix.',
+      intro_p: 'Esta política de privacidade descreve como "Equalizer – Web Audio" (a "Extensão") coleta, usa e compartilha dados do usuário. A Extensão é uma ferramenta para melhorar o áudio em sites como YouTube, Spotify Web e Netflix.',
       collect_h: 'Dados que Coletamos',
       collect_p: 'A Extensão coleta os seguintes dados locais:',
       collect_li1: 'Configurações personalizadas: Presets de equalizador e volume.',
@@ -23,7 +23,7 @@ export default function Privacy({ lang }) {
       title: 'Datenschutzbestimmungen',
       updated: 'Zuletzt aktualisiert: 26. Februar 2026',
       intro_h: 'Einführung',
-      intro_p: 'Diese Datenschutzrichtlinie beschreibt, wie "Equalizer - Smart Audio EQ" (die "Erweiterung") Benutzerdaten sammelt, verwendet und weitergibt. Die Erweiterung ist ein Tool zur Verbesserung von Audio auf Websites wie YouTube, Spotify Web und Netflix.',
+      intro_p: 'Diese Datenschutzrichtlinie beschreibt, wie "Equalizer – Web Audio" (die "Erweiterung") Benutzerdaten sammelt, verwendet und weitergibt. Die Erweiterung ist ein Tool zur Verbesserung von Audio auf Websites wie YouTube, Spotify Web und Netflix.',
       collect_h: 'Daten, die wir sammeln',
       collect_p: 'Die Erweiterung sammelt die folgenden lokalen Daten:',
       collect_li1: 'Benutzerdefinierte Einstellungen: Equalizer-Presets und Lautstärke.',
@@ -71,7 +71,7 @@ export default function Privacy({ lang }) {
 
         <h2>Introduction</h2>
         <p>
-          This Privacy Policy describes how "Equalizer - Smart Audio EQ" (the "Extension") collects, uses, and shares user data. 
+          This Privacy Policy describes how "Equalizer – Web Audio" (the "Extension") collects, uses, and shares user data. 
           The Extension is a tool to enhance audio on websites like YouTube, Spotify Web, and Netflix, allowing for equalizer and volume adjustments.
         </p>
 
@@ -136,7 +136,7 @@ export default function Privacy({ lang }) {
 
       <h2>Introducción</h2>
       <p>
-        Esta Política de Privacidad describe cómo "Equalizer - Smart Audio EQ" (la "Extensión") recopila, usa y comparte datos de usuarios. 
+        Esta Política de Privacidad describe cómo "Equalizer – Web Audio" (la "Extensión") recopila, usa y comparte datos de usuarios. 
         La Extensión es una herramienta para mejorar el audio en sitios web como YouTube, Spotify Web y Netflix, permitiendo ajustes de ecualizador y volumen.
       </p>
 

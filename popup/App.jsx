@@ -37,7 +37,7 @@ export default function App() {
   const extensionTexts = {
     es: {
       visitWebsite: 'Visitar sitio web',
-      extName: 'Smart Audio EQ',
+      extName: 'Equalizer – Web Audio',
       premiumBadge: 'PRO',
       premiumStatus: '• PREMIUM 💎',
       freeStatus: '• Gratis',
@@ -53,7 +53,7 @@ export default function App() {
     },
     en: {
       visitWebsite: 'Visit Website',
-      extName: 'Smart Audio EQ',
+      extName: 'Equalizer – Web Audio',
       premiumBadge: 'PRO',
       premiumStatus: '• PREMIUM 💎',
       freeStatus: '• Free',
@@ -69,7 +69,7 @@ export default function App() {
     },
     pt: {
       visitWebsite: 'Visite o site',
-      extName: 'Smart Audio EQ',
+      extName: 'Equalizer – Web Audio',
       premiumBadge: 'PRO',
       premiumStatus: '• PREMIUM 💎',
       freeStatus: '• Grátis',
@@ -85,7 +85,7 @@ export default function App() {
     },
     de: {
       visitWebsite: 'Website besuchen',
-      extName: 'Smart Audio EQ',
+      extName: 'Equalizer – Web Audio',
       premiumBadge: 'PRO',
       premiumStatus: '• PREMIUM 💎',
       freeStatus: '• Kostenlos',

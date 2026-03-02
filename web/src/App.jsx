@@ -281,7 +281,7 @@ function AppContent() {
         <div className="container">
           <nav>
             <Link to="/" style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#00d2ff', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-              Smart Audio EQ
+              Equalizer – Web Audio
               <span className="beta-badge" style={{fontSize: '0.5em', marginLeft: '10px'}}>BETA</span>
             </Link>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -398,7 +398,7 @@ function AppContent() {
           </Routes>
 
           <footer>
-            <p>© 2026 Smart Audio EQ. {currentLang.footer} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.2 (20k)</span></p>
+            <p>© 2026 Equalizer – Web Audio. {currentLang.footer} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.2 (20k)</span></p>
             <p style={{ fontSize: '0.8rem', marginTop: '5px' }}>
               <Link to="/privacy" style={{ color: '#aaa', textDecoration: 'none' }}>
                 {currentLang.privacy}

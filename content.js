@@ -6,7 +6,7 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
   // Already loaded
 } else {
   window.__SMART_AUDIO_EQ_LOADED = true;
-  console.log("✅ Smart Audio EQ: Content script loaded (disabled per-tab audio processing)");
+  console.log("✅ Equalizer – Web Audio: Content script loaded (disabled per-tab audio processing)");
 
   // Content script messaging listener
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

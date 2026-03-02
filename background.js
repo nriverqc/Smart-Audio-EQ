@@ -3,7 +3,7 @@ import { checkAppPass, activateAppPass, manageAppPass } from '@chrome-stats/app-
 // Service Worker con gestión de Offscreen Document
 // Migrado para cumplir con Manifest V3 y evitar problemas de CSP/Autoplay
 
-console.log("Smart Audio EQ: Background Service Worker iniciado");
+console.log("Equalizer – Web Audio: Background Service Worker iniciado");
 
 // ===== AUTOMATIC APP PASS CHECK (SDK) =====
 async function notifyWebTabsOfPremium() {

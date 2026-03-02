@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Equalizer – Web Audio",
+  "name": "__MSG_extName__",
   "short_name": "Web Audio EQ",
   "version": "1.0.5",
-  "description": "Powerful 15-band equalizer, volume booster and audio effects for any website.",
+  "description": "__MSG_extDescription__",
   "icons": {
     "128": "IconoEcualizador.png"
   },

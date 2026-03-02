@@ -204,7 +204,7 @@ def setup_paypal_products_and_plans():
             "Content-Type": "application/json"
         }
         data = {
-            "name": "Smart Audio EQ Premium V3",
+            "name": "Equalizer – Web Audio Premium V3",
             "type": "SERVICE",
             "category": "SOFTWARE"
         }
@@ -231,7 +231,7 @@ def setup_paypal_products_and_plans():
         headers = { "Authorization": f"Bearer {token}", "Content-Type": "application/json" }
         plan_data = {
             "product_id": product_id,
-            "name": "Smart Audio EQ Premium (Yearly Sandbox)",
+            "name": "Equalizer – Web Audio Premium (Yearly Sandbox)",
             "description": "Yearly subscription",
             "status": "ACTIVE",
             "billing_cycles": [
@@ -261,7 +261,7 @@ def setup_paypal_products_and_plans():
          headers = { "Authorization": f"Bearer {token}", "Content-Type": "application/json" }
          plan_data = {
             "product_id": product_id,
-            "name": "Smart Audio EQ Premium (Monthly Sandbox)",
+            "name": "Equalizer – Web Audio Premium (Monthly Sandbox)",
             "description": "Monthly subscription",
             "status": "ACTIVE",
             "billing_cycles": [
@@ -324,7 +324,7 @@ def verify_paypal_order(order_id):
 
 @app.route("/")
 def home():
-    return "Smart Audio EQ API is running with SQLite (v3.0 - PayPal Only + App Pass)"
+    return "Equalizer – Web Audio API is running with SQLite (v3.0 - PayPal Only + App Pass)"
 
 @app.route("/get-plans", methods=["GET"])
 def get_plans():
@@ -741,12 +741,12 @@ def support():
             <hr>
             <p style="white-space: pre-wrap;">{message}</p>
             <hr>
-            <p style="font-size: 12px; color: #888;">Enviado desde Smart Audio EQ Web</p>
+            <p style="font-size: 12px; color: #888;">Enviado desde Equalizer – Web Audio Web</p>
         </div>
         """
 
         params = {
-            "from": "Soporte Smart Audio EQ <onboarding@resend.dev>",
+            "from": "Soporte Equalizer – Web Audio <onboarding@resend.dev>",
             "to": [recipient],
             "subject": f"[Soporte] {subject}",
             "html": html_content,

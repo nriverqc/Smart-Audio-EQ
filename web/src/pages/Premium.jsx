@@ -192,7 +192,7 @@ export default function Premium({ lang }) {
       appPassPlaceholder: 'CÓDIGO-PROMO',
       appPassBtn: 'Activar código',
       comingSoon: 'Próximamente',
-      comingSoonMsg: 'Las suscripciones Premium estarán disponibles muy pronto. Estamos finalizando los últimos detalles de seguridad para tu tranquilidad.'
+      comingSoonMsg: 'Las suscripciones directas con PayPal estarán disponibles muy pronto. Por ahora, solo puedes activar Premium si tienes un App Pass oficial o un código promocional.'
     },
     en: {
       title: 'Unlock the full power',
@@ -239,7 +239,7 @@ export default function Premium({ lang }) {
       appPassPlaceholder: 'PROMO-CODE',
       appPassBtn: 'Activate code',
       comingSoon: 'Coming Soon',
-      comingSoonMsg: 'Premium subscriptions will be available very soon. We are finalizing the last security details for your peace of mind.'
+      comingSoonMsg: 'Direct PayPal subscriptions will be available very soon. For now, you can only activate Premium if you have an official App Pass or a promo code.'
     },
     pt: {
       title: 'Desbloqueie todo o poder',
@@ -272,7 +272,7 @@ export default function Premium({ lang }) {
       buyLabel: 'Pagar com PayPal',
       processingLabel: 'Processando...',
       loadingLabel: 'Carregando formulário de pagamento...',
-      emailLabel: 'Insira seu e-mail do Google (para ativar o Premium)',
+      emailLabel: 'Insira seu e-mail do Google (para activar o Premium)',
       emailPlaceholder: 'seu.email@gmail.com',
       successMessage: 'Pagamento bem-sucedido! Sua licença Premium foi ativada.',
       errorMessage: 'Houve um erro ao processar o pagamento.',
@@ -286,7 +286,7 @@ export default function Premium({ lang }) {
       appPassPlaceholder: 'CÓDIGO-PROMO',
       appPassBtn: 'Ativar código',
       comingSoon: 'Em breve',
-      comingSoonMsg: 'As assinaturas Premium estarão disponíveis em breve. Estamos finalizando os últimos detalhes de segurança para sua tranquilidade.'
+      comingSoonMsg: 'As assinaturas diretas com o PayPal estarão disponíveis em breve. Por enquanto, você só pode ativar o Premium se tiver um App Pass oficial ou um código promocional.'
     },
     de: {
       title: 'Schalte die volle Leistung frei',
@@ -333,7 +333,7 @@ export default function Premium({ lang }) {
       appPassPlaceholder: 'PROMO-CODE',
       appPassBtn: 'Code aktivieren',
       comingSoon: 'Demnächst',
-      comingSoonMsg: 'Premium-Abonnements werden in Kürze verfügbar sein. Wir schließen die letzten Sicherheitsdetails für Ihre Sicherheit ab.'
+      comingSoonMsg: 'Direkte PayPal-Abonnements werden in Kürze verfügbar sein. Derzeit können Sie Premium nur aktivieren, wenn Sie einen offiziellen App Pass oder einen Promo-Code haben.'
     },
   };
 
@@ -595,18 +595,27 @@ export default function Premium({ lang }) {
                   </div>}
               </div>
 
-              {/* PAYPAL */}
+              {/* PAYPAL SECTION (HIDDEN FOR NOW) */}
+              {/* 
               <div style={{marginTop: '20px'}}>
                   <div id="paypal-button-container"></div>
                   <p style={{fontSize: '0.8rem', color: '#aaa', marginTop: '10px'}}>
                       {t.paypalNote}
                   </p>
               </div>
+              */}
 
               {/* APP PASS SECTION */}
-              <div style={{marginTop: '30px', borderTop: '1px solid #333', paddingTop: '20px', textAlign: 'left'}}>
-                  <label style={{display: 'block', marginBottom: '10px', fontSize: '0.9rem', color: '#00d2ff', fontWeight: 'bold'}}>
-                      {t.appPassLabel}
+              <div style={{
+                  marginTop: '30px', 
+                  border: '1px solid rgba(0, 210, 255, 0.3)', 
+                  padding: '20px', 
+                  borderRadius: '10px',
+                  background: 'rgba(0, 210, 255, 0.05)',
+                  textAlign: 'left'
+              }}>
+                  <label style={{display: 'block', marginBottom: '15px', fontSize: '1.1rem', color: '#00d2ff', fontWeight: 'bold'}}>
+                      🚀 {t.appPassLabel}
                   </label>
                   <button 
                       onClick={requestExtensionAppPassCheck}

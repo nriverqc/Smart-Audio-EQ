@@ -190,7 +190,9 @@ export default function Premium({ lang }) {
       appPassBtnAuto: 'Verificar automáticamente desde la extensión',
       appPassManualLabel: '¿Tienes un código promocional o manual?',
       appPassPlaceholder: 'CÓDIGO-PROMO',
-      appPassBtn: 'Activar código'
+      appPassBtn: 'Activar código',
+      comingSoon: 'Próximamente',
+      comingSoonMsg: 'Las suscripciones Premium estarán disponibles muy pronto. Estamos finalizando los últimos detalles de seguridad para tu tranquilidad.'
     },
     en: {
       title: 'Unlock the full power',
@@ -235,7 +237,9 @@ export default function Premium({ lang }) {
       appPassBtnAuto: 'Verify automatically via extension',
       appPassManualLabel: 'Have a promo or manual code?',
       appPassPlaceholder: 'PROMO-CODE',
-      appPassBtn: 'Activate code'
+      appPassBtn: 'Activate code',
+      comingSoon: 'Coming Soon',
+      comingSoonMsg: 'Premium subscriptions will be available very soon. We are finalizing the last security details for your peace of mind.'
     },
     pt: {
       title: 'Desbloqueie todo o poder',
@@ -280,7 +284,9 @@ export default function Premium({ lang }) {
       appPassBtnAuto: 'Verificar automaticamente via extensão',
       appPassManualLabel: 'Tem um código promocional ou manual?',
       appPassPlaceholder: 'CÓDIGO-PROMO',
-      appPassBtn: 'Ativar código'
+      appPassBtn: 'Ativar código',
+      comingSoon: 'Em breve',
+      comingSoonMsg: 'As assinaturas Premium estarão disponíveis em breve. Estamos finalizando os últimos detalhes de segurança para sua tranquilidade.'
     },
     de: {
       title: 'Schalte die volle Leistung frei',
@@ -325,7 +331,9 @@ export default function Premium({ lang }) {
       appPassBtnAuto: 'Automatisch über Erweiterung verifizieren',
       appPassManualLabel: 'Haben Sie einen Promo- oder manuellen Code?',
       appPassPlaceholder: 'PROMO-CODE',
-      appPassBtn: 'Code aktivieren'
+      appPassBtn: 'Code aktivieren',
+      comingSoon: 'Demnächst',
+      comingSoonMsg: 'Premium-Abonnements werden in Kürze verfügbar sein. Wir schließen die letzten Sicherheitsdetails für Ihre Sicherheit ab.'
     },
   };
 
@@ -484,6 +492,19 @@ export default function Premium({ lang }) {
             {t.premiumTitle}
             <span className="beta-badge" style={{fontSize: '0.5em', verticalAlign: 'middle', marginLeft: '10px'}}>BETA</span>
           </h2>
+
+          {/* Coming Soon Notice */}
+          <div style={{
+              background: 'rgba(255, 215, 0, 0.1)',
+              border: '1px solid #ffd700',
+              padding: '15px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              textAlign: 'center'
+          }}>
+              <h4 style={{color: '#ffd700', margin: '0 0 5px 0', fontSize: '1.1rem'}}>🚀 {t.comingSoon}</h4>
+              <p style={{fontSize: '0.85rem', color: '#eee', margin: 0}}>{t.comingSoonMsg}</p>
+          </div>
           
           {/* Plan Selector */}
           <div style={{margin: '10px 0'}}>

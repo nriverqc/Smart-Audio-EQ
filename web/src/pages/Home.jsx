@@ -7,7 +7,8 @@ export default function Home({ lang }) {
       titleLine1: 'Mejora el audio de tu navegador',
       titleHighlight: 'como un profesional',
       description:
-        'Equalizer – Web Audio lleva un ecualizador real a YouTube, Spotify y cualquier otra página con audio.',
+        'Equalizer – Web Audio es una extensión de navegador que mejora y personaliza el audio en sitios web como YouTube, Spotify, Netflix y otras plataformas de streaming.',
+      compatibility: 'Compatible con Chrome, Edge y navegadores Chromium.',
       addButton: 'Agregar a Chrome (Gratis)',
       premiumButton: 'Obtener Premium',
       f1Title: '🎚️ Ecualizador de 6 bandas',
@@ -21,7 +22,8 @@ export default function Home({ lang }) {
       titleLine1: 'Boost your browser audio',
       titleHighlight: 'like a pro',
       description:
-        'Equalizer – Web Audio brings a real equalizer to YouTube, Spotify, and any website with audio.',
+        'Equalizer – Web Audio is a browser extension that enhances and customizes audio across websites like YouTube, Spotify, Netflix, and other streaming platforms.',
+      compatibility: 'Works on Chrome, Edge and Chromium browsers.',
       addButton: 'Add to Chrome (Free)',
       premiumButton: 'Get Premium',
       f1Title: '🎚️ 6-Band Equalizer',
@@ -35,7 +37,8 @@ export default function Home({ lang }) {
       titleLine1: 'Melhore o áudio do seu navegador',
       titleHighlight: 'como um profissional',
       description:
-        'Equalizer – Web Audio traz um equalizador real para YouTube, Spotify e qualquer site com áudio.',
+        'Equalizer – Web Audio é uma extensão de navegador que melhora e personaliza o áudio em sites como YouTube, Spotify, Netflix e outras plataformas de streaming.',
+      compatibility: 'Compatível com Chrome, Edge e navegadores Chromium.',
       addButton: 'Adicionar ao Chrome (Grátis)',
       premiumButton: 'Obter Premium',
       f1Title: '🎚️ Equalizador de 6 bandas',
@@ -49,7 +52,8 @@ export default function Home({ lang }) {
       titleLine1: 'Verbessern Sie Ihren Browser-Sound',
       titleHighlight: 'wie ein Profi',
       description:
-        'Equalizer – Web Audio bringt einen echten Equalizer zu YouTube, Spotify und jeder Website mit Audio.',
+        'Equalizer – Web Audio ist eine Browser-Erweiterung, die den Ton auf Websites wie YouTube, Spotify, Netflix und anderen Streaming-Plattformen verbessert und anpasst.',
+      compatibility: 'Kompatibel mit Chrome, Edge und Chromium-Browsern.',
       addButton: 'Zu Chrome hinzufügen (Kostenlos)',
       premiumButton: 'Premium erhalten',
       f1Title: '🎚️ 6-Band-Equalizer',
@@ -73,8 +77,11 @@ export default function Home({ lang }) {
             <span className="beta-badge" style={{fontSize: '0.4em', verticalAlign: 'top', marginTop: '10px'}}>BETA</span>
           </span>
         </h1>
-        <p style={{fontSize: '1.2rem', color: '#aaa', maxWidth: '600px', margin: '0 auto 40px'}}>
+        <p style={{fontSize: '1.2rem', color: '#aaa', maxWidth: '600px', margin: '0 auto 10px'}}>
           {t.description}
+        </p>
+        <p style={{fontSize: '1rem', color: '#00d2ff', marginBottom: '40px', fontWeight: 'bold'}}>
+          {t.compatibility}
         </p>
         <div style={{display: 'flex', gap: '20px', justifyContent: 'center'}}>
           <a 

@@ -191,8 +191,8 @@ export default function Premium({ lang }) {
       appPassManualLabel: '¿Tienes un código promocional o manual?',
       appPassPlaceholder: 'CÓDIGO-PROMO',
       appPassBtn: 'Activar código',
-      comingSoon: 'Próximamente',
-      comingSoonMsg: 'Las suscripciones directas con PayPal estarán disponibles muy pronto. Por ahora, solo puedes activar Premium si tienes un App Pass oficial o un código promocional.'
+      comingSoon: 'Suscripción Premium',
+      comingSoonMsg: 'Los pagos directos estarán disponibles pronto. Actualmente, el acceso premium se puede activar mediante un App Pass oficial o un código promocional.'
     },
     en: {
       title: 'Unlock the full power',
@@ -238,8 +238,8 @@ export default function Premium({ lang }) {
       appPassManualLabel: 'Have a promo or manual code?',
       appPassPlaceholder: 'PROMO-CODE',
       appPassBtn: 'Activate code',
-      comingSoon: 'Coming Soon',
-      comingSoonMsg: 'Direct PayPal subscriptions will be available very soon. For now, you can only activate Premium if you have an official App Pass or a promo code.'
+      comingSoon: 'Premium Access',
+      comingSoonMsg: 'Direct payments will be available soon. Currently, premium access can be activated using an official App Pass or promotional code.'
     },
     pt: {
       title: 'Desbloqueie todo o poder',
@@ -285,8 +285,8 @@ export default function Premium({ lang }) {
       appPassManualLabel: 'Tem um código promocional ou manual?',
       appPassPlaceholder: 'CÓDIGO-PROMO',
       appPassBtn: 'Ativar código',
-      comingSoon: 'Em breve',
-      comingSoonMsg: 'As assinaturas diretas com o PayPal estarão disponíveis em breve. Por enquanto, você só pode ativar o Premium se tiver um App Pass oficial ou um código promocional.'
+      comingSoon: 'Acesso Premium',
+      comingSoonMsg: 'Pagamentos diretos estarão disponíveis em breve. Atualmente, o acesso premium pode ser ativado usando um App Pass oficial ou código promocional.'
     },
     de: {
       title: 'Schalte die volle Leistung frei',
@@ -332,8 +332,8 @@ export default function Premium({ lang }) {
       appPassManualLabel: 'Haben Sie einen Promo- oder manuellen Code?',
       appPassPlaceholder: 'PROMO-CODE',
       appPassBtn: 'Code aktivieren',
-      comingSoon: 'Demnächst',
-      comingSoonMsg: 'Direkte PayPal-Abonnements werden in Kürze verfügbar sein. Derzeit können Sie Premium nur aktivieren, wenn Sie einen offiziellen App Pass oder einen Promo-Code haben.'
+      comingSoon: 'Premium-Zugang',
+      comingSoonMsg: 'Direkte Zahlungen werden bald verfügbar sein. Derzeit kann der Premium-Zugang über einen offiziellen App Pass oder Aktionscode aktiviert werden.'
     },
   };
 

@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Premium from './pages/Premium';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import Refund from './pages/Refund';
 import Contact from './pages/Contact';
 import SupportWidget from './components/SupportWidget';
 import { auth, googleProvider } from './firebase';
@@ -234,10 +235,10 @@ function AppContent() {
   };
 
   const langLabels = {
-    es: { label: 'Español', flag: '/flags/es.svg', premium: 'PREMIUM 💎', free: 'GRATIS', home: 'Inicio', goPremium: 'Ir a Premium', footer: 'Todos los derechos reservados.', privacy: 'Política de Privacidad', terms: 'Términos', contact: 'Contacto', login: 'Iniciar Sesión' },
-    en: { label: 'English', flag: '/flags/en.svg', premium: 'PREMIUM 💎', free: 'FREE', home: 'Home', goPremium: 'Go Premium', footer: 'All rights reserved.', privacy: 'Privacy Policy', terms: 'Terms', contact: 'Contact', login: 'Login' },
-    pt: { label: 'Português', flag: '/flags/pt.svg', premium: 'PREMIUM 💎', free: 'GRÁTIS', home: 'Início', goPremium: 'Ir para Premium', footer: 'Todos los derechos reservados.', privacy: 'Política de Privacidade', terms: 'Termos', contact: 'Contato', login: 'Entrar' },
-    de: { label: 'Deutsch', flag: '/flags/de.svg', premium: 'PREMIUM 💎', free: 'KOSTENLOS', home: 'Startseite', goPremium: 'Zu Premium wechseln', footer: 'Alle Rechte vorbehalten.', privacy: 'Datenschutz', terms: 'Bedingungen', contact: 'Kontakt', login: 'Anmelden' }
+    es: { label: 'Español', flag: '/flags/es.svg', premium: 'PREMIUM 💎', free: 'GRATIS', home: 'Inicio', goPremium: 'Ir a Premium', footer: 'Todos los derechos reservados.', privacy: 'Política de Privacidad', terms: 'Términos', refund: 'Reembolsos', contact: 'Contacto', login: 'Iniciar Sesión' },
+    en: { label: 'English', flag: '/flags/en.svg', premium: 'PREMIUM 💎', free: 'FREE', home: 'Home', goPremium: 'Go Premium', footer: 'All rights reserved.', privacy: 'Privacy Policy', terms: 'Terms', refund: 'Refunds', contact: 'Contact', login: 'Login' },
+    pt: { label: 'Português', flag: '/flags/pt.svg', premium: 'PREMIUM 💎', free: 'GRÁTIS', home: 'Início', goPremium: 'Ir para Premium', footer: 'Todos os derechos reservados.', privacy: 'Política de Privacidade', terms: 'Termos', refund: 'Reembolsos', contact: 'Contato', login: 'Entrar' },
+    de: { label: 'Deutsch', flag: '/flags/de.svg', premium: 'PREMIUM 💎', free: 'KOSTENLOS', home: 'Startseite', goPremium: 'Zu Premium wechseln', footer: 'Alle Rechte vorbehalten.', privacy: 'Datenschutz', terms: 'Bedingungen', refund: 'Erstattungen', contact: 'Kontakt', login: 'Anmelden' }
   };
 
   const currentLang = langLabels[lang] || langLabels.en;
@@ -398,17 +399,21 @@ function AppContent() {
             <Route path="/premium" element={<Premium lang={lang} />} />
             <Route path="/privacy" element={<Privacy lang={lang} />} />
             <Route path="/terms" element={<Terms lang={lang} />} />
+            <Route path="/refund" element={<Refund lang={lang} />} />
             <Route path="/contact" element={<Contact lang={lang} />} />
           </Routes>
 
           <footer>
             <p>© 2026 Equalizer – Web Audio. {currentLang.footer} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.2 (20k)</span></p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '10px', flexWrap: 'wrap' }}>
               <Link to="/privacy" style={{ color: '#aaa', textDecoration: 'none', fontSize: '0.85rem' }}>
                 {currentLang.privacy}
               </Link>
               <Link to="/terms" style={{ color: '#aaa', textDecoration: 'none', fontSize: '0.85rem' }}>
                 {currentLang.terms}
+              </Link>
+              <Link to="/refund" style={{ color: '#aaa', textDecoration: 'none', fontSize: '0.85rem' }}>
+                {currentLang.refund}
               </Link>
               <Link to="/contact" style={{ color: '#aaa', textDecoration: 'none', fontSize: '0.85rem' }}>
                 {currentLang.contact}

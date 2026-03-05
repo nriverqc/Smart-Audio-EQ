@@ -8,7 +8,7 @@ export default function Terms({ lang }) {
       sections: [
         {
           h: '1. Propiedad del Servicio',
-          p: 'Este servicio es operado por Nicolas Rivera como desarrollador independiente. Al utilizar la extensión "Equalizer – Web Audio", usted reconoce que está tratando con un desarrollador individual.'
+          p: 'Este servicio es operado por Nicolas Rivera Software como desarrollador independiente. Al utilizar la extensión "Equalizer – Web Audio", usted reconoce que está tratando con Nicolas Rivera Software.'
         },
         {
           h: '2. Aceptación de los Términos',
@@ -54,7 +54,7 @@ export default function Terms({ lang }) {
       sections: [
         {
           h: '1. Service Ownership',
-          p: 'This service is operated by Nicolas Rivera as an independent developer. By using the "Equalizer – Web Audio" extension, you acknowledge that you are dealing with an individual developer.'
+          p: 'This service is operated by Nicolas Rivera Software as an independent developer. By using the "Equalizer – Web Audio" extension, you acknowledge that you are dealing with Nicolas Rivera Software.'
         },
         {
           h: '2. Acceptance of Terms',
@@ -100,7 +100,7 @@ export default function Terms({ lang }) {
       sections: [
         {
           h: '1. Propriedade do Serviço',
-          p: 'Este serviço é operado por Nicolas Rivera como desenvolvedor independente. Ao usar a extensão "Equalizer – Web Audio", você reconhece que está lidando com um desenvolvedor individual.'
+          p: 'Este serviço é operado por Nicolas Rivera Software como desenvolvedor independente. Ao usar a extensão "Equalizer – Web Audio", você reconhece que está lidando com Nicolas Rivera Software.'
         },
         {
           h: '2. Aceitação dos Termos',
@@ -146,7 +146,7 @@ export default function Terms({ lang }) {
       sections: [
         {
           h: '1. Eigentum am Dienst',
-          p: 'Dieser Dienst wird von Nicolas Rivera als unabhängiger Entwickler betrieben. Durch die Nutzung der Erweiterung "Equalizer – Web Audio" erkennen Sie an, dass Sie es mit einem einzelnen Entwickler zu tun haben.'
+          p: 'Dieser Dienst wird von Nicolas Rivera Software als unabhängiger Entwickler betrieben. Durch die Nutzung der Erweiterung "Equalizer – Web Audio" erkennen Sie an, dass Sie es mit Nicolas Rivera Software zu tun haben.'
         },
         {
           h: '2. Annahme der Bedingungen',

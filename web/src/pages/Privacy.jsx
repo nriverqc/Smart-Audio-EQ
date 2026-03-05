@@ -17,7 +17,7 @@ export default function Privacy({ lang }) {
       security_h: 'Segurança dos Dados',
       security_p: 'Os dados são armazenados localmente ou no Firebase com criptografia moderna (HTTPS).',
       rights_h: 'Direitos do Usuário',
-      rights_p: 'Você pode excluir dados desinstalando a extensão ou contatando support@smartaudioeq.com.',
+      rights_p: 'Você pode excluir dados desinstalando a extensão ou contatando nr525859@gmail.com.',
     },
     de: {
       title: 'Datenschutzbestimmungen',
@@ -34,7 +34,7 @@ export default function Privacy({ lang }) {
       security_h: 'Datensicherheit',
       security_p: 'Daten werden lokal oder in Firebase mit moderner Verschlüsselung (HTTPS) gespeichert.',
       rights_h: 'Benutzerrechte',
-      rights_p: 'Sie können Daten löschen, indem Sie die Erweiterung deinstallieren oder support@smartaudioeq.com kontaktieren.',
+      rights_p: 'Sie können Daten löschen, indem Sie die Erweiterung deinstallieren oder nr525859@gmail.com kontaktieren.',
     }
   };
 
@@ -119,7 +119,7 @@ export default function Privacy({ lang }) {
         <h2>User Rights</h2>
         <p>
           You can delete local data by uninstalling the Extension or clearing Chrome data. 
-          For Premium account data deletion, please contact us at support@smartaudioeq.com.
+          For Premium account data deletion, please contact us at nr525859@gmail.com.
         </p>
 
         <h2>Changes to Policy</h2>
@@ -184,7 +184,7 @@ export default function Privacy({ lang }) {
       <h2>Derechos del Usuario</h2>
       <p>
         Puedes eliminar datos locales desinstalando la Extensión o borrando datos de Chrome. 
-        Para eliminar datos de cuenta Premium, contáctanos en support@smartaudioeq.com.
+        Para eliminar datos de cuenta Premium, contáctanos en nr525859@gmail.com.
       </p>
 
       <h2>Cambios en la Política</h2>

@@ -413,7 +413,6 @@ export default function Premium({ lang }) {
             {t.premiumTitle}
           </h2>
 
-          {/* Paddle Checkout Button */}
           <div style={{ marginBottom: '20px' }}>
               <button 
                 onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2ntgc0py83xjw60tnw7x2c' : 'pri_01kk2nvf5pf316avk8khkzqrm3')}
@@ -422,16 +421,22 @@ export default function Premium({ lang }) {
                     padding: '15px',
                     borderRadius: '8px',
                     border: 'none',
-                    background: '#ffd700',
+                    background: 'linear-gradient(90deg, #00d2ff, #00a8cc)',
                     color: '#000',
                     fontWeight: 'bold',
                     fontSize: '1.1rem',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(255, 215, 0, 0.3)',
-                    transition: 'transform 0.2s'
+                    boxShadow: '0 4px 15px rgba(0, 210, 255, 0.3)',
+                    transition: 'all 0.3s'
                 }}
-                onMouseOver={(e) => e.target.style.transform = 'scale(1.02)'}
-                onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                onMouseOver={(e) => {
+                    e.target.style.transform = 'scale(1.02)';
+                    e.target.style.boxShadow = '0 6px 20px rgba(0, 210, 255, 0.5)';
+                }}
+                onMouseOut={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 4px 15px rgba(0, 210, 255, 0.3)';
+                }}
               >
                 {lang === 'es' ? 'Suscribirse ahora (Card / Apple Pay)' : 'Subscribe Now (Card / Apple Pay)'}
               </button>
@@ -446,7 +451,7 @@ export default function Premium({ lang }) {
                           flex: 1,
                           padding: '10px',
                           borderRadius: '5px',
-                          background: planType === 'monthly' ? '#ffd700' : 'transparent',
+                          background: planType === 'monthly' ? '#00d2ff' : 'transparent',
                           color: planType === 'monthly' ? '#000' : '#888',
                           border: 'none',
                           cursor: 'pointer',
@@ -462,7 +467,7 @@ export default function Premium({ lang }) {
                           flex: 1,
                           padding: '10px',
                           borderRadius: '5px',
-                          background: planType === 'yearly' ? '#ffd700' : 'transparent',
+                          background: planType === 'yearly' ? '#00d2ff' : 'transparent',
                           color: planType === 'yearly' ? '#000' : '#888',
                           border: 'none',
                           cursor: 'pointer',

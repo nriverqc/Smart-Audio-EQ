@@ -9,7 +9,7 @@ export default function Refund({ lang }) {
       sections: [
         {
           h: '1. Garantía de Reembolso de 14 Días',
-          p: 'Ofrecemos una política de reembolso de 14 días. Si no está satisfecho con su compra por cualquier motivo, puede solicitar un reembolso completo dentro de los 14 días posteriores a la fecha de compra original.'
+          p: 'Si no está satisfecho con su compra, puede solicitar un reembolso completo dentro de los 14 días posteriores a la fecha de compra. Los reembolsos se procesarán de acuerdo con la política de reembolsos de Paddle.'
         },
         {
           h: '2. Cómo solicitar un reembolso',
@@ -19,12 +19,12 @@ export default function Refund({ lang }) {
     },
     en: {
       title: 'Refund Policy',
-      updated: 'Last updated: February 26, 2026',
+      updated: 'Last updated: March 6, 2026',
       intro: 'At Nicolas Rivera Software, we want you to be satisfied with your purchase.',
       sections: [
         {
           h: '1. 14-Day Refund Guarantee',
-          p: 'We offer a 14-day refund policy. If you are not satisfied with your purchase for any reason, you can request a full refund within 14 days of the original purchase date.'
+          p: 'If you are not satisfied with your purchase, you may request a full refund within 14 days of the purchase date. Refunds will be processed according to Paddle\'s refund policy.'
         },
         {
           h: '2. How to Request a Refund',
@@ -39,7 +39,7 @@ export default function Refund({ lang }) {
       sections: [
         {
           h: '1. Garantia de Reembolso de 14 Dias',
-          p: 'Oferecemos uma política de reembolso de 14 dias. Se você não estiver satisfeito com sua compra por qualquer motivo, poderá solicitar um reembolso total no prazo de 14 dias a partir da data da compra original.'
+          p: 'Se você não estiver satisfeito com sua compra, poderá solicitar um reembolso total no prazo de 14 dias a partir da data da compra. Os reembolsos serão processados de acordo com a política de reembolso da Paddle.'
         },
         {
           h: '2. Como solicitar um reembolso',
@@ -49,12 +49,12 @@ export default function Refund({ lang }) {
     },
     de: {
       title: 'Rückerstattungsrichtlinie',
-      updated: 'Zuletzt aktualisiert: 26. Februar 2026',
+      updated: 'Zuletzt aktualisiert: 6. März 2026',
       intro: 'Bei Nicolas Rivera Software möchten wir, dass Sie mit Ihrem Kauf zufrieden sind.',
       sections: [
         {
           h: '1. 14-tägige Rückerstattungsgarantie',
-          p: 'Wir bieten eine 14-tägige Rückerstattungsrichtlinie an. Wenn Sie aus irgendeinem Grund mit Ihrem Kauf nicht zufrieden sind, können Sie innerhalb von 14 Tagen nach dem ursprünglichen Kaufdatum eine vollständige Rückerstattung beantragen.'
+          p: 'Wenn Sie mit Ihrem Kauf nicht zufrieden sind, können Sie innerhalb von 14 Tagen nach dem Kaufdatum eine vollständige Rückerstattung beantragen. Rückerstattungen werden gemäß der Rückerstattungsrichtlinie von Paddle bearbeitet.'
         },
         {
           h: '2. So beantragen Sie eine Rückerstattung',

@@ -28,7 +28,7 @@ export default function Terms({ lang }) {
         },
         {
           h: '6. Política de Reembolsos',
-          p: 'Consulte nuestra Política de Reembolsos completa para más detalles. En general, debido a la naturaleza digital del producto, los reembolsos se evalúan caso por caso si existen problemas técnicos insalvables.'
+          p: 'Si no está satisfecho con su compra, puede solicitar un reembolso completo dentro de los 14 días posteriores a la fecha de compra. Los reembolsos se procesarán de acuerdo con la política de reembolsos de Paddle.'
         },
         {
           h: '7. Responsabilidad sobre Sitios de Terceros',
@@ -50,7 +50,7 @@ export default function Terms({ lang }) {
     },
     en: {
       title: 'Terms of Service',
-      updated: 'Last updated: February 26, 2026',
+      updated: 'Last updated: March 6, 2026',
       sections: [
         {
           h: '1. Service Ownership',
@@ -74,7 +74,7 @@ export default function Terms({ lang }) {
         },
         {
           h: '6. Refund Policy',
-          p: 'Please refer to our full Refund Policy for more details. Generally, due to the digital nature of the product, refunds are evaluated on a case-by-case basis if there are insurmountable technical issues.'
+          p: 'If you are not satisfied with your purchase, you may request a full refund within 14 days of the purchase date. Refunds will be processed according to Paddle\'s refund policy.'
         },
         {
           h: '7. Third-Party Sites Responsibility',
@@ -120,7 +120,7 @@ export default function Terms({ lang }) {
         },
         {
           h: '6. Política de Reembolso',
-          p: 'Consulte nossa Política de Reembolso completa para mais detalhes. Geralmente, devido à natureza digital do produto, os reembolsos são avaliados caso a caso se houver problemas técnicos intransponíveis.'
+          p: 'Se você não estiver satisfeito com sua compra, poderá solicitar um reembolso total no prazo de 14 dias a partir da data da compra. Os reembolsos serão processados de acordo com a política de reembolso da Paddle.'
         },
         {
           h: '7. Responsabilidade sobre Sites de Terceiros',
@@ -142,7 +142,7 @@ export default function Terms({ lang }) {
     },
     de: {
       title: 'Nutzungsbedingungen',
-      updated: 'Zuletzt aktualisiert: 26. Februar 2026',
+      updated: 'Zuletzt aktualisiert: 6. März 2026',
       sections: [
         {
           h: '1. Eigentum am Dienst',

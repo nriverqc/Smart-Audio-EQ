@@ -26,8 +26,11 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
                 setVolume(result.masterVolume);
             }
             
-            // Priority: Per-tab gains
-            if (tabData.gains && tabData.gains.length > 0) {
+            // Priority: Current Preset Gains from props (if changing preset)
+            // or Per-tab gains from storage (if switching tabs)
+            if (currentPreset !== 'custom' && presetGains) {
+                setGains(presetGains);
+            } else if (tabData.gains && tabData.gains.length > 0) {
                 setGains(tabData.gains);
             } else if (presetGains) {
                 setGains(presetGains);
@@ -61,7 +64,8 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
             chrome.runtime.sendMessage({ 
               type: "APPLY_PRESET", 
               preset: 'custom',
-              gains: newGains 
+              gains: newGains,
+              tabId: targetTabId
             }, (response) => {
               if (chrome.runtime.lastError) {
                 console.error("Error enviando preset:", chrome.runtime.lastError.message);
@@ -110,7 +114,8 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
             const normalizedVol = newVol / 100;
             chrome.runtime.sendMessage({ 
               type: "SET_MASTER_VOLUME", 
-              value: normalizedVol 
+              value: normalizedVol,
+              tabId: targetTabId
             });
           }, 100);
         }

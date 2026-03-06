@@ -279,8 +279,16 @@ export default function App() {
     setCurrentPreset(presetKey);
     // Persist immediately in the activeTabs structure
     if (targetTabId && allActiveTabs[targetTabId]) {
+        const gains = presetKey === 'custom' 
+            ? (allActiveTabs[targetTabId].gains || new Array(isPremium ? 15 : 6).fill(0))
+            : PRESETS[presetKey];
+
         const updatedTabs = { ...allActiveTabs };
-        updatedTabs[targetTabId].preset = presetKey;
+        updatedTabs[targetTabId] = {
+            ...updatedTabs[targetTabId],
+            preset: presetKey,
+            gains: gains
+        };
         setAllActiveTabs(updatedTabs);
         chrome.storage.local.set({ activeTabs: updatedTabs });
     }
@@ -288,7 +296,7 @@ export default function App() {
     if (presetKey === 'custom') {
         // Retrieve stored custom gains and apply them
         chrome.storage.local.get(['customGains'], (result) => {
-            const savedGains = result.customGains || new Array(6).fill(0); // Default to flat if no custom gains
+            const savedGains = result.customGains || new Array(isPremium ? 15 : 6).fill(0);
             chrome.runtime.sendMessage({ type: 'APPLY_PRESET', preset: 'custom', gains: savedGains, tabId: targetTabId });
         });
     } else {
@@ -308,8 +316,11 @@ export default function App() {
     // Persist in activeTabs for the specific tab
     if (targetTabId && allActiveTabs[targetTabId]) {
         const updatedTabs = { ...allActiveTabs };
-        updatedTabs[targetTabId].gains = newGains;
-        updatedTabs[targetTabId].preset = 'custom';
+        updatedTabs[targetTabId] = {
+            ...updatedTabs[targetTabId],
+            gains: newGains,
+            preset: 'custom'
+        };
         setAllActiveTabs(updatedTabs);
         chrome.storage.local.set({ activeTabs: updatedTabs });
     }

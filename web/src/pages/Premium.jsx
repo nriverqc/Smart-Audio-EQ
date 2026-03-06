@@ -210,6 +210,11 @@ export default function Premium({ lang }) {
   const t = texts[lang] || texts.es;
 
   const openPaddleCheckout = (priceId) => {
+    if (!priceId) {
+        alert("Error: Price ID is missing.");
+        return;
+    }
+    console.log("Opening Paddle Checkout for priceId:", priceId);
     if (!user.email) {
         alert(lang === 'es' ? 'Por favor inicia sesión con Google primero para activar tu cuenta tras el pago.' : 'Please login with Google first to activate your account after payment.');
         loginWithGoogle();
@@ -217,16 +222,31 @@ export default function Premium({ lang }) {
     }
 
     if (window.Paddle) {
-        window.Paddle.Checkout.open({
-            items: [{ priceId: priceId, quantity: 1 }],
-            customer: {
-                email: user.email
-            },
-            customData: {
-                uid: user.uid,
-                email: user.email
-            }
-        });
+        try {
+            window.Paddle.Checkout.open({
+                settings: {
+                    displayMode: "overlay",
+                    theme: "dark",
+                    locale: lang === 'es' ? 'es' : 'en'
+                },
+                items: [
+                    {
+                        priceId: priceId,
+                        quantity: 1
+                    }
+                ],
+                customer: {
+                    email: user.email
+                },
+                customData: {
+                    uid: String(user.uid || ""),
+                    email: String(user.email || "")
+                }
+            });
+        } catch (err) {
+            console.error("Paddle Checkout Error:", err);
+            alert("Error opening checkout: " + err.message);
+        }
     } else {
         alert("Paddle SDK not loaded. Please refresh.");
     }

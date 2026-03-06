@@ -9,9 +9,7 @@ export default function Premium({ lang }) {
   const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [appPassCode, setAppPassCode] = useState('');
-  const [sdkReady, setSdkReady] = useState(false); // New state for PayPal SDK
   const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
-  const [paypalPlans, setPaypalPlans] = useState({});
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
 
@@ -25,126 +23,6 @@ export default function Premium({ lang }) {
   useEffect(() => {
       emailRef.current = email;
   }, [email]);
-
-  const [paypalClientId, setPaypalClientId] = useState('');
-
-  useEffect(() => {
-      // Fetch Plans and Config from Backend
-      fetch(`${API_BASE}/get-plans`)
-          .then(res => res.json())
-          .then(data => {
-              if (data.paypal) {
-                  setPaypalPlans(data.paypal);
-              }
-              if (data.paypal_client_id) {
-                  setPaypalClientId(data.paypal_client_id);
-              }
-              if (data.paypal_mode === 'sandbox') {
-                  console.log("⚠️ Running in PayPal SANDBOX Mode");
-              }
-          })
-          .catch(err => console.error("Error fetching plans:", err));
-  }, []);
-
-  // PayPal Effect
-  useEffect(() => {
-      const containerId = "paypal-button-container";
-      
-      // 1. Wait for Client ID and Plans
-      if (!paypalClientId || (!paypalPlans.monthly && !paypalPlans.yearly)) return;
-      
-      // 2. Load SDK if not present
-      if (!window.paypal && !document.getElementById('paypal-sdk-script')) {
-          const script = document.createElement("script");
-          script.id = 'paypal-sdk-script';
-          // Ensure exact URL parameters for Subscription flow
-          script.src = `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&vault=true&intent=subscription`;
-          script.setAttribute('data-sdk-integration-source', 'button-factory');
-          script.async = true;
-          script.onload = () => setSdkReady(true);
-          script.onerror = () => setErrorMsg("Error loading PayPal SDK.");
-          document.body.appendChild(script);
-      } else if (window.paypal) {
-          setSdkReady(true);
-      }
-
-      // 3. Wait for SDK Ready
-      if (!sdkReady || !window.paypal) return;
-      
-      const planId = paypalPlans[planType];
-      const container = document.getElementById(containerId);
-
-      if (container && planId) {
-          container.innerHTML = ""; 
-          try {
-              window.paypal.Buttons({
-                  style: { 
-                      shape: 'rect', 
-                      color: 'gold', 
-                      layout: 'vertical', 
-                      label: 'subscribe' 
-                  },
-                  onClick: (data, actions) => {
-                      if (!userRef.current?.uid) {
-                          alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
-                          loginWithGoogle();
-                          return actions.reject();
-                      }
-                      return actions.resolve();
-                  },
-                  createSubscription: (data, actions) => {
-                      console.log("Creating subscription for plan:", planId);
-                      return actions.subscription.create({
-                          'plan_id': planId
-                      });
-                  },
-                  onApprove: (data, actions) => {
-                      console.log("✅ PayPal Approved! Subscription ID:", data.subscriptionID);
-                      setLoading(true);
-                      fetch(`${API_BASE}/register-paypal`, {
-                          method: 'POST',
-                          headers: {'Content-Type': 'application/json'},
-                          body: JSON.stringify({
-                              email: userRef.current.email,
-                              uid: userRef.current.uid,
-                              subscriptionID: data.subscriptionID,
-                              plan_type: planType
-                          })
-                      })
-                      .then(res => res.json())
-                      .then(response => {
-                          if (response.status === 'approved' || response.success) {
-                              alert(lang === 'es' ? '¡Suscripción activada! Tu cuenta Premium está lista.' : 'Subscription activated! Your Premium account is ready.');
-                              refreshUser();
-                          }
-                      })
-                      .catch(err => console.error("Register error:", err))
-                      .finally(() => setLoading(false));
-                  },
-                  onError: (err) => {
-                      console.error("❌ PayPal ERROR Detallado:", err);
-                      
-                      // Check for specific error codes if available
-                      if (err && err.message) {
-                          if (err.message.includes("400")) {
-                              console.error("⚠️ Error 400: Posible problema de configuración (Plan ID vs Client ID, Moneda, Reference Transactions)");
-                          }
-                      }
-
-                      if (err.message && err.message.includes("render")) return;
-                      
-                      let msg = lang === 'es' 
-                        ? "Error de PayPal. Por favor, revisa la consola (F12) para más detalles."
-                        : "PayPal Error. Please check the console (F12) for more details.";
-                        
-                      setErrorMsg(msg);
-                  }
-              }).render("#" + containerId);
-          } catch (e) {
-              console.error("PayPal Buttons Error:", e);
-          }
-      }
-  }, [lang, sdkReady, planType, paypalPlans, loginWithGoogle, refreshUser, paypalClientId]);
 
   const texts = {
     es: {
@@ -175,7 +53,6 @@ export default function Premium({ lang }) {
         '✨ Badge Premium exclusivo',
         '✨ Cualquier integración a la extensión'
       ],
-      buyLabel: 'Pagar con PayPal',
       processingLabel: 'Procesando...',
       loadingLabel: 'Cargando formulario de pago...',
       emailLabel: 'Ingresa tu email de Google (para activar Premium)',
@@ -185,7 +62,6 @@ export default function Premium({ lang }) {
       planLabel: 'Selecciona tu plan:',
       optionMonthly: 'Mensual',
       optionYearly: 'Anual (Ahorra más del 15%)',
-      paypalNote: 'Nota: Después de pagar en PayPal, tu cuenta se activará automáticamente en unos minutos. Si no, contáctanos.',
       appPassLabel: 'App Pass (Oficial):',
       appPassBtnAuto: 'Verificar automáticamente desde la extensión',
       appPassManualLabel: '¿Tienes un código promocional o manual?',
@@ -222,7 +98,6 @@ export default function Premium({ lang }) {
         '✨ Exclusive Premium Badge',
         '✨ Any extension integration'
       ],
-      buyLabel: 'Pay with PayPal',
       processingLabel: 'Processing...',
       loadingLabel: 'Loading payment form...',
       emailLabel: 'Enter your Google Email (to activate Premium)',
@@ -232,7 +107,6 @@ export default function Premium({ lang }) {
       planLabel: 'Select your plan:',
       optionMonthly: 'Monthly',
       optionYearly: 'Yearly (Save more than 15%)',
-      paypalNote: 'Note: After paying on PayPal, your account will be activated automatically within a few minutes. If not, contact us.',
       appPassLabel: 'App Pass (Official):',
       appPassBtnAuto: 'Verify automatically via extension',
       appPassManualLabel: 'Have a promo or manual code?',
@@ -264,12 +138,11 @@ export default function Premium({ lang }) {
         '✨ Presets Pro (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Sincronização na Nuvem (Seus presets em todos os lugares)',
         '✨ Suporte Técnico Prioritario',
-        '✨ Acesso antecipado a novas funções',
+        '✨ Acesso antecipado a nuevas funções',
         '✨ Sem anúncios / Experiência limpa',
         '✨ Badge Premium exclusivo',
         '✨ Qualquer integração à extensão'
       ],
-      buyLabel: 'Pagar com PayPal',
       processingLabel: 'Processando...',
       loadingLabel: 'Carregando formulário de pagamento...',
       emailLabel: 'Insira seu e-mail do Google (para activar o Premium)',
@@ -279,14 +152,13 @@ export default function Premium({ lang }) {
       planLabel: 'Selecione seu plano:',
       optionMonthly: 'Mensal',
       optionYearly: 'Anual (Economize mais de 15%)',
-      paypalNote: 'Nota: Após pagar no PayPal, sua conta será ativada automaticamente em alguns minutos. Caso contrário, entre em contato conosco.',
       appPassLabel: 'App Pass (Oficial):',
       appPassBtnAuto: 'Verificar automaticamente via extensão',
-      appPassManualLabel: 'Tem um código promocional ou manual?',
+      appPassManualLabel: 'Tem um código promocional o manual?',
       appPassPlaceholder: 'CÓDIGO-PROMO',
       appPassBtn: 'Ativar código',
       comingSoon: 'Acesso Premium',
-      comingSoonMsg: 'Pagamentos diretos estarão disponíveis em breve. Atualmente, o acesso premium pode ser ativado usando um App Pass oficial ou código promocional.'
+      comingSoonMsg: 'Pagamentos diretos estarão disponíveis em breve. Atualmente, o acceso premium pode ser ativado usando um App Pass oficial ou código promocional.'
     },
     de: {
       title: 'Schalte die volle Leistung frei',
@@ -316,7 +188,6 @@ export default function Premium({ lang }) {
         '✨ Exklusives Premium-Badge',
         '✨ Jede Erweiterungsintegration'
       ],
-      buyLabel: 'Mit PayPal bezahlen',
       processingLabel: 'Wird verarbeitet...',
       loadingLabel: 'Zahlungsformular wird geladen...',
       emailLabel: 'Geben Sie Ihre Google-E-Mail ein (um Premium zu aktivieren)',
@@ -326,7 +197,6 @@ export default function Premium({ lang }) {
       planLabel: 'Wählen Sie Ihren Plan:',
       optionMonthly: 'Monatlich',
       optionYearly: 'Jährlich (Sparen Sie mehr als 15%)',
-      paypalNote: 'Hinweis: Nach der Zahlung bei PayPal wird Ihr Konto in wenigen Minuten automatisch aktiviert. Falls nicht, kontaktieren Sie uns.',
       appPassLabel: 'App Pass (Offiziell):',
       appPassBtnAuto: 'Automatisch über Erweiterung verifizieren',
       appPassManualLabel: 'Haben Sie einen Promo- oder manuellen Code?',
@@ -631,15 +501,7 @@ export default function Premium({ lang }) {
           {/* PAYMENT FORM OR ACTIVE STATUS */}
           {!user.isPremium ? (
             <>
-              {/* PayPal Container (Secondary) */}
-              <div style={{ marginTop: '20px' }}>
-                  <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '10px' }}>
-                      {lang === 'es' ? 'Otras formas de pago:' : 'Alternative payment methods:'}
-                  </p>
-                  <div id="paypal-button-container" style={{ minHeight: '150px' }}>
-                      {!sdkReady && <p style={{color: '#888', fontSize: '0.8rem'}}>{t.loadingLabel}</p>}
-                  </div>
-              </div>
+
 
               <div style={{margin: '20px 0', textAlign: 'left'}}>
                   <input 

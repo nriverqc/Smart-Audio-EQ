@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-export default function SpectrumAnalyzer() {
+export default function SpectrumAnalyzer({ targetTabId }) {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
 
@@ -16,7 +16,8 @@ export default function SpectrumAnalyzer() {
       try {
         // Request analyser from background (que lo envía al offscreen)
         const response = await chrome.runtime.sendMessage({
-          type: 'GET_ANALYSER_DATA'
+          type: 'GET_ANALYSER_DATA',
+          tabId: targetTabId
         }).catch(() => null);
 
         if (!response || !response.data || response.data.length === 0) {

@@ -12,8 +12,13 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [tabTitle, setTabTitle] = useState('');
   const [allActiveTabs, setAllActiveTabs] = useState({});
+  const [targetTabId, setTargetTabId] = useState(null);
+  const [activeTabList, setActiveTabList] = useState([]);
   const [appPassCode, setAppPassCode] = useState('');
   const [lang, setLang] = useState('en');
+  const [currentTabId, setCurrentTabId] = useState(null);
+
+  const isActiveTabSelected = targetTabId === currentTabId;
 
   const langLabels = {
     es: { label: 'Español', flag: '../flags/es.svg' },
@@ -119,18 +124,39 @@ export default function App() {
     const checkState = () => {
         // Get current tab info
         chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-            if (tab) setTabTitle(tab.title);
+            if (tab) {
+                setTabTitle(tab.title);
+                setCurrentTabId(tab.id);
+                if (!targetTabId) setTargetTabId(tab.id);
+            }
+        });
+
+        // Get ALL tabs to show titles in the switcher
+        chrome.tabs.query({}, (tabs) => {
+            setActiveTabList(tabs);
         });
 
         // 1. Get global settings
         chrome.storage.local.get(['isPremium', 'email', 'uid', 'activeTabs'], (result) => {
             if (result.isPremium) setIsPremium(true);
             if (result.email) setUserEmail(result.email);
-            if (result.activeTabs) setAllActiveTabs(result.activeTabs);
+            if (result.activeTabs) {
+                setAllActiveTabs(result.activeTabs);
+                
+                // If the targeted tab changed in storage, update local state
+                const currentTarget = targetTabId || currentTabId;
+                if (currentTarget && result.activeTabs[currentTarget]) {
+                    const tabData = result.activeTabs[currentTarget];
+                    setEnabled(true);
+                    if (tabData.preset) setCurrentPreset(tabData.preset);
+                } else {
+                    setEnabled(false);
+                }
+            }
         });
 
         // 2. Ask background for TAB SPECIFIC status
-        chrome.runtime.sendMessage({ type: 'GET_TAB_STATUS' }, (response) => {
+        chrome.runtime.sendMessage({ type: 'GET_TAB_STATUS', tabId: targetTabId || currentTabId }, (response) => {
             if (chrome.runtime.lastError) {
                 console.warn("Could not get tab status:", chrome.runtime.lastError.message);
                 return;
@@ -140,9 +166,7 @@ export default function App() {
                 console.log("✅ Tab is already active. Syncing UI...", response);
                 setEnabled(true);
                 if (response.preset) setCurrentPreset(response.preset);
-                // Note: Gains are passed to Equalizer via PRESETS[currentPreset] or we need a way to pass custom gains
                 if (response.gains) {
-                    // Store in local storage so Equalizer component can pick it up if it's 'custom'
                     chrome.storage.local.set({ customGains: response.gains });
                     if (response.preset === 'custom') {
                         setCurrentPreset('custom');
@@ -192,7 +216,7 @@ export default function App() {
     setEnabled(newState);
     
     if (newState) {
-      chrome.runtime.sendMessage({ type: 'ENABLE_EQ' }, (response) => {
+      chrome.runtime.sendMessage({ type: 'ENABLE_EQ', tabId: targetTabId }, (response) => {
           if (response && !response.success) {
               console.error(response.error);
               setEnabled(false); // Revert if failed
@@ -200,7 +224,7 @@ export default function App() {
           }
       });
     } else {
-      chrome.runtime.sendMessage({ type: 'DISABLE_EQ' });
+      chrome.runtime.sendMessage({ type: 'DISABLE_EQ', tabId: targetTabId });
     }
   };
 
@@ -247,13 +271,13 @@ export default function App() {
         // Retrieve stored custom gains and apply them
         chrome.storage.local.get(['customGains'], (result) => {
             const savedGains = result.customGains || new Array(6).fill(0); // Default to flat if no custom gains
-            chrome.runtime.sendMessage({ type: 'APPLY_PRESET', preset: 'custom', gains: savedGains });
+            chrome.runtime.sendMessage({ type: 'APPLY_PRESET', preset: 'custom', gains: savedGains, tabId: targetTabId });
         });
     } else {
         const gains = PRESETS[presetKey];
         if (gains) {
             // Apply preset in one message so background can route to per-tab or offscreen
-            chrome.runtime.sendMessage({ type: 'APPLY_PRESET', preset: presetKey, gains });
+            chrome.runtime.sendMessage({ type: 'APPLY_PRESET', preset: presetKey, gains, tabId: targetTabId });
         }
     }
   };
@@ -362,9 +386,60 @@ export default function App() {
         {isPremium && <span className="premium-badge">{t("premiumBadge")}</span>}
       </div>
 
+      {isPremium && Object.keys(allActiveTabs).length > 0 && (
+        <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid #333',
+            borderRadius: '8px',
+            padding: '10px',
+            marginBottom: '15px',
+            textAlign: 'left'
+        }}>
+            <div style={{fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: 'bold', textTransform: 'uppercase'}}>
+                🎛️ Control independent tabs (Premium)
+            </div>
+            <div style={{display: 'flex', flexWrap: 'wrap', gap: '5px'}}>
+                {Object.keys(allActiveTabs).map(tId => {
+                    const tabId = parseInt(tId);
+                    const tabInfo = activeTabList.find(t => t.id === tabId);
+                    const isActive = targetTabId === tabId;
+                    
+                    return (
+                        <button 
+                            key={tId}
+                            onClick={() => {
+                                setTargetTabId(tabId);
+                                if (allActiveTabs[tabId]) {
+                                    setEnabled(true);
+                                    if (allActiveTabs[tabId].preset) setCurrentPreset(allActiveTabs[tabId].preset);
+                                }
+                            }}
+                            style={{
+                                background: isActive ? '#00d2ff' : '#222',
+                                color: isActive ? '#000' : '#fff',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                padding: '4px 8px',
+                                fontSize: '0.7rem',
+                                cursor: 'pointer',
+                                maxWidth: '120px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            }}
+                            title={tabInfo?.title || `Tab ${tId}`}
+                        >
+                            {tabInfo?.title || `Tab ${tId}`}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+      )}
+
       <div style={{
           background: 'rgba(0, 210, 255, 0.05)',
-          border: '1px solid rgba(0, 210, 255, 0.2)',
+          border: isActiveTabSelected ? '1px solid #00d2ff' : '1px solid #444',
           borderRadius: '8px',
           padding: '8px 12px',
           margin: '10px 0',
@@ -376,10 +451,14 @@ export default function App() {
       }}>
           <span style={{color: '#00d2ff'}}>🎯</span>
           <div style={{flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-              <span style={{color: '#aaa', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase'}}>Controlling current tab:</span>
-              <span style={{color: '#fff', fontWeight: 'bold'}}>{tabTitle || 'Unknown Tab'}</span>
+              <span style={{color: '#aaa', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase'}}>
+                  {isActiveTabSelected ? 'Controlling current tab:' : 'Controlling selected tab:'}
+              </span>
+              <span style={{color: '#fff', fontWeight: 'bold'}}>
+                  {activeTabList.find(t => t.id === targetTabId)?.title || tabTitle || 'Unknown Tab'}
+              </span>
           </div>
-          {isPremium && <span style={{fontSize: '0.7rem', background: '#ffd700', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold'}}>INDEPENDENT</span>}
+          {isPremium && <span style={{fontSize: '0.7rem', background: '#ffd700', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold'}}>PREMIUM</span>}
       </div>
 
       {userEmail ? (
@@ -485,10 +564,11 @@ export default function App() {
         currentPreset={currentPreset}
         presetGains={PRESETS[currentPreset]}
         onUserAdjust={onUserAdjust}
+        targetTabId={targetTabId}
       />
 
       {enabled && (
-        <SpectrumAnalyzer />
+        <SpectrumAnalyzer targetTabId={targetTabId} />
       )}
 
       {!isPremium && (

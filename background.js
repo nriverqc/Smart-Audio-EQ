@@ -391,20 +391,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === "SET_BAND_GAIN") {
     (async () => {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab || !offscreenPort) {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const targetTabId = msg.tabId || activeTab?.id;
+        
+        if (!targetTabId || !offscreenPort) {
             sendResponse({ success: false });
             return;
         }
 
-        const isPrem = activeTabs[tab.id]?.isPremium || false;
+        const isPrem = activeTabs[targetTabId]?.isPremium || false;
 
         if (isPrem) {
             // Per-tab independent for premium
-            offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value, tabId: tab.id });
-            if (activeTabs[tab.id]) {
-                if (!activeTabs[tab.id].gains) activeTabs[tab.id].gains = [];
-                activeTabs[tab.id].gains[msg.bandIndex] = msg.value;
+            offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value, tabId: targetTabId });
+            if (activeTabs[targetTabId]) {
+                if (!activeTabs[targetTabId].gains) activeTabs[targetTabId].gains = [];
+                activeTabs[targetTabId].gains[msg.bandIndex] = msg.value;
             }
         } else {
             // Global for free users
@@ -425,19 +427,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === "SET_MASTER_VOLUME") {
     (async () => {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab || !offscreenPort) {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const targetTabId = msg.tabId || activeTab?.id;
+
+        if (!targetTabId || !offscreenPort) {
             sendResponse({ success: false });
             return;
         }
 
-        const isPrem = activeTabs[tab.id]?.isPremium || false;
+        const isPrem = activeTabs[targetTabId]?.isPremium || false;
 
         if (isPrem) {
             // Per-tab independent for premium
-            offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value, tabId: tab.id });
-            if (activeTabs[tab.id]) {
-                activeTabs[tab.id].masterVolume = msg.value;
+            offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value, tabId: targetTabId });
+            if (activeTabs[targetTabId]) {
+                activeTabs[targetTabId].masterVolume = msg.value;
             }
         } else {
             // Global for free users
@@ -459,15 +463,35 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === "SET_GAIN") {
     (async () => {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab && offscreenPort) {
-            offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.index, value: msg.value, tabId: tab.id });
-            if (activeTabs[tab.id]) {
-                if (!activeTabs[tab.id].gains) activeTabs[tab.id].gains = [];
-                activeTabs[tab.id].gains[msg.index] = msg.value;
-                chrome.storage.local.set({ activeTabs });
-            }
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const targetTabId = msg.tabId || activeTab?.id;
+
+        if (!targetTabId || !offscreenPort) {
+            sendResponse({ success: false });
+            return;
         }
+
+        const isPrem = activeTabs[targetTabId]?.isPremium || false;
+
+        if (isPrem) {
+            // Per-tab independent for premium
+            offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.index, value: msg.value, tabId: targetTabId });
+            if (activeTabs[targetTabId]) {
+                if (!activeTabs[targetTabId].gains) activeTabs[targetTabId].gains = [];
+                activeTabs[targetTabId].gains[msg.index] = msg.value;
+            }
+        } else {
+            // Global for free users
+            const allTabIds = Object.keys(activeTabs);
+            allTabIds.forEach(tId => {
+                offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.index, value: msg.value, tabId: parseInt(tId) });
+                if (activeTabs[tId]) {
+                    if (!activeTabs[tId].gains) activeTabs[tId].gains = [];
+                    activeTabs[tId].gains[msg.index] = msg.value;
+                }
+            });
+        }
+        await chrome.storage.local.set({ activeTabs });
         sendResponse({ success: true });
     })();
     return true;
@@ -476,8 +500,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "GET_ANALYSER_DATA") {
     (async () => {
       try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab || !offscreenPort || !activeTabs[tab.id]) {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const targetTabId = msg.tabId || activeTab?.id;
+
+        if (!targetTabId || !offscreenPort || !activeTabs[targetTabId]) {
           sendResponse({ success: false, data: [] });
           return;
         }
@@ -485,14 +511,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const data = await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => resolve({ success: false }), 1000);
           const listener = (m) => {
-            if (m && m.type === 'ANALYSER_DATA' && m.tabId === tab.id) {
+            if (m && m.type === 'ANALYSER_DATA' && m.tabId === targetTabId) {
               clearTimeout(timeout);
               offscreenPort.onMessage.removeListener(listener);
               resolve(m);
             }
           };
           offscreenPort.onMessage.addListener(listener);
-          offscreenPort.postMessage({ type: 'GET_ANALYSER_DATA', tabId: tab.id });
+          offscreenPort.postMessage({ type: 'GET_ANALYSER_DATA', tabId: targetTabId });
         });
 
         sendResponse({ success: !!data.success, data: data.data || [] });
@@ -530,18 +556,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       try {
         const gains = Array.isArray(msg.gains) ? msg.gains : [];
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const targetTabId = msg.tabId || activeTab?.id;
         
-        if (tab && activeTabs[tab.id]) {
-          const isPrem = activeTabs[tab.id].isPremium || false;
+        if (targetTabId && activeTabs[targetTabId]) {
+          const isPrem = activeTabs[targetTabId].isPremium || false;
 
           if (isPrem) {
             // Per-tab independent for premium
-            activeTabs[tab.id].gains = gains;
-            activeTabs[tab.id].preset = msg.preset || 'custom';
+            activeTabs[targetTabId].gains = gains;
+            activeTabs[targetTabId].preset = msg.preset || 'custom';
             if (offscreenPort) {
               gains.forEach((g, i) => {
-                offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g, tabId: tab.id });
+                offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g, tabId: targetTabId });
               });
             }
           } else {

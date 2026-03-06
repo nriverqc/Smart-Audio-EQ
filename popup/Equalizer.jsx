@@ -51,34 +51,6 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
   }, [targetTabId, currentPreset, presetGains]);
 
   const changeGain = (i, v) => {
-    if (!enabled) {
-      console.warn(`⚠️  EQ no está activado, activando primero...`);
-      chrome.runtime.sendMessage({ type: 'ENABLE_EQ' }, (response) => {
-        if (response?.success) {
-          setTimeout(() => {
-            const newVal = parseFloat(v);
-            const newGains = [...gains];
-            newGains[i] = newVal;
-            setGains(newGains);
-
-            chrome.runtime.sendMessage({ 
-              type: "APPLY_PRESET", 
-              preset: 'custom',
-              gains: newGains,
-              tabId: targetTabId
-            }, (response) => {
-              if (chrome.runtime.lastError) {
-                console.error("Error enviando preset:", chrome.runtime.lastError.message);
-              } else {
-                console.log(`✅ Banda ${i} aplicada via APPLY_PRESET`);
-              }
-            });
-          }, 100);
-        }
-      });
-      return;
-    }
-    
     const newVal = parseFloat(v);
     const newGains = [...gains];
     newGains[i] = newVal;
@@ -105,24 +77,6 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
   };
 
   const changeVolume = (v) => {
-    if (!enabled) {
-      console.warn(`⚠️  EQ no está activado, activando primero...`);
-      chrome.runtime.sendMessage({ type: 'ENABLE_EQ' }, (response) => {
-        if (response?.success) {
-          setTimeout(() => {
-            const newVol = parseInt(v);
-            const normalizedVol = newVol / 100;
-            chrome.runtime.sendMessage({ 
-              type: "SET_MASTER_VOLUME", 
-              value: normalizedVol,
-              tabId: targetTabId
-            });
-          }, 100);
-        }
-      });
-      return;
-    }
-    
     const newVol = parseInt(v);
     setVolume(newVol);
     
@@ -142,6 +96,7 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
       }
     });
 
+    // Update global for free users and backup
     chrome.storage.local.set({ masterVolume: newVol });
   };
 
@@ -155,15 +110,16 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
           <span>🔊 Volumen Maestro</span>
           <span className="volume-value">{volume}%</span>
         </div>
-        <input 
-          type="range" 
-          min="0" 
-          max="300" 
-          value={volume} 
-          onChange={(e) => changeVolume(e.target.value)}
-          className="volume-slider"
-          disabled={!enabled}
-        />
+          <input 
+            key={`volume-${targetTabId}`}
+            type="range" 
+            min="0" 
+            max="300" 
+            value={volume} 
+            onChange={(e) => changeVolume(e.target.value)}
+            className="volume-slider"
+            disabled={!enabled}
+          />
       </div>
 
       {/* EQ Bands */}
@@ -174,6 +130,7 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
               {gains[i] > 0 ? `+${gains[i]}` : gains[i]}dB
             </div>
             <input
+              key={`band-${targetTabId}-${i}`}
               type="range"
               min="-12"
               max="12"

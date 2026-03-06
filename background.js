@@ -216,8 +216,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
         // ... (rest of logic)
-        if (activeTabs[tab.id] && activeTabs[tab.id].enabled) {
-           console.log("⚠️ EQ already active for tab", tab.id);
+        if (activeTabs[tabId] && activeTabs[tabId].enabled) {
+           console.log("⚠️ EQ already active for tab", tabId);
 
            // CASE 1: Everything is perfect (offscreenPort alive)
            if (offscreenPort) {
@@ -250,7 +250,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 sendResponse({ success: true, reconnected: true });
                 
                 // Notify widget to show itself
-                sendMessageToTab(tab.id, { type: 'EQ_ENABLED' });
+                sendMessageToTab(tabId, { type: 'EQ_ENABLED' });
                 return;
              } catch (e) {
                 console.warn("Failed to reconnect:", e);

@@ -142,16 +142,6 @@ export default function App() {
             if (result.email) setUserEmail(result.email);
             if (result.activeTabs) {
                 setAllActiveTabs(result.activeTabs);
-                
-                // If the targeted tab changed in storage, update local state
-                const currentTarget = targetTabId || currentTabId;
-                if (currentTarget && result.activeTabs[currentTarget]) {
-                    const tabData = result.activeTabs[currentTarget];
-                    setEnabled(true);
-                    if (tabData.preset) setCurrentPreset(tabData.preset);
-                } else {
-                    setEnabled(false);
-                }
             }
         });
 
@@ -186,8 +176,18 @@ export default function App() {
         if (area === 'local') {
             if (changes.isPremium) setIsPremium(changes.isPremium.newValue);
             if (changes.email) setUserEmail(changes.email.newValue);
-            if (changes.currentPreset) setCurrentPreset(changes.currentPreset.newValue);
-            if (changes.enabled) setEnabled(changes.enabled.newValue);
+            if (changes.activeTabs) setAllActiveTabs(changes.activeTabs.newValue || {});
+            
+            // Sync current tab state if target tab data changed
+            if (changes.activeTabs && targetTabId) {
+                const newTabs = changes.activeTabs.newValue || {};
+                if (newTabs[targetTabId]) {
+                    setEnabled(true);
+                    if (newTabs[targetTabId].preset) setCurrentPreset(newTabs[targetTabId].preset);
+                } else {
+                    setEnabled(false);
+                }
+            }
         }
     };
 
@@ -211,11 +211,12 @@ export default function App() {
       const tabData = allActiveTabs[targetTabId];
       setEnabled(true);
       if (tabData.preset) setCurrentPreset(tabData.preset);
-    } else {
+    } else if (targetTabId) {
+      // Tab is not active in background, UI should be OFF
       setEnabled(false);
       setCurrentPreset('flat');
     }
-  }, [targetTabId, allActiveTabs]);
+  }, [targetTabId]); // Only trigger on tab switch to avoid recursion
 
   const toggleEq = async () => {
     const newState = !enabled;
@@ -285,7 +286,7 @@ export default function App() {
 
         const updatedTabs = { ...allActiveTabs };
         updatedTabs[targetTabId] = {
-            ...updatedTabs[targetTabId],
+            ...updatedTabs[targetTabId], // Preserves masterVolume and other fields
             preset: presetKey,
             gains: gains
         };

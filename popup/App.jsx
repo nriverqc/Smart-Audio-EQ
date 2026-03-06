@@ -205,6 +205,18 @@ export default function App() {
   };
 
 
+  // Sync state when targetTabId or allActiveTabs change
+  useEffect(() => {
+    if (targetTabId && allActiveTabs[targetTabId]) {
+      const tabData = allActiveTabs[targetTabId];
+      setEnabled(true);
+      if (tabData.preset) setCurrentPreset(tabData.preset);
+    } else {
+      setEnabled(false);
+      setCurrentPreset('flat');
+    }
+  }, [targetTabId, allActiveTabs]);
+
   const toggleEq = async () => {
     const newState = !enabled;
     
@@ -265,7 +277,13 @@ export default function App() {
     }
 
     setCurrentPreset(presetKey);
-    chrome.storage.local.set({ currentPreset: presetKey });
+    // Persist immediately in the activeTabs structure
+    if (targetTabId && allActiveTabs[targetTabId]) {
+        const updatedTabs = { ...allActiveTabs };
+        updatedTabs[targetTabId].preset = presetKey;
+        setAllActiveTabs(updatedTabs);
+        chrome.storage.local.set({ activeTabs: updatedTabs });
+    }
 
     if (presetKey === 'custom') {
         // Retrieve stored custom gains and apply them
@@ -285,8 +303,18 @@ export default function App() {
   const onUserAdjust = (newGains) => {
     if (currentPreset !== 'custom') {
       setCurrentPreset('custom');
-      chrome.storage.local.set({ currentPreset: 'custom' });
     }
+    
+    // Persist in activeTabs for the specific tab
+    if (targetTabId && allActiveTabs[targetTabId]) {
+        const updatedTabs = { ...allActiveTabs };
+        updatedTabs[targetTabId].gains = newGains;
+        updatedTabs[targetTabId].preset = 'custom';
+        setAllActiveTabs(updatedTabs);
+        chrome.storage.local.set({ activeTabs: updatedTabs });
+    }
+    
+    // Fallback for global customGains if needed (free users)
     chrome.storage.local.set({ customGains: newGains });
   };
 

@@ -14,30 +14,38 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
   const [volume, setVolume] = useState(100); // 100% es volumen normal (1.0x)
 
   useEffect(() => {
-    chrome.storage.local.get(['activeTabs', 'masterVolume'], (result) => {
-      if (targetTabId && result.activeTabs && result.activeTabs[targetTabId]) {
-          const tabData = result.activeTabs[targetTabId];
-          if (tabData.masterVolume) {
-              setVolume(Math.round(tabData.masterVolume * 100));
-          }
-          if (tabData.gains) {
-              setGains(tabData.gains);
-          }
-      } else if (result.masterVolume) {
-        setVolume(result.masterVolume);
-      }
-    });
-
-    if (currentPreset === 'custom') {
-      // If we are switching tabs, the gains should come from activeTabs storage, handled above
-    } else if (presetGains) {
-      // Normalize preset length to current bands count
-      const normalized = Array.from({ length: bands.length }, (_, i) => {
-        return typeof presetGains[i] !== 'undefined' ? presetGains[i] : 0;
+    const loadState = () => {
+      chrome.storage.local.get(['activeTabs', 'masterVolume'], (result) => {
+        if (targetTabId && result.activeTabs && result.activeTabs[targetTabId]) {
+            const tabData = result.activeTabs[targetTabId];
+            
+            // Priority: Per-tab volume
+            if (typeof tabData.masterVolume !== 'undefined') {
+                setVolume(Math.round(tabData.masterVolume * 100));
+            } else if (result.masterVolume) {
+                setVolume(result.masterVolume);
+            }
+            
+            // Priority: Per-tab gains
+            if (tabData.gains && tabData.gains.length > 0) {
+                setGains(tabData.gains);
+            } else if (presetGains) {
+                setGains(presetGains);
+            }
+        } else {
+            // Fallback for non-active or free tabs
+            if (result.masterVolume) {
+                setVolume(result.masterVolume);
+            }
+            if (presetGains) {
+                setGains(presetGains);
+            }
+        }
       });
-      setGains(normalized);
-    }
-  }, [currentPreset, presetGains]);
+    };
+
+    loadState();
+  }, [targetTabId, currentPreset, presetGains]);
 
   const changeGain = (i, v) => {
     if (!enabled) {

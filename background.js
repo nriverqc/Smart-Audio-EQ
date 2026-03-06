@@ -209,9 +209,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tabId = msg.tabId || tab?.id;
         
-        if (!tab) {
-          sendResponse({ success: false, error: "No active tab" });
+        if (!tabId) {
+          sendResponse({ success: false, error: "No tab found" });
           return;
         }
         // ... (rest of logic)
@@ -262,8 +263,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         await setupOffscreenDocument('offscreen.html');
 
         // Get Stream ID from tab
-        const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-        console.log('✅ StreamId obtenido para tab:', tab.id, streamId);
+        const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
+        console.log('✅ StreamId obtenido para tab:', tabId, streamId);
 
         // 3. Enviar mensaje al offscreen
         try {
@@ -289,7 +290,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             type: 'START_AUDIO_CAPTURE', 
             streamId: streamId, 
             isPremium: isPremium,
-            tabId: tab.id 
+            tabId: tabId 
           };
           
           offscreenPort.postMessage(startMsg);
@@ -301,7 +302,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             }, 5000);
 
             const listener = (msg) => {
-              if (!msg || !msg.type || msg.tabId !== tab.id) return;
+              if (!msg || !msg.type || msg.tabId !== tabId) return;
               if (msg.type === 'AUDIO_CAPTURE_STARTED') {
                 clearTimeout(timeout);
                 offscreenPort.onMessage.removeListener(listener);
@@ -321,7 +322,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           const savedVolume = storageRes.masterVolume;
           const normalizedVolume = savedVolume ? savedVolume / 100 : 1.0;
 
-          activeTabs[tab.id] = { 
+          activeTabs[tabId] = { 
               enabled: true, 
               preset: 'flat', 
               isPremium: isPremium,
@@ -331,12 +332,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           await chrome.storage.local.set({ activeTabs });
 
           // Apply saved volume immediately for this tab
-          offscreenPort.postMessage({ type: 'SET_VOLUME', value: normalizedVolume, tabId: tab.id });
+          offscreenPort.postMessage({ type: 'SET_VOLUME', value: normalizedVolume, tabId: tabId });
 
-          console.log("✅ EQ Enabled for tab", tab.id, "Volume:", normalizedVolume);
+          console.log("✅ EQ Enabled for tab", tabId, "Volume:", normalizedVolume);
 
           // Notify widget to show itself
-          sendMessageToTab(tab.id, { type: 'EQ_ENABLED' });
+          sendMessageToTab(tabId, { type: 'EQ_ENABLED' });
 
           sendResponse(response);
 

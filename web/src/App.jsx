@@ -405,7 +405,7 @@ function AppContent() {
           <AdBlockNotice lang={lang} />
 
           <footer>
-            <p>© 2026 Equalizer – Web Audio. {currentLang.footer} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.2 (20k)</span></p>
+            <p>© 2026 Equalizer – Web Audio. {currentLang.footer} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.0.6 (20k)</span></p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '10px', flexWrap: 'wrap' }}>
               <Link to="/privacy" style={{ color: '#aaa', textDecoration: 'none', fontSize: '0.85rem' }}>
                 {currentLang.privacy}

@@ -1,4 +1,4 @@
-import { initAudio, setGain, setMasterVolume, getAnalyserData } from './audio/processor.js';
+import { initAudio, setGain, setMasterVolume, getAnalyserData, stopAudio } from './audio/processor.js';
 
 let port = null;
 
@@ -9,7 +9,7 @@ chrome.runtime.onConnect.addListener((p) => {
     console.log("✅ Offscreen conectado al background");
     
     port.onMessage.addListener(async (msg) => {
-      console.log("Offscreen recibió:", msg.type);
+      // console.log("Offscreen recibió:", msg.type, "Tab:", msg.tabId);
       
       if (msg.type === 'START_AUDIO_CAPTURE') {
         try {
@@ -24,34 +24,36 @@ chrome.runtime.onConnect.addListener((p) => {
           });
           
           const isPremium = msg.isPremium || false;
-          await initAudio(stream, isPremium);
-          console.log("✅ Audio capture iniciado");
-          port.postMessage({ type: 'AUDIO_CAPTURE_STARTED', success: true });
+          const tabId = msg.tabId;
+          await initAudio(tabId, stream, isPremium);
+          
+          port.postMessage({ type: 'AUDIO_CAPTURE_STARTED', success: true, tabId });
         } catch (err) {
           console.error('Error capturing audio in offscreen:', err);
-          port.postMessage({ type: 'AUDIO_CAPTURE_STARTED', success: false, error: err.message });
+          port.postMessage({ type: 'AUDIO_CAPTURE_FAILED', success: false, error: err.message, tabId: msg.tabId });
         }
       }
       
       if (msg.type === 'SET_GAIN') {
-        setGain(msg.index, msg.value);
+        setGain(msg.tabId, msg.index, msg.value);
       }
       
       if (msg.type === 'SET_VOLUME') {
-        setMasterVolume(msg.value);
+        setMasterVolume(msg.tabId, msg.value);
       }
       
       if (msg.type === 'GET_ANALYSER_DATA') {
         try {
-          const data = getAnalyserData();
-          port.postMessage({ type: 'ANALYSER_DATA', success: true, data });
+          const data = getAnalyserData(msg.tabId);
+          port.postMessage({ type: 'ANALYSER_DATA', success: !!data, data, tabId: msg.tabId });
         } catch (err) {
-          port.postMessage({ type: 'ANALYSER_DATA', success: false, error: err.message });
+          port.postMessage({ type: 'ANALYSER_DATA', success: false, error: err.message, tabId: msg.tabId });
         }
       }
       
       if (msg.type === 'STOP_AUDIO_CAPTURE') {
-        port.postMessage({ type: 'AUDIO_CAPTURE_STOPPED', success: true });
+        stopAudio(msg.tabId);
+        port.postMessage({ type: 'AUDIO_CAPTURE_STOPPED', success: true, tabId: msg.tabId });
       }
     });
     
@@ -68,7 +70,7 @@ setInterval(() => {
     try {
       port.postMessage({ type: 'PING' });
     } catch (err) {
-      console.warn('Error sending PING:', err.message);
+      // console.warn('Error sending PING:', err.message);
     }
   }
 }, 20000);

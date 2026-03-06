@@ -258,44 +258,40 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
            }
         }
 
-        // Setup Offscreen Document for audio processing
-        await closeOffscreenDocument();
+        // Setup Offscreen Document for audio processing if not exists
         await setupOffscreenDocument('offscreen.html');
 
         // Get Stream ID from tab
         const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-        console.log('✅ StreamId obtenido:', streamId);
+        console.log('✅ StreamId obtenido para tab:', tab.id, streamId);
 
         // 3. Enviar mensaje al offscreen
         try {
-          // Esperar un breve momento para que el offscreen document esté listo
-          await new Promise(r => setTimeout(r, 300));
-
-          // Conectar con el offscreen para comunicación persistente
-          if (offscreenPort) {
-            try { offscreenPort.disconnect(); } catch(e) {}
-          }
-          offscreenPort = chrome.runtime.connect({ name: 'offscreen-port' });
-
-          // Escuchar mensajes y desconexiones
-          offscreenPort.onMessage.addListener((m) => {
-            console.log('Background <- offscreen:', m && m.type);
-          });
-
-          offscreenPort.onDisconnect.addListener(() => {
-            console.log('❌ Offscreen desconectado');
-            offscreenPort = null;
-          });
-
-          // Enviar comando de inicio
-          const startMsg = { type: 'START_AUDIO_CAPTURE', streamId: streamId, isPremium: isPremium };
-          // Si hay mensajes pendientes, los enviamos primero para que el offscreen tenga el contexto
-          if (pendingPortMessages.length > 0) {
-            pendingPortMessages.forEach(pm => {
-              try { offscreenPort.postMessage(pm); } catch (err) { console.warn('Flush msg failed', err); }
+          // Si no hay puerto, intentar conectar
+          if (!offscreenPort) {
+            offscreenPort = chrome.runtime.connect({ name: 'offscreen-port' });
+            
+            offscreenPort.onMessage.addListener((m) => {
+              // console.log('Background <- offscreen:', m && m.type);
             });
-            pendingPortMessages = [];
+
+            offscreenPort.onDisconnect.addListener(() => {
+              console.log('❌ Offscreen desconectado');
+              offscreenPort = null;
+            });
+            
+            // Esperar un poco para que la conexión se estabilice
+            await new Promise(r => setTimeout(r, 200));
           }
+
+          // Enviar comando de inicio con tabId
+          const startMsg = { 
+            type: 'START_AUDIO_CAPTURE', 
+            streamId: streamId, 
+            isPremium: isPremium,
+            tabId: tab.id 
+          };
+          
           offscreenPort.postMessage(startMsg);
 
           // Esperar confirmación del offscreen (AUDIO_CAPTURE_STARTED)
@@ -305,7 +301,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             }, 5000);
 
             const listener = (msg) => {
-              if (!msg || !msg.type) return;
+              if (!msg || !msg.type || msg.tabId !== tab.id) return;
               if (msg.type === 'AUDIO_CAPTURE_STARTED') {
                 clearTimeout(timeout);
                 offscreenPort.onMessage.removeListener(listener);
@@ -321,22 +317,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           });
 
           // Update state
-          const savedVolume = (await chrome.storage.local.get('masterVolume')).masterVolume;
-          // Normalized volume for audio processor (0.0 - 3.0)
+          const storageRes = await chrome.storage.local.get('masterVolume');
+          const savedVolume = storageRes.masterVolume;
           const normalizedVolume = savedVolume ? savedVolume / 100 : 1.0;
 
           activeTabs[tab.id] = { 
               enabled: true, 
               preset: 'flat', 
               isPremium: isPremium,
-              masterVolume: normalizedVolume
+              masterVolume: normalizedVolume,
+              gains: isPremium ? new Array(15).fill(0) : new Array(6).fill(0)
           };
-          try { chrome.storage.local.set({ activeTabs }); } catch (e) {}
+          await chrome.storage.local.set({ activeTabs });
 
-          // Apply saved volume immediately
-          if (normalizedVolume !== 1.0) {
-              offscreenPort.postMessage({ type: 'SET_VOLUME', value: normalizedVolume });
-          }
+          // Apply saved volume immediately for this tab
+          offscreenPort.postMessage({ type: 'SET_VOLUME', value: normalizedVolume, tabId: tab.id });
 
           console.log("✅ EQ Enabled for tab", tab.id, "Volume:", normalizedVolume);
 
@@ -361,39 +356,32 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "DISABLE_EQ") {
     (async () => {
       try {
-        // Disable EQ for current active tab if it's a per-tab session (free or premium)
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const tabId = tab?.id;
 
-        // Stop per-tab processing if active (regardless of premium status)
-        if (tabId && activeTabs[tabId] && activeTabs[tabId].enabled) {
+        if (tabId && activeTabs[tabId]) {
+          // Send STOP to offscreen for this specific tab
+          if (offscreenPort) {
+            offscreenPort.postMessage({ type: 'STOP_AUDIO_CAPTURE', tabId: tabId });
+          }
+          
           try {
             await sendMessageToTab(tabId, { type: 'STOP_TAB_EQ' });
-            // Also tell widget to hide
             await sendMessageToTab(tabId, { type: 'EQ_DISABLED' });
-          } catch (e) { console.warn('STOP_TAB_EQ send error', e && e.message); }
+          } catch (e) {}
+
           delete activeTabs[tabId];
-          // Persist changes
-          try { chrome.storage.local.set({ activeTabs }); } catch (e) {}
-          chrome.storage.local.set({ enabled: false });
-          sendResponse({ success: true, method: 'tab' });
+          await chrome.storage.local.set({ activeTabs });
+
+          // If no more active tabs, we could close offscreen, but better to keep it for next time
+          if (Object.keys(activeTabs).length === 0) {
+             // await closeOffscreenDocument();
+          }
+
+          sendResponse({ success: true });
           return;
         }
-
-        // Fallback: stop offscreen processing
-        chrome.storage.local.set({ enabled: false });
-        try {
-          if (offscreenPort) {
-            offscreenPort.postMessage({ type: 'STOP_AUDIO_CAPTURE' });
-          } else {
-            await chrome.runtime.sendMessage({ type: 'STOP_AUDIO_CAPTURE' });
-          }
-        } catch(e) {}
-
-        // Close document to free resources and allow clean new capture later
-        await closeOffscreenDocument();
-
-        sendResponse({ success: true });
+        sendResponse({ success: false, error: "Tab not active" });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
       }
@@ -402,79 +390,113 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === "SET_BAND_GAIN") {
-    if (offscreenPort) {
-      offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
-    } else {
-      pendingPortMessages.push({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value });
-    }
-    sendResponse({ success: true });
+    (async () => {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab || !offscreenPort) {
+            sendResponse({ success: false });
+            return;
+        }
+
+        const isPrem = activeTabs[tab.id]?.isPremium || false;
+
+        if (isPrem) {
+            // Per-tab independent for premium
+            offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value, tabId: tab.id });
+            if (activeTabs[tab.id]) {
+                if (!activeTabs[tab.id].gains) activeTabs[tab.id].gains = [];
+                activeTabs[tab.id].gains[msg.bandIndex] = msg.value;
+            }
+        } else {
+            // Global for free users
+            const allTabIds = Object.keys(activeTabs);
+            allTabIds.forEach(tId => {
+                offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.bandIndex, value: msg.value, tabId: parseInt(tId) });
+                if (activeTabs[tId]) {
+                    if (!activeTabs[tId].gains) activeTabs[tId].gains = [];
+                    activeTabs[tId].gains[msg.bandIndex] = msg.value;
+                }
+            });
+        }
+        await chrome.storage.local.set({ activeTabs });
+        sendResponse({ success: true });
+    })();
     return true;
   }
 
   if (msg.type === "SET_MASTER_VOLUME") {
-    if (offscreenPort) {
-      offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value });
-    } else {
-      pendingPortMessages.push({ type: 'SET_VOLUME', value: msg.value });
-    }
-    
-    // Persist volume
     (async () => {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab && activeTabs[tab.id]) {
-            activeTabs[tab.id].masterVolume = msg.value;
-            chrome.storage.local.set({ activeTabs });
+        if (!tab || !offscreenPort) {
+            sendResponse({ success: false });
+            return;
         }
-        // Also update global preference
-        chrome.storage.local.set({ masterVolume: Math.round(msg.value * 100) });
-    })();
 
-    sendResponse({ success: true });
+        const isPrem = activeTabs[tab.id]?.isPremium || false;
+
+        if (isPrem) {
+            // Per-tab independent for premium
+            offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value, tabId: tab.id });
+            if (activeTabs[tab.id]) {
+                activeTabs[tab.id].masterVolume = msg.value;
+            }
+        } else {
+            // Global for free users
+            const allTabIds = Object.keys(activeTabs);
+            allTabIds.forEach(tId => {
+                offscreenPort.postMessage({ type: 'SET_VOLUME', value: msg.value, tabId: parseInt(tId) });
+                if (activeTabs[tId]) {
+                    activeTabs[tId].masterVolume = msg.value;
+                }
+            });
+        }
+        
+        // Also update global preference
+        chrome.storage.local.set({ activeTabs, masterVolume: Math.round(msg.value * 100) });
+        sendResponse({ success: true });
+    })();
     return true;
   }
 
-  // Accept legacy/setter variants from popup
   if (msg.type === "SET_GAIN") {
-    if (offscreenPort) {
-      offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.index, value: msg.value });
-    } else {
-      pendingPortMessages.push({ type: 'SET_GAIN', index: msg.index, value: msg.value });
-    }
-    sendResponse({ success: true });
+    (async () => {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab && offscreenPort) {
+            offscreenPort.postMessage({ type: 'SET_GAIN', index: msg.index, value: msg.value, tabId: tab.id });
+            if (activeTabs[tab.id]) {
+                if (!activeTabs[tab.id].gains) activeTabs[tab.id].gains = [];
+                activeTabs[tab.id].gains[msg.index] = msg.value;
+                chrome.storage.local.set({ activeTabs });
+            }
+        }
+        sendResponse({ success: true });
+    })();
     return true;
   }
 
   if (msg.type === "GET_ANALYSER_DATA") {
-    if (!offscreenPort) {
-      sendResponse({ success: false, data: [] });
-      return true;
-    }
-
-    // Send request and wait for one-time ANALYSER_DATA response
     (async () => {
       try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab || !offscreenPort || !activeTabs[tab.id]) {
+          sendResponse({ success: false, data: [] });
+          return;
+        }
+
         const data = await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error('Timeout waiting analyser')), 2000);
+          const timeout = setTimeout(() => resolve({ success: false }), 1000);
           const listener = (m) => {
-            if (m && m.type === 'ANALYSER_DATA') {
+            if (m && m.type === 'ANALYSER_DATA' && m.tabId === tab.id) {
               clearTimeout(timeout);
               offscreenPort.onMessage.removeListener(listener);
               resolve(m);
             }
           };
           offscreenPort.onMessage.addListener(listener);
-          try {
-            offscreenPort.postMessage({ type: 'GET_ANALYSER_DATA' });
-          } catch (e) {
-            clearTimeout(timeout);
-            offscreenPort.onMessage.removeListener(listener);
-            reject(e);
-          }
+          offscreenPort.postMessage({ type: 'GET_ANALYSER_DATA', tabId: tab.id });
         });
 
         sendResponse({ success: !!data.success, data: data.data || [] });
       } catch (err) {
-        console.warn('Error getting analyser data:', err.message);
         sendResponse({ success: false, data: [] });
       }
     })();
@@ -505,40 +527,43 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'APPLY_PRESET') {
-    try {
-      const gains = Array.isArray(msg.gains) ? msg.gains : [];
-      
-      // Update active tab state if possible
-      (async () => {
-         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-         if (tab && activeTabs[tab.id]) {
+    (async () => {
+      try {
+        const gains = Array.isArray(msg.gains) ? msg.gains : [];
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        
+        if (tab && activeTabs[tab.id]) {
+          const isPrem = activeTabs[tab.id].isPremium || false;
+
+          if (isPrem) {
+            // Per-tab independent for premium
             activeTabs[tab.id].gains = gains;
             activeTabs[tab.id].preset = msg.preset || 'custom';
-            chrome.storage.local.set({ activeTabs });
-         }
-      })();
-
-      // compute master compensation
-      // const pos = gains.filter(g => typeof g === 'number' && g > 0);
-      // const maxPos = pos.length ? Math.max(...pos) : 0;
-      // let masterFactor = 1.0;
-      // if (maxPos >= 15) masterFactor = 0.5;
-      // else if (maxPos >= 10) masterFactor = 0.6;
-      // else if (maxPos >= 6) masterFactor = 0.75;
-
-      // Send to offscreen
-      if (offscreenPort) {
-        gains.forEach((g, i) => offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g }));
-        // offscreenPort.postMessage({ type: 'SET_VOLUME', value: masterFactor });
-      } else {
-        gains.forEach((g, i) => pendingPortMessages.push({ type: 'SET_GAIN', index: i, value: g }));
-        // pendingPortMessages.push({ type: 'SET_VOLUME', value: masterFactor });
+            if (offscreenPort) {
+              gains.forEach((g, i) => {
+                offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g, tabId: tab.id });
+              });
+            }
+          } else {
+            // Global for free users
+            const allTabIds = Object.keys(activeTabs);
+            allTabIds.forEach(tId => {
+                activeTabs[tId].gains = gains;
+                activeTabs[tId].preset = msg.preset || 'custom';
+                if (offscreenPort) {
+                    gains.forEach((g, i) => {
+                        offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g, tabId: parseInt(tId) });
+                    });
+                }
+            });
+          }
+          await chrome.storage.local.set({ activeTabs });
+        }
+        sendResponse({ success: true });
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
       }
-
-      sendResponse({ success: true });
-    } catch (e) {
-      sendResponse({ success: false, error: e.message });
-    }
+    })();
     return true;
   }
 

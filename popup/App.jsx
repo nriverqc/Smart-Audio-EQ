@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Equalizer from './Equalizer';
-import TabMixer from './TabMixer';
 import SpectrumAnalyzer from './SpectrumAnalyzer';
 import { PRESETS, IS_PREMIUM_PRESET } from './presets';
 import logo from './Logo ecualizador 2.png';
@@ -11,6 +10,8 @@ export default function App() {
   const [currentPreset, setCurrentPreset] = useState('flat');
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tabTitle, setTabTitle] = useState('');
+  const [allActiveTabs, setAllActiveTabs] = useState({});
   const [appPassCode, setAppPassCode] = useState('');
   const [lang, setLang] = useState('en');
 
@@ -37,7 +38,7 @@ export default function App() {
   const extensionTexts = {
     es: {
       visitWebsite: 'Visitar sitio web',
-      extName: 'Equalizer – Web Audio',
+      extName: 'Equalizer - Web Audio EQ',
       premiumBadge: 'PRO',
       premiumStatus: '• PREMIUM 💎',
       freeStatus: '• Gratis',
@@ -53,7 +54,7 @@ export default function App() {
     },
     en: {
       visitWebsite: 'Visit Website',
-      extName: 'Equalizer – Web Audio',
+      extName: 'Equalizer - Web Audio EQ',
       premiumBadge: 'PRO',
       premiumStatus: '• PREMIUM 💎',
       freeStatus: '• Free',
@@ -69,7 +70,7 @@ export default function App() {
     },
     pt: {
       visitWebsite: 'Visite o site',
-      extName: 'Equalizer – Web Audio',
+      extName: 'Equalizer - Web Audio EQ',
       premiumBadge: 'PRO',
       premiumStatus: '• PREMIUM 💎',
       freeStatus: '• Grátis',
@@ -85,7 +86,7 @@ export default function App() {
     },
     de: {
       visitWebsite: 'Website besuchen',
-      extName: 'Equalizer – Web Audio',
+      extName: 'Equalizer - Web Audio EQ',
       premiumBadge: 'PRO',
       premiumStatus: '• PREMIUM 💎',
       freeStatus: '• Kostenlos',
@@ -116,10 +117,16 @@ export default function App() {
 
     // Check state from storage and active tab status
     const checkState = () => {
+        // Get current tab info
+        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+            if (tab) setTabTitle(tab.title);
+        });
+
         // 1. Get global settings
-        chrome.storage.local.get(['isPremium', 'email', 'uid'], (result) => {
+        chrome.storage.local.get(['isPremium', 'email', 'uid', 'activeTabs'], (result) => {
             if (result.isPremium) setIsPremium(true);
             if (result.email) setUserEmail(result.email);
+            if (result.activeTabs) setAllActiveTabs(result.activeTabs);
         });
 
         // 2. Ask background for TAB SPECIFIC status
@@ -355,6 +362,26 @@ export default function App() {
         {isPremium && <span className="premium-badge">{t("premiumBadge")}</span>}
       </div>
 
+      <div style={{
+          background: 'rgba(0, 210, 255, 0.05)',
+          border: '1px solid rgba(0, 210, 255, 0.2)',
+          borderRadius: '8px',
+          padding: '8px 12px',
+          margin: '10px 0',
+          textAlign: 'left',
+          fontSize: '0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+      }}>
+          <span style={{color: '#00d2ff'}}>🎯</span>
+          <div style={{flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+              <span style={{color: '#aaa', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase'}}>Controlling current tab:</span>
+              <span style={{color: '#fff', fontWeight: 'bold'}}>{tabTitle || 'Unknown Tab'}</span>
+          </div>
+          {isPremium && <span style={{fontSize: '0.7rem', background: '#ffd700', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold'}}>INDEPENDENT</span>}
+      </div>
+
       {userEmail ? (
         <div style={{fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '10px', background: '#222', padding: '5px', borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'}}>
             <span>👤 <span style={{color: '#fff'}}>{userEmail}</span></span>
@@ -462,10 +489,6 @@ export default function App() {
 
       {enabled && (
         <SpectrumAnalyzer />
-      )}
-
-      {isPremium && enabled && (
-        <TabMixer />
       )}
 
       {!isPremium && (

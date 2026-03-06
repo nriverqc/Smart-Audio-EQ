@@ -725,6 +725,9 @@ export default function Premium({ lang }) {
                   {lang === 'es' ? 'Haz clic aquí para actualizar' : 'Click here to refresh status'}
               </button>
           </div>
+
+          {/* Adsterra Native Banner */}
+          <div id="container-98237cf077449f197b6656eb7fccd1dc" style={{marginTop: '30px', minHeight: '250px'}}></div>
         </div>
       </div>
     </div>

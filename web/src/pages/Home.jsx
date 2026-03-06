@@ -96,6 +96,9 @@ export default function Home({ lang }) {
         </div>
       </div>
 
+      {/* Adsterra Native Banner */}
+      <div id="container-98237cf077449f197b6656eb7fccd1dc" style={{marginTop: '40px', minHeight: '250px'}}></div>
+
       <div className="features">
         <div className="feature-card">
           <h3>{t.f1Title}</h3>

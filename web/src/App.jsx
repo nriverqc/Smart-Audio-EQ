@@ -257,7 +257,6 @@ function AppContent() {
 
   return (
     <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, requestExtensionAppPassCheck }}>
-      <AdBlockNotice />
       <div className="app-root">
         <div className="floating-icons-container">
             {/* Random floating music notes */}
@@ -402,6 +401,8 @@ function AppContent() {
             <Route path="/refund" element={<Refund lang={lang} />} />
             <Route path="/contact" element={<Contact lang={lang} />} />
           </Routes>
+
+          <AdBlockNotice lang={lang} />
 
           <footer>
             <p>© 2026 Equalizer – Web Audio. {currentLang.footer} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.2 (20k)</span></p>

@@ -166,7 +166,7 @@ export default function Terms({ lang }) {
         },
         {
           h: '6. Rückerstattungsrichtlinie',
-          p: 'Weitere Einzelheiten finden Sie in unserer vollständigen Rückerstattungsrichtlinie. Im Allgemeinen werden Rückerstattungen aufgrund der digitalen Natur des Produkts von Fall zu Fall geprüft, wenn unüberwindbare technische Probleme vorliegen.'
+          p: 'Wenn Sie mit Ihrem Kauf nicht zufrieden sind, können Sie innerhalb von 14 Tagen nach dem Kaufdatum eine vollständige Rückerstattung beantragen. Rückerstattungen werden gemäß der Rückerstattungsrichtlinie von Paddle bearbeitet.'
         },
         {
           h: '7. Verantwortung für Websites Dritter',

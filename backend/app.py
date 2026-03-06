@@ -469,6 +469,108 @@ def register_paypal():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/paddle-webhook", methods=["POST"])
+def paddle_webhook():
+    """Handles Paddle Billing Webhooks (v2)"""
+    try:
+        # 1. Get raw body for signature verification (if needed later)
+        payload = request.json
+        if not payload:
+            return jsonify({"error": "No payload"}), 400
+            
+        event_type = payload.get("event_type")
+        data = payload.get("data", {})
+        
+        print(f"🔔 Paddle Webhook Received: {event_type}")
+
+        # 2. Extract user info from customData
+        custom_data = data.get("custom_data", {})
+        email = custom_data.get("email")
+        uid = custom_data.get("uid")
+        
+        # Fallback if custom_data is missing but present in transaction/subscription
+        if not email:
+            customer = data.get("customer", {})
+            email = customer.get("email")
+
+        if not email:
+            print("⚠️ Paddle Webhook: No email found in custom_data or customer info.")
+            return jsonify({"status": "ignored", "reason": "no_email"}), 200
+
+        # 3. Handle specific events
+        if event_type in ["transaction.paid", "transaction.completed", "subscription.activated", "subscription.updated"]:
+            print(f"✅ Activating Premium for {email} (UID: {uid}) via Paddle")
+            
+            # Calculate expiration (monthly vs yearly)
+            # Default to 31 days if we can't determine
+            days_to_add = 31
+            items = data.get("items", [])
+            for item in items:
+                price_id = item.get("price_id")
+                if price_id == "pri_01kk2nvf5pf316avk8khkzqrm3": # Anual
+                    days_to_add = 366
+                    break
+
+            expiration_date = datetime.now() + timedelta(days=days_to_add)
+            payment_id = data.get("id") or data.get("transaction_id")
+
+            # Update SQLite
+            with sqlite3.connect(DB_NAME) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date, method)
+                    VALUES (?, 1, ?, ?, ?)
+                    ON CONFLICT(email) DO UPDATE SET
+                    is_premium=1,
+                    payment_id=excluded.payment_id,
+                    expiration_date=excluded.expiration_date,
+                    method=excluded.method
+                """, (email, f"PADDLE_{payment_id}", expiration_date, "Paddle"))
+                conn.commit()
+
+            # Update Firestore
+            if db and uid:
+                try:
+                    user_ref = db.collection('usuarios').document(uid)
+                    user_ref.set({
+                        'isPremium': True,
+                        'lastPayment': firestore.SERVER_TIMESTAMP,
+                        'expirationDate': expiration_date,
+                        'paymentId': payment_id,
+                        'method': 'Paddle',
+                        'email': email
+                    }, merge=True)
+                except Exception as e:
+                    print(f"Firebase Update Error: {e}")
+
+            return jsonify({"status": "success", "message": "Premium activated"})
+
+        elif event_type in ["subscription.canceled", "subscription.past_due"]:
+            print(f"❌ Deactivating Premium for {email} (UID: {uid}) - Subscription Status: {event_type}")
+            
+            # Update SQLite
+            with sqlite3.connect(DB_NAME) as conn:
+                cursor = conn.cursor()
+                cursor.execute("UPDATE licenses SET is_premium=0 WHERE email=?", (email,))
+                conn.commit()
+
+            # Update Firestore
+            if db and uid:
+                try:
+                    user_ref = db.collection('usuarios').document(uid)
+                    user_ref.update({'isPremium': False})
+                except Exception as e:
+                    print(f"Firebase Update Error: {e}")
+
+            return jsonify({"status": "success", "message": "Premium deactivated"})
+
+        return jsonify({"status": "ignored", "event": event_type}), 200
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/verify-official-app-pass", methods=["POST"])
 def verify_official_app_pass():
     """Verifies an official App Pass token from joinapppass.com"""

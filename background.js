@@ -215,7 +215,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ success: false, error: "No tab found" });
           return;
         }
-        // ... (rest of logic)
+
         if (activeTabs[tabId] && activeTabs[tabId].enabled) {
            console.log("⚠️ EQ already active for tab", tabId);
 
@@ -358,12 +358,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        const tabId = tab?.id;
+        const tabId = msg.tabId || tab?.id;
 
         if (tabId && activeTabs[tabId]) {
-          // Send STOP to offscreen for this specific tab
+          // Send STOP to offscreen and WAIT for it to stop tracks
           if (offscreenPort) {
             offscreenPort.postMessage({ type: 'STOP_AUDIO_CAPTURE', tabId: tabId });
+            
+            // Wait for confirmation to ensure tracks are released
+            await new Promise((resolve) => {
+                const timeout = setTimeout(resolve, 2000);
+                const listener = (m) => {
+                    if (m && m.type === 'AUDIO_CAPTURE_STOPPED' && m.tabId === tabId) {
+                        clearTimeout(timeout);
+                        offscreenPort.onMessage.removeListener(listener);
+                        resolve();
+                    }
+                };
+                offscreenPort.onMessage.addListener(listener);
+            });
           }
           
           try {
@@ -374,11 +387,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           delete activeTabs[tabId];
           await chrome.storage.local.set({ activeTabs });
 
-          // If no more active tabs, we could close offscreen, but better to keep it for next time
-          if (Object.keys(activeTabs).length === 0) {
-             // await closeOffscreenDocument();
-          }
-
+          console.log(`✅ EQ disabled and tracks released for tab ${tabId}`);
           sendResponse({ success: true });
           return;
         }
@@ -765,12 +774,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab) {
+        const tabId = msg.tabId || tab?.id;
+        
+        if (!tabId) {
           sendResponse({ enabled: false });
           return;
         }
 
-        const tabId = tab.id;
         // Check if we have active state for this tab
         if (activeTabs[tabId] && activeTabs[tabId].enabled) {
           

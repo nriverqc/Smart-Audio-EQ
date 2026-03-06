@@ -58,6 +58,7 @@ smart-audio-eq/
 - **Pagos:** MercadoPago SDK, PayPal SDK
 - **Backend:** Flask, SQLite, Firebase Firestore
 - **Cloud:** Deployed en Render (backend), Cloudflare Pages (web)
+- **Métricas y Calidad:** [Chrome Stats App Pass SDK](https://chrome-stats.com/) (Análisis de seguridad y gestión de licencias)
 
 ## Instalación y Desarrollo
 

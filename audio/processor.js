@@ -30,6 +30,7 @@ export async function initAudio(tabId, stream, premium = false) {
   const tabState = {
     isPremium: premium,
     filters: [],
+    stream: stream, // Store stream to stop it later
     source: ctx.createMediaStreamSource(stream)
   };
 
@@ -100,6 +101,12 @@ export function getAnalyserData(tabId) {
 export function stopAudio(tabId) {
     if (tabs[tabId]) {
         try {
+            // Stop the media tracks to release capture
+            if (tabs[tabId].stream) {
+                tabs[tabId].stream.getTracks().forEach(track => track.stop());
+                console.log(`✅ Tracks stopped for tab ${tabId}`);
+            }
+            
             tabs[tabId].source.disconnect();
             tabs[tabId].filters.forEach(f => f.disconnect());
             tabs[tabId].gainNode.disconnect();

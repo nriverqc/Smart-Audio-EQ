@@ -440,14 +440,14 @@ export default function Premium({ lang }) {
   };
 
   return (
-    <div style={{textAlign: 'center', padding: '50px 0'}}>
+    <div style={{textAlign: 'center', padding: '20px 10px', maxWidth: '1200px', margin: '0 auto'}}>
       {user.isPremium && (
-          <div style={{marginBottom: '50px', padding: '20px', background: 'rgba(0, 210, 255, 0.1)', borderRadius: '10px', border: '1px solid #00d2ff', display: 'inline-block'}}>
-              <h1 style={{color: '#ffd700', fontSize: '2.5rem', margin: 0}}>Premium 💎 {lang === 'es' ? 'Activado' : 'Active'}</h1>
-              <p style={{fontSize: '1.2rem', marginTop: '10px'}}>
+          <div style={{marginBottom: '30px', padding: '15px', background: 'rgba(0, 210, 255, 0.1)', borderRadius: '10px', border: '1px solid #00d2ff', display: 'inline-block'}}>
+              <h1 style={{color: '#ffd700', fontSize: '2rem', margin: 0}}>Premium 💎 {lang === 'es' ? 'Activado' : 'Active'}</h1>
+              <p style={{fontSize: '1rem', marginTop: '5px'}}>
                   {getThanksMessage()}
               </p>
-              <p style={{color: '#ccc', marginTop: '5px'}}>
+              <p style={{color: '#ccc', marginTop: '5px', fontSize: '0.9rem'}}>
                   {lang === 'es' 
                     ? `Licencia activa para: ${user.email}` 
                     : `License active for: ${user.email}`}
@@ -455,11 +455,11 @@ export default function Premium({ lang }) {
           </div>
       )}
 
-      <h1 style={{color: '#ffd700', fontSize: '3rem'}}>
+      <h1 style={{color: '#ffd700', fontSize: '2.5rem', marginBottom: '10px'}}>
         {t.title}
         <span className="beta-badge" style={{fontSize: '0.4em', verticalAlign: 'middle', marginLeft: '15px'}}>BETA</span>
       </h1>
-      <p style={{fontSize: '1.2rem', marginBottom: '40px'}}>{t.subtitle}</p>
+      <p style={{fontSize: '1.1rem', marginBottom: '30px', color: '#aaa'}}>{t.subtitle}</p>
 
       {errorMsg && (
           <div style={{
@@ -476,51 +476,78 @@ export default function Premium({ lang }) {
           </div>
       )}
 
-      <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
-        <div className="feature-card" style={{border: '1px solid #333', textAlign: 'left', minWidth: '300px'}}>
-          <h2>{t.freeTitle}</h2>
-          <ul style={{listStyle: 'none', padding: 0, lineHeight: '2'}}>
+      <div style={{
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+        gap: '30px', 
+        alignItems: 'start',
+        justifyContent: 'center'
+      }}>
+        {/* FREE PLAN */}
+        <div className="feature-card" style={{border: '1px solid #333', textAlign: 'left', background: '#1a1a1a', height: '100%'}}>
+          <h2 style={{fontSize: '1.8rem', marginBottom: '10px'}}>{t.freeTitle}</h2>
+          <h3 style={{color: '#aaa', fontSize: '1.2rem', marginBottom: '20px'}}>{t.freePrice}</h3>
+          <ul style={{listStyle: 'none', padding: 0, lineHeight: '2.2', fontSize: '0.95rem'}}>
             {t.freeItems.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item} style={{borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '5px'}}>{item}</li>
             ))}
           </ul>
-          <h3 style={{marginTop: '20px'}}>{t.freePrice}</h3>
         </div>
 
-        <div className="feature-card" style={{border: '2px solid #ffd700', textAlign: 'left', minWidth: '300px', transform: 'scale(1.05)'}}>
-          <h2 style={{color: '#ffd700'}}>
+        {/* PREMIUM PLAN */}
+        <div className="feature-card" style={{
+            border: '2px solid #ffd700', 
+            textAlign: 'left', 
+            background: '#1a1a1a', 
+            position: 'relative',
+            boxShadow: '0 0 30px rgba(255, 215, 0, 0.15)'
+        }}>
+          <div style={{
+              position: 'absolute', 
+              top: '-12px', 
+              right: '20px', 
+              background: '#ffd700', 
+              color: '#000', 
+              padding: '2px 10px', 
+              borderRadius: '5px', 
+              fontWeight: 'bold', 
+              fontSize: '0.8rem'
+          }}>
+              RECOMMENDED
+          </div>
+
+          <h2 style={{color: '#ffd700', fontSize: '2rem', margin: '0 0 10px 0'}}>
             {t.premiumTitle}
-            <span className="beta-badge" style={{fontSize: '0.5em', verticalAlign: 'middle', marginLeft: '10px'}}>BETA</span>
           </h2>
 
           {/* Coming Soon Notice */}
           <div style={{
-              background: 'rgba(255, 215, 0, 0.1)',
-              border: '1px solid #ffd700',
-              padding: '15px',
+              background: 'rgba(255, 215, 0, 0.05)',
+              border: '1px solid rgba(255, 215, 0, 0.3)',
+              padding: '10px',
               borderRadius: '8px',
-              marginBottom: '20px',
+              marginBottom: '15px',
               textAlign: 'center'
           }}>
-              <h4 style={{color: '#ffd700', margin: '0 0 5px 0', fontSize: '1.1rem'}}>🚀 {t.comingSoon}</h4>
-              <p style={{fontSize: '0.85rem', color: '#eee', margin: 0}}>{t.comingSoonMsg}</p>
+              <h4 style={{color: '#ffd700', margin: '0 0 2px 0', fontSize: '1rem'}}>🚀 {t.comingSoon}</h4>
+              <p style={{fontSize: '0.8rem', color: '#ccc', margin: 0}}>{t.comingSoonMsg}</p>
           </div>
           
           {/* Plan Selector */}
-          <div style={{margin: '10px 0'}}>
-              <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc'}}>{t.planLabel}</label>
-              <div style={{display: 'flex', gap: '10px'}}>
+          <div style={{margin: '15px 0'}}>
+              <div style={{display: 'flex', gap: '10px', background: '#222', padding: '5px', borderRadius: '8px'}}>
                   <button 
                       onClick={() => setPlanType('monthly')}
                       style={{
                           flex: 1,
-                          padding: '8px',
+                          padding: '10px',
                           borderRadius: '5px',
-                          background: planType === 'monthly' ? '#ffd700' : '#222',
-                          color: planType === 'monthly' ? '#000' : '#fff',
-                          border: '1px solid #555',
+                          background: planType === 'monthly' ? '#ffd700' : 'transparent',
+                          color: planType === 'monthly' ? '#000' : '#888',
+                          border: 'none',
                           cursor: 'pointer',
-                          fontWeight: 'bold'
+                          fontWeight: 'bold',
+                          transition: 'all 0.2s'
                       }}
                   >
                       {t.optionMonthly}
@@ -529,41 +556,41 @@ export default function Premium({ lang }) {
                       onClick={() => setPlanType('yearly')}
                       style={{
                           flex: 1,
-                          padding: '8px',
+                          padding: '10px',
                           borderRadius: '5px',
-                          background: planType === 'yearly' ? '#ffd700' : '#222',
-                          color: planType === 'yearly' ? '#000' : '#fff',
-                          border: '1px solid #555',
+                          background: planType === 'yearly' ? '#ffd700' : 'transparent',
+                          color: planType === 'yearly' ? '#000' : '#888',
+                          border: 'none',
                           cursor: 'pointer',
                           fontWeight: 'bold',
-                          position: 'relative'
+                          position: 'relative',
+                          transition: 'all 0.2s'
                       }}
                   >
                       {t.optionYearly}
                       {planType !== 'yearly' && (
                           <span style={{
                               position: 'absolute',
-                              top: '-10px',
+                              top: '-8px',
                               right: '-5px',
                               background: '#ff4444',
                               color: '#fff',
                               fontSize: '0.6rem',
                               padding: '2px 5px',
                               borderRadius: '10px',
-                              border: '1px solid #fff'
                           }}>30% OFF</span>
                       )}
                   </button>
               </div>
           </div>
 
-          <ul style={{listStyle: 'none', padding: 0, lineHeight: '2'}}>
+          <ul style={{listStyle: 'none', padding: 0, lineHeight: '2', fontSize: '0.95rem'}}>
             {t.premiumItems.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item} style={{borderBottom: '1px solid #333', paddingBottom: '5px', marginBottom: '5px'}}>{item}</li>
             ))}
           </ul>
           
-          <h3 style={{marginTop: '20px'}}>
+          <h3 style={{marginTop: '20px', fontSize: '1.5rem', color: '#fff'}}>
               {planType === 'yearly' ? t.premiumPriceINT_Yearly : t.premiumPriceINT_Monthly}
           </h3>
           
@@ -571,9 +598,6 @@ export default function Premium({ lang }) {
           {!user.isPremium ? (
             <>
               <div style={{margin: '20px 0', textAlign: 'left'}}>
-                  <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#ccc'}}>
-                      {t.emailLabel}
-                  </label>
                   <input 
                       type="email" 
                       placeholder={t.emailPlaceholder}
@@ -582,12 +606,13 @@ export default function Premium({ lang }) {
                       disabled={!!user.uid}
                       style={{
                           width: '100%', 
-                          padding: '10px', 
+                          padding: '12px', 
                           borderRadius: '5px', 
-                          border: '1px solid #555',
-                          background: user.uid ? '#333' : '#222',
+                          border: '1px solid #444',
+                          background: user.uid ? '#2a2a2a' : '#111',
                           color: user.uid ? '#aaa' : '#fff',
-                          cursor: user.uid ? 'not-allowed' : 'text'
+                          cursor: user.uid ? 'not-allowed' : 'text',
+                          fontSize: '1rem'
                       }}
                   />
                   {user.uid && <div style={{fontSize: '0.8rem', color: '#00d2ff', marginTop: '5px'}}>
@@ -595,26 +620,16 @@ export default function Premium({ lang }) {
                   </div>}
               </div>
 
-              {/* PAYPAL SECTION (HIDDEN FOR NOW) */}
-              {/* 
-              <div style={{marginTop: '20px'}}>
-                  <div id="paypal-button-container"></div>
-                  <p style={{fontSize: '0.8rem', color: '#aaa', marginTop: '10px'}}>
-                      {t.paypalNote}
-                  </p>
-              </div>
-              */}
-
               {/* APP PASS SECTION */}
               <div style={{
-                  marginTop: '30px', 
-                  border: '1px solid rgba(0, 210, 255, 0.3)', 
-                  padding: '20px', 
+                  marginTop: '20px', 
+                  border: '1px solid rgba(0, 210, 255, 0.2)', 
+                  padding: '15px', 
                   borderRadius: '10px',
-                  background: 'rgba(0, 210, 255, 0.05)',
+                  background: 'rgba(0, 210, 255, 0.03)',
                   textAlign: 'left'
               }}>
-                  <label style={{display: 'block', marginBottom: '15px', fontSize: '1.1rem', color: '#00d2ff', fontWeight: 'bold'}}>
+                  <label style={{display: 'block', marginBottom: '10px', fontSize: '1rem', color: '#00d2ff', fontWeight: 'bold'}}>
                       🚀 {t.appPassLabel}
                   </label>
                   <button 
@@ -625,20 +640,18 @@ export default function Premium({ lang }) {
                           padding: '12px',
                           borderRadius: '5px',
                           border: 'none',
-                          background: 'linear-gradient(45deg, #00d2ff, #00a8cc)',
+                          background: 'linear-gradient(90deg, #00d2ff, #00a8cc)',
                           color: '#000',
                           fontWeight: 'bold',
                           cursor: 'pointer',
-                          marginBottom: '20px'
+                          marginBottom: '15px',
+                          fontSize: '1rem'
                       }}
                   >
                       {t.appPassBtnAuto}
                   </button>
 
-                  <label style={{display: 'block', marginBottom: '10px', fontSize: '0.8rem', color: '#aaa'}}>
-                      {t.appPassManualLabel}
-                  </label>
-                  <div style={{display: 'flex', gap: '10px'}}>
+                  <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
                       <input 
                           type="text"
                           placeholder={t.appPassPlaceholder}
@@ -648,27 +661,28 @@ export default function Premium({ lang }) {
                               flex: 1,
                               padding: '10px',
                               borderRadius: '5px',
-                              border: '1px solid #555',
+                              border: '1px solid #444',
                               background: '#111',
                               color: '#fff',
-                              fontSize: '1rem'
+                              fontSize: '0.9rem'
                           }}
                       />
                       <button 
                           onClick={verifyAppPass}
                           disabled={loading}
                           style={{
-                              padding: '10px 20px',
+                              padding: '10px 15px',
                               borderRadius: '5px',
-                              border: 'none',
-                              background: '#444',
+                              border: '1px solid #444',
+                              background: '#333',
                               color: '#fff',
                               fontWeight: 'bold',
                               cursor: 'pointer',
-                              whiteSpace: 'nowrap'
+                              whiteSpace: 'nowrap',
+                              fontSize: '0.9rem'
                           }}
                       >
-                          {loading ? t.processingLabel : t.appPassBtn}
+                          {loading ? '...' : t.appPassBtn}
                       </button>
                   </div>
               </div>
@@ -678,34 +692,28 @@ export default function Premium({ lang }) {
                   onClick={restorePurchase} 
                   disabled={loading}
                   style={{
-                      marginTop: '20px', 
+                      marginTop: '15px', 
                       background: 'transparent', 
-                      border: '1px solid #555', 
-                      color: '#ccc', 
-                      padding: '10px 15px', 
-                      borderRadius: '5px', 
+                      border: 'none', 
+                      color: '#666', 
+                      padding: '5px', 
                       cursor: 'pointer',
-                      fontSize: '0.9rem',
-                      width: '100%'
+                      fontSize: '0.8rem',
+                      width: '100%',
+                      textDecoration: 'underline'
                   }}
               >
                   {lang === 'es' ? '¿Ya pagaste? Ingresar ID de pago' : 'Already paid? Enter Payment ID'}
               </button>
             </>
           ) : (
-            <div style={{marginTop: '30px', textAlign: 'center', padding: '20px', background: 'rgba(0, 255, 133, 0.1)', border: '1px solid #00ff85', borderRadius: '8px'}}>
-                <h3 style={{color: '#00ff85', margin: 0}}>✅ {lang === 'es' ? 'Plan Activo' : 'Active Plan'}</h3>
-                <p style={{color: '#ccc', fontSize: '0.9rem', marginTop: '10px'}}>
-                    {lang === 'es' ? 'Disfruta de todas las funciones Premium.' : 'Enjoy all Premium features.'}
-                </p>
+            <div style={{marginTop: '20px', textAlign: 'center', padding: '15px', background: 'rgba(0, 255, 133, 0.1)', border: '1px solid #00ff85', borderRadius: '8px'}}>
+                <h3 style={{color: '#00ff85', margin: 0, fontSize: '1.2rem'}}>✅ {lang === 'es' ? 'Plan Activo' : 'Active Plan'}</h3>
             </div>
           )}
 
           {/* Refresh Status Button */}
-          <div style={{marginTop: '30px', borderTop: '1px solid #333', paddingTop: '15px'}}>
-              <p style={{fontSize: '0.9rem', color: '#ccc', marginBottom: '10px'}}>
-                  {lang === 'es' ? '¿Ya eres Premium?' : 'Already Premium?'}
-              </p>
+          <div style={{marginTop: '20px', borderTop: '1px solid #333', paddingTop: '10px', textAlign: 'center'}}>
               <button 
                   onClick={() => {
                       setLoading(true);
@@ -714,20 +722,20 @@ export default function Premium({ lang }) {
                   }}
                   style={{
                       background: 'transparent', 
-                      border: '1px solid #ffd700', 
-                      color: '#ffd700', 
-                      padding: '8px 15px', 
+                      border: '1px solid #444', 
+                      color: '#888', 
+                      padding: '5px 10px', 
                       borderRadius: '5px',
                       cursor: 'pointer',
-                      fontSize: '0.9rem'
+                      fontSize: '0.8rem'
                   }}
               >
-                  {lang === 'es' ? 'Haz clic aquí para actualizar' : 'Click here to refresh status'}
+                  {lang === 'es' ? 'Actualizar estado' : 'Refresh status'}
               </button>
           </div>
 
           {/* Adsterra Native Banner */}
-          <div id="container-98237cf077449f197b6656eb7fccd1dc" style={{marginTop: '30px', minHeight: '250px'}}></div>
+          <div id="container-98237cf077449f197b6656eb7fccd1dc" style={{marginTop: '20px', minHeight: '250px'}}></div>
         </div>
       </div>
     </div>

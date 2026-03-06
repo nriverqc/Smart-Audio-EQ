@@ -153,7 +153,7 @@ export default function Premium({ lang }) {
       freeTitle: 'Gratis',
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$0.99 1er mes, luego $1.99/mes',
+      premiumPriceINT_Monthly: '$1.99 / mes',
       premiumPriceINT_Yearly: '$16.99 USD / año (30% DCTO)',
       freeItems: [
         '✅ Ecualizador de 6 bandas',
@@ -200,7 +200,7 @@ export default function Premium({ lang }) {
       freeTitle: 'Free',
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$0.99 1st month, then $1.99/mo',
+      premiumPriceINT_Monthly: '$1.99 / mo',
       premiumPriceINT_Yearly: '$16.99 USD / year (30% OFF)',
       freeItems: [
         '✅ 6-Band Equalizer',
@@ -247,7 +247,7 @@ export default function Premium({ lang }) {
       freeTitle: 'Grátis',
       freePrice: '$0 / para sempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$0.99 no 1º mês, depois $1.99/mês',
+      premiumPriceINT_Monthly: '$1.99 / mês',
       premiumPriceINT_Yearly: '$16.99 USD / ano (30% OFF)',
       freeItems: [
         '✅ Equalizador de 6 bandas',
@@ -294,7 +294,7 @@ export default function Premium({ lang }) {
       freeTitle: 'Kostenlos',
       freePrice: '$0 / für immer',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$0.99 im 1. Monat, dann $1.99/Monat',
+      premiumPriceINT_Monthly: '$1.99 / Monat',
       premiumPriceINT_Yearly: '$16.99 USD / Jahr (30% RABATT)',
       freeItems: [
         '✅ 6-Band Equalizer',
@@ -338,6 +338,29 @@ export default function Premium({ lang }) {
   };
 
   const t = texts[lang] || texts.es;
+
+  const openPaddleCheckout = (priceId) => {
+    if (!user.email) {
+        alert(lang === 'es' ? 'Por favor inicia sesión con Google primero para activar tu cuenta tras el pago.' : 'Please login with Google first to activate your account after payment.');
+        loginWithGoogle();
+        return;
+    }
+
+    if (window.Paddle) {
+        window.Paddle.Checkout.open({
+            items: [{ priceId: priceId, quantity: 1 }],
+            customer: {
+                email: user.email
+            },
+            customData: {
+                uid: user.uid,
+                email: user.email
+            }
+        });
+    } else {
+        alert("Paddle SDK not loaded. Please refresh.");
+    }
+  };
 
   const verifyAppPass = async () => {
     if (!user.uid) {
@@ -520,17 +543,28 @@ export default function Premium({ lang }) {
             {t.premiumTitle}
           </h2>
 
-          {/* Coming Soon Notice */}
-          <div style={{
-              background: 'rgba(255, 215, 0, 0.05)',
-              border: '1px solid rgba(255, 215, 0, 0.3)',
-              padding: '10px',
-              borderRadius: '8px',
-              marginBottom: '15px',
-              textAlign: 'center'
-          }}>
-              <h4 style={{color: '#ffd700', margin: '0 0 2px 0', fontSize: '1rem'}}>🚀 {t.comingSoon}</h4>
-              <p style={{fontSize: '0.8rem', color: '#ccc', margin: 0}}>{t.comingSoonMsg}</p>
+          {/* Paddle Checkout Button */}
+          <div style={{ marginBottom: '20px' }}>
+              <button 
+                onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2ntgc0py83xjw60tnw7x2c' : 'pri_01kk2nvf5pf316avk8khkzqrm3')}
+                style={{
+                    width: '100%',
+                    padding: '15px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#ffd700',
+                    color: '#000',
+                    fontWeight: 'bold',
+                    fontSize: '1.1rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(255, 215, 0, 0.3)',
+                    transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.transform = 'scale(1.02)'}
+                onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+              >
+                {lang === 'es' ? 'Suscribirse ahora (Card / Apple Pay)' : 'Subscribe Now (Card / Apple Pay)'}
+              </button>
           </div>
           
           {/* Plan Selector */}
@@ -597,6 +631,16 @@ export default function Premium({ lang }) {
           {/* PAYMENT FORM OR ACTIVE STATUS */}
           {!user.isPremium ? (
             <>
+              {/* PayPal Container (Secondary) */}
+              <div style={{ marginTop: '20px' }}>
+                  <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '10px' }}>
+                      {lang === 'es' ? 'Otras formas de pago:' : 'Alternative payment methods:'}
+                  </p>
+                  <div id="paypal-button-container" style={{ minHeight: '150px' }}>
+                      {!sdkReady && <p style={{color: '#888', fontSize: '0.8rem'}}>{t.loadingLabel}</p>}
+                  </div>
+              </div>
+
               <div style={{margin: '20px 0', textAlign: 'left'}}>
                   <input 
                       type="email" 

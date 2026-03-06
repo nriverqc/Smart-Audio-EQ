@@ -462,14 +462,33 @@ export default function App() {
                                 padding: '4px 8px',
                                 fontSize: '0.7rem',
                                 cursor: 'pointer',
-                                maxWidth: '120px',
+                                maxWidth: '130px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap'
                             }}
                             title={tabInfo?.title || `Tab ${tId}`}
                         >
-                            {tabInfo?.title || `Tab ${tId}`}
+                            {tabInfo?.favIconUrl ? (
+                                <img 
+                                    src={tabInfo.favIconUrl} 
+                                    alt="" 
+                                    style={{ width: '14px', height: '14px', borderRadius: '2px' }} 
+                                    onError={(e) => e.target.style.display = 'none'}
+                                />
+                            ) : (
+                                <span style={{ fontSize: '10px' }}>🌍</span>
+                            )}
+                            <span style={{ 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis', 
+                                whiteSpace: 'nowrap' 
+                            }}>
+                                {tabInfo?.title || `Tab ${tId}`}
+                            </span>
                         </button>
                     );
                 })}
@@ -494,9 +513,18 @@ export default function App() {
               <span style={{color: '#aaa', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase'}}>
                   {isActiveTabSelected ? 'Controlling current tab:' : 'Controlling selected tab:'}
               </span>
-              <span style={{color: '#fff', fontWeight: 'bold'}}>
-                  {activeTabList.find(t => t.id === targetTabId)?.title || tabTitle || 'Unknown Tab'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                {activeTabList.find(t => t.id === targetTabId)?.favIconUrl && (
+                  <img 
+                    src={activeTabList.find(t => t.id === targetTabId).favIconUrl} 
+                    alt="" 
+                    style={{ width: '16px', height: '16px', borderRadius: '2px' }} 
+                  />
+                )}
+                <span style={{color: '#fff', fontWeight: 'bold'}}>
+                    {activeTabList.find(t => t.id === targetTabId)?.title || tabTitle || 'Unknown Tab'}
+                </span>
+              </div>
           </div>
           {isPremium && <span style={{fontSize: '0.7rem', background: '#ffd700', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold'}}>PREMIUM</span>}
       </div>

@@ -221,7 +221,7 @@ def setup_paypal_products_and_plans():
     
     # 2. Plans
     yearly_price = "16.99"
-    monthly_price = "0.99"
+    monthly_price = "1.99"
     
     yearly_plan_key = f"yearly_plan_{yearly_price}"
     monthly_plan_key = f"monthly_plan_{monthly_price}"

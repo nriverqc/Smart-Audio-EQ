@@ -33,7 +33,7 @@ const AdBlockNotice = ({ lang }) => {
       // 2. Network Check (Relaxed)
       // Only check one critical URL and allow cors issues (opaque response is fine, failure is block)
       try {
-        const adUrl = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+        const adUrl = 'https://pl28656732.effectivegatecpm.com/98/23/7c/98237cf077449f197b6656eb7fccd1dc.js';
         await fetch(new Request(adUrl), { mode: 'no-cors' });
         // If fetch succeeds (even with opaque response), no block
         setAdBlocked(false);

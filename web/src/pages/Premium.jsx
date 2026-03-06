@@ -214,8 +214,12 @@ export default function Premium({ lang }) {
         alert("Error: Price ID is missing.");
         return;
     }
-    console.log("Opening Paddle Checkout for priceId:", priceId);
-    if (!user.email) {
+    
+    // Normalize Price ID
+    const cleanPriceId = String(priceId).trim();
+    console.log("Opening Paddle Checkout for priceId:", cleanPriceId);
+
+    if (!user || !user.email) {
         alert(lang === 'es' ? 'Por favor inicia sesión con Google primero para activar tu cuenta tras el pago.' : 'Please login with Google first to activate your account after payment.');
         loginWithGoogle();
         return;
@@ -223,7 +227,8 @@ export default function Premium({ lang }) {
 
     if (window.Paddle) {
         try {
-            window.Paddle.Checkout.open({
+            // Paddle Billing V2 Checkout Options
+            const checkoutOptions = {
                 settings: {
                     displayMode: "overlay",
                     theme: "dark",
@@ -231,24 +236,28 @@ export default function Premium({ lang }) {
                 },
                 items: [
                     {
-                        priceId: priceId,
+                        priceId: cleanPriceId,
                         quantity: 1
                     }
                 ],
                 customer: {
-                    email: user.email
+                    email: String(user.email)
                 },
                 customData: {
                     uid: String(user.uid || ""),
                     email: String(user.email || "")
                 }
-            });
+            };
+
+            console.log("Checkout Options Payload:", JSON.stringify(checkoutOptions, null, 2));
+            window.Paddle.Checkout.open(checkoutOptions);
+
         } catch (err) {
-            console.error("Paddle Checkout Error:", err);
-            alert("Error opening checkout: " + err.message);
+            console.error("Paddle SDK runtime error:", err);
+            alert("Error: " + err.message);
         }
     } else {
-        alert("Paddle SDK not loaded. Please refresh.");
+        alert("Paddle SDK not loaded. Please check your internet connection or refresh.");
     }
   };
 

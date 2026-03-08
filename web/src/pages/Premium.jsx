@@ -227,7 +227,10 @@ export default function Premium({ lang }) {
 
     if (window.Paddle) {
         try {
-            // Paddle Billing V2 Checkout Options
+            const timestamp = new Date().toISOString();
+            console.log(`[Paddle Debug] Attempting checkout at: ${timestamp}`);
+            
+            // Paddle Billing V2 Checkout Options - Absolute Minimal Payload
             const checkoutOptions = {
                 settings: {
                     displayMode: "overlay",
@@ -236,20 +239,21 @@ export default function Premium({ lang }) {
                 },
                 items: [
                     {
-                        priceId: cleanPriceId,
+                        priceId: cleanPriceId.replace(/\s/g, ''), // Remove ANY whitespace
                         quantity: 1
                     }
                 ],
                 customer: {
-                    email: String(user.email)
+                    email: String(user.email).trim()
                 },
                 customData: {
-                    uid: String(user.uid || ""),
-                    email: String(user.email || "")
+                    uid: String(user.uid || "").trim(),
+                    email: String(user.email || "").trim(),
+                    debug_timestamp: timestamp
                 }
             };
 
-            console.log("Checkout Options Payload:", JSON.stringify(checkoutOptions, null, 2));
+            console.log("Full Payload for Support:", JSON.stringify(checkoutOptions));
             window.Paddle.Checkout.open(checkoutOptions);
 
         } catch (err) {

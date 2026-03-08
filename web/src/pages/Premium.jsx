@@ -10,7 +10,7 @@ export default function Premium({ lang }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [appPassCode, setAppPassCode] = useState('');
   const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
-  const displayPrices = { monthly: '$1.99 USD', yearly: '$16.99 USD' };
+  const displayPrices = { monthly: '$0.85 USD', yearly: '$16.99 USD' };
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
 

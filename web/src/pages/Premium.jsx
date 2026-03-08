@@ -10,7 +10,7 @@ export default function Premium({ lang }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [appPassCode, setAppPassCode] = useState('');
   const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
-  const displayPrices = { monthly: '$1.99 USD', yearly: '$16.99 USD' };
+  const displayPrices = { monthly: '$2.99 USD', yearly: '$24.99 USD' };
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
 
@@ -62,7 +62,7 @@ export default function Premium({ lang }) {
       errorMessage: 'Hubo un error al procesar el pago.',
       planLabel: 'Selecciona tu plan:',
       optionMonthly: 'Mensual',
-      optionYearly: 'Anual (Ahorra más del 15%)',
+      optionYearly: 'Anual (Ahorra 30%)',
       appPassLabel: 'App Pass (Oficial):',
       appPassBtnAuto: 'Verificar automáticamente desde la extensión',
       appPassManualLabel: '¿Tienes un código promocional o manual?',
@@ -107,7 +107,7 @@ export default function Premium({ lang }) {
       errorMessage: 'There was an error processing the payment.',
       planLabel: 'Select your plan:',
       optionMonthly: 'Monthly',
-      optionYearly: 'Yearly (Save more than 15%)',
+      optionYearly: 'Yearly (Save 30%)',
       appPassLabel: 'App Pass (Official):',
       appPassBtnAuto: 'Verify automatically via extension',
       appPassManualLabel: 'Have a promo or manual code?',
@@ -152,7 +152,7 @@ export default function Premium({ lang }) {
       errorMessage: 'Houve um erro ao processar o pagamento.',
       planLabel: 'Selecione seu plano:',
       optionMonthly: 'Mensal',
-      optionYearly: 'Anual (Economize mais de 15%)',
+      optionYearly: 'Anual (Economize 30%)',
       appPassLabel: 'App Pass (Oficial):',
       appPassBtnAuto: 'Verificar automaticamente via extensão',
       appPassManualLabel: 'Tem um código promocional o manual?',
@@ -197,7 +197,7 @@ export default function Premium({ lang }) {
       errorMessage: 'Beim Verarbeiten der Zahlung ist ein Fehler aufgetreten.',
       planLabel: 'Wählen Sie Ihren Plan:',
       optionMonthly: 'Monatlich',
-      optionYearly: 'Jährlich (Sparen Sie mehr als 15%)',
+      optionYearly: 'Jährlich (Sparen Sie 30%)',
       appPassLabel: 'App Pass (Offiziell):',
       appPassBtnAuto: 'Automatisch über Erweiterung verifizieren',
       appPassManualLabel: 'Haben Sie einen Promo- oder manuellen Code?',
@@ -368,6 +368,16 @@ export default function Premium({ lang }) {
 
   return (
     <div style={{textAlign: 'center', padding: '20px 10px', maxWidth: '1200px', margin: '0 auto'}}>
+      <style>{`
+        @keyframes pulse-green {
+          0% { box-shadow: 0 0 0 0 rgba(0, 255, 133, 0.4); }
+          70% { box-shadow: 0 0 0 15px rgba(0, 255, 133, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(0, 255, 133, 0); }
+        }
+        .pulse-btn {
+          animation: pulse-green 2s infinite;
+        }
+      `}</style>
       {user.isPremium && (
           <div style={{marginBottom: '30px', padding: '15px', background: 'rgba(0, 210, 255, 0.1)', borderRadius: '10px', border: '1px solid #00d2ff', display: 'inline-block'}}>
               <h1 style={{color: '#ffd700', fontSize: '2rem', margin: 0}}>Premium 💎 {lang === 'es' ? 'Activado' : 'Active'}</h1>
@@ -447,35 +457,6 @@ export default function Premium({ lang }) {
             {t.premiumTitle}
           </h2>
 
-          <div style={{ marginBottom: '20px' }}>
-              <button 
-                onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2mvgj2pmjfh0pkjatsv8bf' : 'pri_01kk2mxf0828y5x7p8bky7ch47')}
-                style={{
-                    width: '100%',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: 'linear-gradient(90deg, #00d2ff, #00a8cc)',
-                    color: '#000',
-                    fontWeight: 'bold',
-                    fontSize: '1.1rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(0, 210, 255, 0.3)',
-                    transition: 'all 0.3s'
-                }}
-                onMouseOver={(e) => {
-                    e.target.style.transform = 'scale(1.02)';
-                    e.target.style.boxShadow = '0 6px 20px rgba(0, 210, 255, 0.5)';
-                }}
-                onMouseOut={(e) => {
-                    e.target.style.transform = 'scale(1)';
-                    e.target.style.boxShadow = '0 4px 15px rgba(0, 210, 255, 0.3)';
-                }}
-              >
-                {lang === 'es' ? 'Suscribirse ahora (Card / Apple Pay)' : 'Subscribe Now (Card / Apple Pay)'}
-              </button>
-          </div>
-          
           {/* Plan Selector */}
           <div style={{margin: '15px 0'}}>
               <div style={{display: 'flex', gap: '10px', background: '#222', padding: '5px', borderRadius: '8px'}}>
@@ -485,7 +466,7 @@ export default function Premium({ lang }) {
                           flex: 1,
                           padding: '10px',
                           borderRadius: '5px',
-                          background: planType === 'monthly' ? '#00d2ff' : 'transparent',
+                          background: planType === 'monthly' ? '#00ff85' : 'transparent',
                           color: planType === 'monthly' ? '#000' : '#888',
                           border: 'none',
                           cursor: 'pointer',
@@ -501,7 +482,7 @@ export default function Premium({ lang }) {
                           flex: 1,
                           padding: '10px',
                           borderRadius: '5px',
-                          background: planType === 'yearly' ? '#00d2ff' : 'transparent',
+                          background: planType === 'yearly' ? '#00ff85' : 'transparent',
                           color: planType === 'yearly' ? '#000' : '#888',
                           border: 'none',
                           cursor: 'pointer',
@@ -511,18 +492,17 @@ export default function Premium({ lang }) {
                       }}
                   >
                       {t.optionYearly}
-                      {planType !== 'yearly' && (
-                          <span style={{
-                              position: 'absolute',
-                              top: '-8px',
-                              right: '-5px',
-                              background: '#ff4444',
-                              color: '#fff',
-                              fontSize: '0.6rem',
-                              padding: '2px 5px',
-                              borderRadius: '10px',
-                          }}>30% OFF</span>
-                      )}
+                      <span style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          right: '-5px',
+                          background: '#ff4444',
+                          color: '#fff',
+                          fontSize: '0.6rem',
+                          padding: '2px 5px',
+                          borderRadius: '10px',
+                          zIndex: 10
+                      }}>30% OFF</span>
                   </button>
               </div>
           </div>
@@ -533,9 +513,41 @@ export default function Premium({ lang }) {
             ))}
           </ul>
           
-          <h3 style={{marginTop: '20px', fontSize: '1.5rem', color: '#fff'}}>
+          <h3 style={{marginTop: '20px', fontSize: '1.8rem', color: '#fff', textAlign: 'center'}}>
               {planType === 'yearly' ? t.premiumPriceINT_Yearly : t.premiumPriceINT_Monthly}
           </h3>
+
+          <div style={{ marginBottom: '20px', marginTop: '10px' }}>
+              <button 
+                className="pulse-btn"
+                onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2mvgj2pmjfh0pkjatsv8bf' : 'pri_01kk2mxf0828y5x7p8bky7ch47')}
+                style={{
+                    width: '100%',
+                    padding: '18px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'linear-gradient(90deg, #00ff85, #00c86a)',
+                    color: '#000',
+                    fontWeight: '900',
+                    fontSize: '1.3rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(0, 255, 133, 0.4)',
+                    transition: 'all 0.3s',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                }}
+                onMouseOver={(e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                    e.target.style.boxShadow = '0 6px 25px rgba(0, 255, 133, 0.6)';
+                }}
+                onMouseOut={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 4px 15px rgba(0, 255, 133, 0.4)';
+                }}
+              >
+                {lang === 'es' ? '🚀 ¡Obtener Premium Ahora!' : '🚀 Get Premium Now!'}
+              </button>
+          </div>
           
           {/* PAYMENT FORM OR ACTIVE STATUS */}
           {!user.isPremium ? (

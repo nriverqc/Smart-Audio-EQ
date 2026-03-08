@@ -502,13 +502,21 @@ def paddle_webhook():
             print(f"✅ Activating Premium for {email} (UID: {uid}) via Paddle")
             
             # Calculate expiration (monthly vs yearly)
-            # Default to 31 days if we can't determine
-            days_to_add = 31
+            days_to_add = 31 # Default monthly
+            
             items = data.get("items", [])
             for item in items:
-                price_id = item.get("price_id")
+                # Paddle v2 can have price_id in item or item['price']['id']
+                price_info = item.get("price", {})
+                price_id = item.get("price_id") or price_info.get("id")
+                
+                print(f"🔍 Webhook Item Price ID: {price_id}")
+                
                 if price_id == "pri_01kk2mxf0828y5x7p8bky7ch47": # Anual (Live)
                     days_to_add = 366
+                    break
+                elif price_id == "pri_01kk2mvgj2pmjfh0pkjatsv8bf": # Mensual (Live)
+                    days_to_add = 31
                     break
 
             expiration_date = datetime.now() + timedelta(days=days_to_add)

@@ -215,55 +215,38 @@ export default function Premium({ lang }) {
         return;
     }
     
-    // Normalize Price ID
-    const cleanPriceId = String(priceId).trim();
-    console.log("Opening Paddle Checkout for priceId:", cleanPriceId);
-
-    if (!user || !user.email) {
-        alert(lang === 'es' ? 'Por favor inicia sesión con Google primero para activar tu cuenta tras el pago.' : 'Please login with Google first to activate your account after payment.');
-        loginWithGoogle();
-        return;
-    }
+    const cleanPriceId = String(priceId).trim().replace(/\s/g, '');
+    const timestamp = new Date().toISOString();
+    
+    console.log(`[Paddle Debug] Attempting MINIMAL checkout at: ${timestamp}`);
+    console.log(`[Paddle Debug] Price ID: ${cleanPriceId}`);
 
     if (window.Paddle) {
         try {
-            const timestamp = new Date().toISOString();
-            console.log(`[Paddle Debug] Attempting checkout at: ${timestamp}`);
-            
-            // Paddle Billing V2 Checkout Options - Absolute Minimal Payload
-            const checkoutOptions = {
-                settings: {
-                    displayMode: "overlay",
-                    theme: "dark",
-                    locale: lang === 'es' ? 'es' : 'en'
-                },
-                items: [
-                    {
-                        priceId: cleanPriceId.replace(/\s/g, ''), // Remove ANY whitespace
-                        quantity: 1
-                    }
-                ],
-                customer: {
-                    email: String(user.email).trim()
-                },
+            // EXTREMELY MINIMAL PAYLOAD to debug 400/405 error
+            // If this fails, the issue is 100% in Paddle Dashboard (Domain/ID/Token)
+            window.Paddle.Environment.set('sandbox');
+            window.Paddle.Checkout.open({
+                items: [{ priceId: cleanPriceId, quantity: 1 }],
                 customData: {
                     uid: String(user.uid || "").trim(),
                     email: String(user.email || "").trim(),
-                    debug_timestamp: timestamp
+                    debug_ts: timestamp
                 }
-            };
-
-            console.log("Full Payload for Support:", JSON.stringify(checkoutOptions));
-            window.Paddle.Checkout.open(checkoutOptions);
-
+            });
         } catch (err) {
             console.error("Paddle SDK runtime error:", err);
             alert("Error: " + err.message);
         }
     } else {
-        alert("Paddle SDK not loaded. Please check your internet connection or refresh.");
+        alert("Paddle SDK not loaded. Please refresh.");
     }
   };
+
+  // Expose to window for console testing
+  useEffect(() => {
+    window.testPaddle = (id) => openPaddleCheckout(id || 'pri_01kk2ntgc0py83xjw60tnw7x2c');
+  }, [user]);
 
   const verifyAppPass = async () => {
     if (!user.uid) {

@@ -10,38 +10,9 @@ export default function Premium({ lang }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [appPassCode, setAppPassCode] = useState('');
   const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
-  const [displayPrices, setDisplayPrices] = useState({ monthly: '$1.99', yearly: '$16.99' });
+  const displayPrices = { monthly: '$1.99 USD', yearly: '$16.99 USD' };
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
-
-  useEffect(() => {
-    // Fetch dynamic prices from Paddle based on user's country
-    if (window.Paddle) {
-        window.Paddle.PricePreview({
-            items: [
-                { priceId: 'pri_01kk2mvgj2pmjfh0pkjatsv8bf', quantity: 1 },
-                { priceId: 'pri_01kk2mxf0828y5x7p8bky7ch47', quantity: 1 }
-            ]
-        })
-        .then((result) => {
-            console.log("[Paddle Debug] PricePreview Result:", result);
-            const currency = result.data.details.totals.currency_code || 'USD';
-            const prices = {};
-            result.data.details.lineItems.forEach(item => {
-                const formatted = item.formatted_totals.total;
-                if (item.price.id === 'pri_01kk2mvgj2pmjfh0pkjatsv8bf') {
-                    prices.monthly = `${formatted} ${currency}`; 
-                } else if (item.price.id === 'pri_01kk2mxf0828y5x7p8bky7ch47') {
-                    prices.yearly = `${formatted} ${currency}`;
-                }
-            });
-            if (prices.monthly && prices.yearly) {
-                setDisplayPrices(prices);
-            }
-        })
-        .catch((err) => console.error("Paddle PricePreview Error:", err));
-    }
-  }, [lang]);
 
   useEffect(() => {
     if (user.email) {

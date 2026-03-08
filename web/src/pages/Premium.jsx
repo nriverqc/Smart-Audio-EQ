@@ -67,8 +67,8 @@ export default function Premium({ lang }) {
       appPassManualLabel: '¿Tienes un código promocional o manual?',
       appPassPlaceholder: 'CÓDIGO-PROMO',
       appPassBtn: 'Activar código',
-      comingSoon: 'Suscripción Premium (Próximamente)',
-      comingSoonMsg: 'Los pagos directos vía Paddle se activarán pronto. Por ahora, puedes obtener Premium usando un App Pass o un código promocional.'
+      comingSoon: 'Suscripción Premium',
+      comingSoonMsg: 'Obtén acceso a todas las funciones Pro de forma inmediata.'
     },
     en: {
       title: 'Unlock the full power',
@@ -112,8 +112,8 @@ export default function Premium({ lang }) {
       appPassManualLabel: 'Have a promo or manual code?',
       appPassPlaceholder: 'PROMO-CODE',
       appPassBtn: 'Activate code',
-      comingSoon: 'Premium Subscription (Coming Soon)',
-      comingSoonMsg: 'Direct payments via Paddle will be activated soon. For now, you can get Premium using an App Pass or promotional code.'
+      comingSoon: 'Premium Subscription',
+      comingSoonMsg: 'Get access to all Pro features immediately.'
     },
     pt: {
       title: 'Desbloqueie todo o poder',
@@ -157,8 +157,8 @@ export default function Premium({ lang }) {
       appPassManualLabel: 'Tem um código promocional o manual?',
       appPassPlaceholder: 'CÓDIGO-PROMO',
       appPassBtn: 'Ativar código',
-      comingSoon: 'Assinatura Premium (Em breve)',
-      comingSoonMsg: 'Pagamentos diretos via Paddle serão ativados em breve. Por enquanto, você pode obter o Premium usando um App Pass ou código promocional.'
+      comingSoon: 'Assinatura Premium',
+      comingSoonMsg: 'Obtenha acesso a todos os recursos Pro imediatamente.'
     },
     de: {
       title: 'Schalte die volle Leistung frei',
@@ -202,8 +202,8 @@ export default function Premium({ lang }) {
       appPassManualLabel: 'Haben Sie einen Promo- oder manuellen Code?',
       appPassPlaceholder: 'PROMO-CODE',
       appPassBtn: 'Code aktivieren',
-      comingSoon: 'Premium-Abonnement (Demnächst)',
-      comingSoonMsg: 'Direktzahlungen über Paddle werden in Kürze aktiviert. Derzeit können Sie Premium über einen App Pass oder Aktionscode erhalten.'
+      comingSoon: 'Premium-Abonnement',
+      comingSoonMsg: 'Erhalten Sie sofortigen Zugriff auf alle Pro-Funktionen.'
     },
   };
 
@@ -443,35 +443,28 @@ export default function Premium({ lang }) {
           </h2>
 
           <div style={{ marginBottom: '20px' }}>
-              <div style={{
-                  background: 'rgba(255, 215, 0, 0.1)',
-                  border: '1px dashed #ffd700',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  marginBottom: '15px',
-                  textAlign: 'center'
-              }}>
-                  <span style={{color: '#ffd700', fontWeight: 'bold', fontSize: '0.9rem'}}>
-                      🚀 {t.comingSoon}
-                  </span>
-                  <p style={{fontSize: '0.75rem', color: '#ccc', margin: '5px 0 0 0'}}>
-                      {t.comingSoonMsg}
-                  </p>
-              </div>
-
               <button 
-                disabled={true}
+                onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2ntgc0py83xjw60tnw7x2c' : 'pri_01kk2nvf5pf316avk8khkzqrm3')}
                 style={{
                     width: '100%',
                     padding: '15px',
                     borderRadius: '8px',
                     border: 'none',
-                    background: '#333',
-                    color: '#666',
+                    background: 'linear-gradient(90deg, #00d2ff, #00a8cc)',
+                    color: '#000',
                     fontWeight: 'bold',
                     fontSize: '1.1rem',
-                    cursor: 'not-allowed',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(0, 210, 255, 0.3)',
                     transition: 'all 0.3s'
+                }}
+                onMouseOver={(e) => {
+                    e.target.style.transform = 'scale(1.02)';
+                    e.target.style.boxShadow = '0 6px 20px rgba(0, 210, 255, 0.5)';
+                }}
+                onMouseOut={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 4px 15px rgba(0, 210, 255, 0.3)';
                 }}
               >
                 {lang === 'es' ? 'Suscribirse ahora (Card / Apple Pay)' : 'Subscribe Now (Card / Apple Pay)'}

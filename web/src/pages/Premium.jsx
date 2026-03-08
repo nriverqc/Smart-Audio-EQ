@@ -27,9 +27,9 @@ export default function Premium({ lang }) {
             const prices = {};
             result.data.details.lineItems.forEach(item => {
                 if (item.price.id === 'pri_01kk2mvgj2pmjfh0pkjatsv8bf') {
-                    prices.monthly = item.totals.total; // e.g., "$1.99" or "1.99€"
+                    prices.monthly = item.formatted_totals.total; // e.g., "$1.99" or "1.99€"
                 } else if (item.price.id === 'pri_01kk2mxf0828y5x7p8bky7ch47') {
-                    prices.yearly = item.totals.total;
+                    prices.yearly = item.formatted_totals.total;
                 }
             });
             if (prices.monthly && prices.yearly) {
@@ -59,7 +59,7 @@ export default function Premium({ lang }) {
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
       premiumPriceINT_Monthly: displayPrices.monthly + ' / mes',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' USD / año (30% DCTO)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / año (30% DCTO)',
       freeItems: [
         '✅ Ecualizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -104,7 +104,7 @@ export default function Premium({ lang }) {
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
       premiumPriceINT_Monthly: displayPrices.monthly + ' / mo',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' USD / year (30% OFF)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / year (30% OFF)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basic presets (Flat, Rock, Pop, etc.)',
@@ -149,7 +149,7 @@ export default function Premium({ lang }) {
       freePrice: '$0 / para sempre',
       premiumTitle: 'Premium 💎',
       premiumPriceINT_Monthly: displayPrices.monthly + ' / mês',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' USD / ano (30% OFF)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / ano (30% OFF)',
       freeItems: [
         '✅ Equalizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -194,7 +194,7 @@ export default function Premium({ lang }) {
       freePrice: '$0 / für immer',
       premiumTitle: 'Premium 💎',
       premiumPriceINT_Monthly: displayPrices.monthly + ' / Monat',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' USD / Jahr (30% RABATT)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / Jahr (30% RABATT)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basis-Presets (Flat, Rock, Pop, etc.)',

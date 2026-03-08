@@ -324,7 +324,7 @@ def verify_paypal_order(order_id):
 
 @app.route("/")
 def home():
-    return "Equalizer – Web Audio API is running with SQLite (v3.0 - PayPal Only + App Pass)"
+    return "Equalizer – Web Audio API is running with SQLite (v3.1 - creitus1 active)"
 
 @app.route("/get-plans", methods=["GET"])
 def get_plans():

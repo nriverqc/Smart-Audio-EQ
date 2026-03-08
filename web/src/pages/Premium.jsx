@@ -10,8 +10,35 @@ export default function Premium({ lang }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [appPassCode, setAppPassCode] = useState('');
   const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
+  const [displayPrices, setDisplayPrices] = useState({ monthly: '$1.99', yearly: '$16.99' });
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
+
+  useEffect(() => {
+    // Fetch dynamic prices from Paddle based on user's country
+    if (window.Paddle) {
+        window.Paddle.PricePreview({
+            items: [
+                { priceId: 'pri_01kk2mvgj2pmjfh0pkjatsv8bf', quantity: 1 },
+                { priceId: 'pri_01kk2mxf0828y5x7p8bky7ch47', quantity: 1 }
+            ]
+        })
+        .then((result) => {
+            const prices = {};
+            result.data.details.lineItems.forEach(item => {
+                if (item.price.id === 'pri_01kk2mvgj2pmjfh0pkjatsv8bf') {
+                    prices.monthly = item.totals.total; // e.g., "$1.99" or "1.99€"
+                } else if (item.price.id === 'pri_01kk2mxf0828y5x7p8bky7ch47') {
+                    prices.yearly = item.totals.total;
+                }
+            });
+            if (prices.monthly && prices.yearly) {
+                setDisplayPrices(prices);
+            }
+        })
+        .catch((err) => console.error("Paddle PricePreview Error:", err));
+    }
+  }, [lang]);
 
   useEffect(() => {
     if (user.email) {
@@ -31,8 +58,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Gratis',
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$1.99 / mes',
-      premiumPriceINT_Yearly: '$16.99 USD / año (30% DCTO)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / mes',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' USD / año (30% DCTO)',
       freeItems: [
         '✅ Ecualizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -76,8 +103,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Free',
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$1.99 / mo',
-      premiumPriceINT_Yearly: '$16.99 USD / year (30% OFF)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / mo',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' USD / year (30% OFF)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basic presets (Flat, Rock, Pop, etc.)',
@@ -121,8 +148,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Grátis',
       freePrice: '$0 / para sempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$1.99 / mês',
-      premiumPriceINT_Yearly: '$16.99 USD / ano (30% OFF)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / mês',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' USD / ano (30% OFF)',
       freeItems: [
         '✅ Equalizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -166,8 +193,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Kostenlos',
       freePrice: '$0 / für immer',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: '$1.99 / Monat',
-      premiumPriceINT_Yearly: '$16.99 USD / Jahr (30% RABATT)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / Monat',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' USD / Jahr (30% RABATT)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basis-Presets (Flat, Rock, Pop, etc.)',
@@ -228,7 +255,7 @@ export default function Premium({ lang }) {
 
     if (window.Paddle) {
         try {
-            window.Paddle.Environment.set('sandbox');
+            // window.Paddle.Environment.set('production'); // Default is production
             window.Paddle.Checkout.open({
                 settings: {
                     displayMode: "overlay",
@@ -448,7 +475,7 @@ export default function Premium({ lang }) {
 
           <div style={{ marginBottom: '20px' }}>
               <button 
-                onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2ntgc0py83xjw60tnw7x2c' : 'pri_01kk2nvf5pf316avk8khkzqrm3')}
+                onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2mvgj2pmjfh0pkjatsv8bf' : 'pri_01kk2mxf0828y5x7p8bky7ch47')}
                 style={{
                     width: '100%',
                     padding: '15px',

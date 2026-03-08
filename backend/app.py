@@ -507,7 +507,7 @@ def paddle_webhook():
             items = data.get("items", [])
             for item in items:
                 price_id = item.get("price_id")
-                if price_id == "pri_01kk2nvf5pf316avk8khkzqrm3": # Anual
+                if price_id == "pri_01kk2mxf0828y5x7p8bky7ch47": # Anual (Live)
                     days_to_add = 366
                     break
 

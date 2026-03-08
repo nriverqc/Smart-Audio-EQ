@@ -24,12 +24,15 @@ export default function Premium({ lang }) {
             ]
         })
         .then((result) => {
+            console.log("[Paddle Debug] PricePreview Result:", result);
+            const currency = result.data.details.totals.currency_code || 'USD';
             const prices = {};
             result.data.details.lineItems.forEach(item => {
+                const formatted = item.formatted_totals.total;
                 if (item.price.id === 'pri_01kk2mvgj2pmjfh0pkjatsv8bf') {
-                    prices.monthly = item.formatted_totals.total; // e.g., "$1.99" or "1.99€"
+                    prices.monthly = `${formatted} ${currency}`; 
                 } else if (item.price.id === 'pri_01kk2mxf0828y5x7p8bky7ch47') {
-                    prices.yearly = item.formatted_totals.total;
+                    prices.yearly = `${formatted} ${currency}`;
                 }
             });
             if (prices.monthly && prices.yearly) {

@@ -294,7 +294,7 @@ function AppContent() {
                        </button>
                    </div>
                ) : (
-                 <button onClick={loginWithGoogle} className="btn-premium" style={{padding: '5px 10px', fontSize: '0.9rem'}}>
+                 <button onClick={loginWithGoogle} className="btn-primary" style={{padding: '8px 15px', fontSize: '0.85rem'}}>
                     {currentLang.login}
                  </button>
                )}
@@ -365,12 +365,12 @@ function AppContent() {
                 )}
               </div>
 
-              <div>
-                <Link to="/" style={{ marginRight: '20px', color: '#fff', textDecoration: 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <Link to="/" style={{ color: '#ccc', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }} onMouseOver={(e) => e.target.style.color = '#fff'} onMouseOut={(e) => e.target.style.color = '#ccc'}>
                   {currentLang.home}
                 </Link>
                 {!user.isPremium && (
-                    <Link to="/premium" className="btn-premium">
+                    <Link to="/premium" className="btn-premium" style={{ padding: '8px 15px', fontSize: '0.85rem' }}>
                     {currentLang.goPremium}
                     </Link>
                 )}

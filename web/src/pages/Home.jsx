@@ -173,11 +173,10 @@ export default function Home({ lang }) {
             href="https://chromewebstore.google.com/detail/aohaefkkofgkbneodjflnacpipdnfeng?utm_source=item-share-cb"
             target="_blank"
             rel="noopener noreferrer"
-            style={{padding: '10px 20px', fontSize: '0.85rem'}}
           >
             {t.addButton}
           </a>
-          <Link to="/premium" className="btn-premium" style={{padding: '10px 20px', fontSize: '0.85rem'}}>{t.premiumButton}</Link>
+          <Link to="/premium" className="btn-premium">{t.premiumButton}</Link>
         </div>
       </div>
 

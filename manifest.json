@@ -3,7 +3,7 @@
   "default_locale": "en",
   "name": "Equalizer - Web Audio EQ for YouTube, Spotify & Browser",
   "short_name": "Web Audio EQ",
-  "version": "1.0.7",
+  "version": "1.0.6",
   "description": "__MSG_extDescription__",
   "icons": {
     "128": "IconoEcualizador.png"

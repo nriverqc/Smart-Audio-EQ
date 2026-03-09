@@ -370,81 +370,125 @@ export default function App() {
 
   return (
     <div>
-      <div className="controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div 
-            onClick={openMainPage} 
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-            title={t("visitWebsite")}
-        >
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>{t("extName")}</h3>
-            <span className="beta-badge" style={{fontSize: '0.6em', marginLeft: '8px', verticalAlign: 'middle'}}>BETA</span>
-        </div>
+      {/* HEADER: Title, Premium Button, Visit Web */}
+      <div className="controls" style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'stretch' }}>
         
-        {/* Language Switcher in Extension - Dropdown with Flags */}
-        <div 
-            className="lang-switcher-container"
-            style={{ position: 'relative' }}
-        >
-            <button
-                onClick={() => setShowLangMenu(!showLangMenu)}
+        {/* Top Row: Title + Visit Web Icon + Lang */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>{t("extName")}</h3>
+                <span className="beta-badge" style={{fontSize: '0.6em', verticalAlign: 'middle'}}>BETA</span>
+                {isPremium && <span className="premium-badge">{t("premiumBadge")}</span>}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                    onClick={openMainPage} 
+                    style={{ 
+                        background: 'transparent', 
+                        border: '1px solid #444', 
+                        color: '#00d2ff', 
+                        borderRadius: '4px', 
+                        padding: '4px 8px', 
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold'
+                    }}
+                    title={t("visitWebsite")}
+                >
+                    🌐
+                </button>
+
+                {/* Language Switcher */}
+                <div className="lang-switcher-container" style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => setShowLangMenu(!showLangMenu)}
+                        style={{
+                            background: 'rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            color: '#fff',
+                            padding: '4px 6px',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem'
+                        }}
+                    >
+                        <img src={langLabels[lang].flag} alt={lang} style={{ width: '14px', height: 'auto', borderRadius: '1px' }} />
+                        <span style={{ fontSize: '0.6rem' }}>▼</span>
+                    </button>
+                    {/* ... (Lang Menu Content - kept same) ... */}
+                    {showLangMenu && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: 0,
+                            background: '#1a1a1a',
+                            border: '1px solid #333',
+                            borderRadius: '4px',
+                            marginTop: '2px',
+                            overflow: 'hidden',
+                            zIndex: 1000,
+                            minWidth: '100px',
+                            boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+                        }}>
+                            {Object.keys(langLabels).map((l) => (
+                                <button
+                                    key={l}
+                                    onClick={() => { setLang(l); setShowLangMenu(false); }}
+                                    style={{
+                                        width: '100%',
+                                        background: lang === l ? 'rgba(0, 210, 255, 0.1)' : 'transparent',
+                                        border: 'none',
+                                        color: lang === l ? '#00d2ff' : '#fff',
+                                        padding: '6px 10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        cursor: 'pointer',
+                                        fontSize: '0.75rem',
+                                        textAlign: 'left'
+                                    }}
+                                >
+                                    <img src={langLabels[l].flag} alt={l} style={{ width: '14px', height: 'auto', borderRadius: '1px' }} />
+                                    {langLabels[l].label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+
+        {/* PROMO BUTTON - MOVED TO TOP FOR FREE USERS */}
+        {!isPremium && (
+            <button 
+                onClick={handleGoPremium} 
+                className="vibrate-btn"
                 style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
+                    background: 'linear-gradient(90deg, #ffd700, #ffaa00)',
+                    border: 'none',
+                    color: '#000',
+                    cursor: 'pointer',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    fontWeight: '900',
+                    width: '100%',
+                    fontSize: '0.9rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem'
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 2px 10px rgba(255, 215, 0, 0.2)'
                 }}
             >
-                <img src={langLabels[lang].flag} alt={lang} style={{ width: '16px', height: 'auto', borderRadius: '1px' }} />
-                <span style={{ fontSize: '0.6rem' }}>▼</span>
+                <span>💎</span> {t("getPremium")} <span>💎</span>
             </button>
-
-            {showLangMenu && (
-                <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    background: '#1a1a1a',
-                    border: '1px solid #333',
-                    borderRadius: '4px',
-                    marginTop: '2px',
-                    overflow: 'hidden',
-                    zIndex: 1000,
-                    minWidth: '100px',
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
-                }}>
-                    {Object.keys(langLabels).map((l) => (
-                        <button
-                            key={l}
-                            onClick={() => { setLang(l); setShowLangMenu(false); }}
-                            style={{
-                                width: '100%',
-                                background: lang === l ? 'rgba(0, 210, 255, 0.1)' : 'transparent',
-                                border: 'none',
-                                color: lang === l ? '#00d2ff' : '#fff',
-                                padding: '6px 10px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                cursor: 'pointer',
-                                fontSize: '0.75rem',
-                                textAlign: 'left'
-                            }}
-                        >
-                            <img src={langLabels[l].flag} alt={l} style={{ width: '14px', height: 'auto', borderRadius: '1px' }} />
-                            {langLabels[l].label}
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-
-        {isPremium && <span className="premium-badge">{t("premiumBadge")}</span>}
+        )}
       </div>
 
       {isPremium && Object.keys(allActiveTabs).length > 0 && (
@@ -596,34 +640,7 @@ export default function App() {
           )}
       </div>
 
-      {!isPremium && (
-        <div style={{ padding: '0 10px', marginBottom: '15px' }}>
-            <button 
-                onClick={handleGoPremium} 
-                className="vibrate-btn"
-                style={{
-                    background: 'linear-gradient(45deg, #ffd700, #ffa500)',
-                    border: 'none',
-                    color: '#000',
-                    cursor: 'pointer',
-                    padding: '10px 15px',
-                    borderRadius: '8px',
-                    fontWeight: '900',
-                    width: '100%',
-                    fontSize: '1rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px'
-                }}
-            >
-                <span>💎</span> {t("getPremium")} <span>💎</span>
-            </button>
-        </div>
-      )}
-
+      {/* USER INFO / SYNC SECTION */}
       {userEmail ? (
         <div style={{fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '10px', background: '#222', padding: '5px', borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'}}>
             <span>👤 <span style={{color: '#fff'}}>{userEmail}</span></span>
@@ -678,6 +695,7 @@ export default function App() {
          </div>
       )}
 
+      {/* POWER BUTTON */}
       <div className="controls">
         <span>{t("power")}</span>
         <button 
@@ -688,6 +706,7 @@ export default function App() {
         </button>
       </div>
 
+      {/* PRESET SELECTOR */}
       <div className="controls" style={{justifyContent: 'center', background: 'transparent'}}>
           <select 
             value={currentPreset} 

@@ -695,7 +695,12 @@ export default function Premium({ lang }) {
 
           {/* Adsterra Native Banner - HIDDEN FOR PREMIUM USERS */}
           {!user.isPremium && (
+             // Script injection logic will handle this
             <div id="container-98237cf077449f197b6656eb7fccd1dc" style={{marginTop: '20px', minHeight: '250px'}}></div>
+          )}
+
+          {!user.isPremium && (
+            <script async="async" data-cfasync="false" src="//pl28656732.effectivegatecpm.com/98/23/7c/98237cf077449f197b6656eb7fccd1dc.js"></script>
           )}
         </div>
       </div>

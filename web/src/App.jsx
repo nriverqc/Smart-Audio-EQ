@@ -404,7 +404,8 @@ function AppContent() {
             <Route path="/contact" element={<Contact lang={lang} />} />
           </Routes>
 
-          <AdBlockNotice lang={lang} />
+          {/* AdBlock Notice - Only if NOT Premium */}
+          {!user.isPremium && <AdBlockNotice lang={lang} />}
 
           <footer>
             <p>© 2026 Equalizer – Web Audio. {currentLang.footer} <span style={{opacity: 0.3, fontSize: '0.8em'}}>v1.0.6 (20k)</span></p>

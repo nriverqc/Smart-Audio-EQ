@@ -382,21 +382,35 @@ export default function App() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Redesigned Visit Web Button */}
                 <button 
                     onClick={openMainPage} 
                     style={{ 
-                        background: 'transparent', 
-                        border: '1px solid #444', 
+                        background: '#333', 
+                        border: '1px solid #555', 
                         color: '#00d2ff', 
-                        borderRadius: '4px', 
-                        padding: '4px 8px', 
+                        borderRadius: '6px', 
+                        padding: '6px 10px', 
                         cursor: 'pointer',
                         fontSize: '0.75rem',
-                        fontWeight: 'bold'
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                        e.currentTarget.style.borderColor = '#00d2ff';
+                        e.currentTarget.style.background = '#3a3a3a';
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.style.borderColor = '#555';
+                        e.currentTarget.style.background = '#333';
                     }}
                     title={t("visitWebsite")}
                 >
-                    🌐
+                    <span>🌐</span>
+                    <span>{t("visitWebsite")}</span>
                 </button>
 
                 {/* Language Switcher */}
@@ -617,25 +631,7 @@ export default function App() {
                   </div>
                   
                   {/* OPTION 2: Link to web panel when active */}
-                  <div 
-                    onClick={openMainPage}
-                    style={{
-                        marginTop: '8px',
-                        paddingTop: '8px',
-                        borderTop: '1px solid rgba(255,255,255,0.1)',
-                        color: '#00d2ff',
-                        fontSize: '0.75rem',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        fontWeight: '500',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '5px'
-                    }}
-                  >
-                    {t("viewAdvancedWeb")}
-                  </div>
+                  {/* REMOVED: "View advanced panel on web" link as requested */}
               </div>
           )}
       </div>

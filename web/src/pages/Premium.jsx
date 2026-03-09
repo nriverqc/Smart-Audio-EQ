@@ -44,15 +44,14 @@ export default function Premium({ lang }) {
       ],
       premiumItems: [
         '✨ Todo lo del plan Gratis',
-        '✨ Ecualizador de 15 bandas',
+        '✨ Ecualizador Profesional de 15 bandas',
         '✨ Presets Personalizados Ilimitados',
         '✨ Presets Pro (Bass Extreme, Cinema 3D, Gaming)',
-        '✨ Sincronización en la Nube (Tus presets en todos lados)',
+        '✨ Control independiente por pestaña',
         '✨ Soporte Técnico Prioritario',
         '✨ Acceso anticipado a nuevas funciones',
         '✨ Sin anuncios / Experiencia limpia',
-        '✨ Badge Premium exclusivo',
-        '✨ Cualquier integración a la extensión'
+        '✨ Badge Premium exclusivo en la extensión'
       ],
       processingLabel: 'Procesando...',
       loadingLabel: 'Cargando formulario de pago...',
@@ -89,15 +88,14 @@ export default function Premium({ lang }) {
       ],
       premiumItems: [
         '✨ Everything in Free plan',
-        '✨ 15-Band Equalizer',
+        '✨ Professional 15-Band Equalizer',
         '✨ Unlimited Custom Presets',
         '✨ Pro Presets (Bass Extreme, Cinema 3D, Gaming)',
-        '✨ Cloud Sync (Your presets everywhere)',
+        '✨ Independent control per tab',
         '✨ Priority Support',
         '✨ Early access to new features',
         '✨ Ad-free / Clean experience',
-        '✨ Exclusive Premium Badge',
-        '✨ Any extension integration'
+        '✨ Exclusive Premium Badge in extension'
       ],
       processingLabel: 'Processing...',
       loadingLabel: 'Loading payment form...',
@@ -134,15 +132,14 @@ export default function Premium({ lang }) {
       ],
       premiumItems: [
         '✨ Tudo no plano Grátis',
-        '✨ Equalizador de 15 bandas',
+        '✨ Equalizador Profissional de 15 bandas',
         '✨ Presets Personalizados Ilimitados',
         '✨ Presets Pro (Bass Extreme, Cinema 3D, Gaming)',
-        '✨ Sincronização na Nuvem (Seus presets em todos os lugares)',
-        '✨ Suporte Técnico Prioritario',
+        '✨ Controle independente por aba',
+        '✨ Suporte Técnico Prioritário',
         '✨ Acesso antecipado a nuevas funções',
         '✨ Sem anúncios / Experiência limpa',
-        '✨ Badge Premium exclusivo',
-        '✨ Qualquer integração à extensão'
+        '✨ Badge Premium exclusivo na extensão'
       ],
       processingLabel: 'Processando...',
       loadingLabel: 'Carregando formulário de pagamento...',
@@ -179,15 +176,14 @@ export default function Premium({ lang }) {
       ],
       premiumItems: [
         '✨ Alles aus dem kostenlosen Plan',
-        '✨ 15-Band Equalizer',
+        '✨ Professioneller 15-Band Equalizer',
         '✨ Unbegrenzte benutzerdefinierte Presets',
         '✨ Pro-Presets (Bass Extreme, Cinema 3D, Gaming)',
-        '✨ Cloud-Synchronisierung (Ihre Presets überall)',
+        '✨ Unabhängige Steuerung pro Tab',
         '✨ Prioritärer technischer Support',
         '✨ Vorabzugang zu neuen Funktionen',
         '✨ Werbefrei / Sauberes Erlebnis',
-        '✨ Exklusives Premium-Badge',
-        '✨ Jede Erweiterungsintegration'
+        '✨ Exklusives Premium-Badge in der Erweiterung'
       ],
       processingLabel: 'Wird verarbeitet...',
       loadingLabel: 'Zahlungsformular wird geladen...',

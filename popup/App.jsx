@@ -444,6 +444,9 @@ export default function App() {
                     const tabInfo = activeTabList.find(t => t.id === tabId);
                     const isActive = targetTabId === tabId;
                     
+                    // Skip if tab info is not found (might be closed or loading)
+                    if (!tabInfo) return null;
+
                     return (
                         <button 
                             key={tId}
@@ -470,9 +473,9 @@ export default function App() {
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap'
                             }}
-                            title={tabInfo?.title || `Tab ${tId}`}
+                            title={tabInfo.title || `Tab ${tId}`}
                         >
-                            {tabInfo?.favIconUrl ? (
+                            {tabInfo.favIconUrl ? (
                                 <img 
                                     src={tabInfo.favIconUrl} 
                                     alt="" 
@@ -487,7 +490,7 @@ export default function App() {
                                 textOverflow: 'ellipsis', 
                                 whiteSpace: 'nowrap' 
                             }}>
-                                {tabInfo?.title || `Tab ${tId}`}
+                                {tabInfo.title || `Tab ${tId}`}
                             </span>
                         </button>
                     );
@@ -498,7 +501,7 @@ export default function App() {
 
       <div style={{
           background: 'rgba(0, 210, 255, 0.05)',
-          border: isActiveTabSelected ? '1px solid #00d2ff' : '1px solid #444',
+          border: enabled ? (isActiveTabSelected ? '1px solid #00d2ff' : '1px solid #444') : '1px dashed #444',
           borderRadius: '8px',
           padding: '8px 12px',
           margin: '10px 0',
@@ -506,27 +509,39 @@ export default function App() {
           fontSize: '0.85rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: '8px',
+          minHeight: '45px'
       }}>
-          <span style={{color: '#00d2ff'}}>🎯</span>
-          <div style={{flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-              <span style={{color: '#aaa', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase'}}>
-                  {isActiveTabSelected ? 'Controlling current tab:' : 'Controlling selected tab:'}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                {activeTabList.find(t => t.id === targetTabId)?.favIconUrl && (
-                  <img 
-                    src={activeTabList.find(t => t.id === targetTabId).favIconUrl} 
-                    alt="" 
-                    style={{ width: '16px', height: '16px', borderRadius: '2px' }} 
-                  />
-                )}
-                <span style={{color: '#fff', fontWeight: 'bold'}}>
-                    {activeTabList.find(t => t.id === targetTabId)?.title || tabTitle || 'Unknown Tab'}
-                </span>
+          {!enabled ? (
+              <div style={{color: '#888', fontStyle: 'italic', textAlign: 'center', width: '100%'}}>
+                  {lang === 'es' ? '⚡ Enciende el ecualizador para esta pestaña' : '⚡ Turn on the equalizer for this tab'}
               </div>
-          </div>
-          {isPremium && <span style={{fontSize: '0.7rem', background: '#ffd700', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold'}}>PREMIUM</span>}
+          ) : (
+              <>
+                  <span style={{color: '#00d2ff'}}>🎯</span>
+                  <div style={{flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                      <span style={{color: '#aaa', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase'}}>
+                          {isActiveTabSelected ? 'Controlling current tab:' : 'Controlling selected tab:'}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                        {activeTabList.find(t => t.id === targetTabId)?.favIconUrl ? (
+                          <img 
+                            src={activeTabList.find(t => t.id === targetTabId).favIconUrl} 
+                            alt="" 
+                            style={{ width: '16px', height: '16px', borderRadius: '2px' }} 
+                            onError={(e) => e.target.src = 'https://www.google.com/s2/favicons?domain=google.com&sz=32'}
+                          />
+                        ) : (
+                          <span style={{fontSize: '12px'}}>🌍</span>
+                        )}
+                        <span style={{color: '#fff', fontWeight: 'bold'}}>
+                            {activeTabList.find(t => t.id === targetTabId)?.title || tabTitle || 'Active Website'}
+                        </span>
+                      </div>
+                  </div>
+                  {isPremium && <span style={{fontSize: '0.7rem', background: '#ffd700', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold'}}>PRO</span>}
+              </>
+          )}
       </div>
 
       {userEmail ? (

@@ -102,7 +102,7 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
 
   return (
     <div className="eq-section">
-      <div className="eq-title">⚙️ Ecualizador (6 Bandas)</div>
+      <div className="eq-title">⚙️ {isPremium ? 'Ecualizador Pro (15 Bandas)' : 'Ecualizador (6 Bandas)'}</div>
       
       {/* Master Volume */}
       <div className="master-volume">

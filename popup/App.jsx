@@ -706,6 +706,7 @@ export default function App() {
         <SpectrumAnalyzer targetTabId={targetTabId} />
       )}
 
+      {/* FOOTER / PREMIUM PROMOS - ONLY FOR FREE USERS */}
       {!isPremium && (
         <div style={{marginTop: '1rem', textAlign: 'center', borderTop: '1px solid #333', paddingTop: '15px'}}>
           <div style={{marginTop: '10px', background: '#222', padding: '10px', borderRadius: '6px', border: '1px solid #444'}}>

@@ -48,9 +48,9 @@ export default function Premium({ lang }) {
         '✨ Presets Personalizados Ilimitados',
         '✨ Presets Pro (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Control independiente por pestaña',
+        '✨ Sin anuncios molestos (Ad-Free) 🚫',
         '✨ Soporte Técnico Prioritario',
         '✨ Acceso anticipado a nuevas funciones',
-        '✨ Sin anuncios / Experiencia limpia',
         '✨ Badge Premium exclusivo en la extensión'
       ],
       processingLabel: 'Procesando...',
@@ -92,9 +92,9 @@ export default function Premium({ lang }) {
         '✨ Unlimited Custom Presets',
         '✨ Pro Presets (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Independent control per tab',
+        '✨ No annoying ads (Ad-Free) 🚫',
         '✨ Priority Support',
         '✨ Early access to new features',
-        '✨ Ad-free / Clean experience',
         '✨ Exclusive Premium Badge in extension'
       ],
       processingLabel: 'Processing...',
@@ -136,9 +136,9 @@ export default function Premium({ lang }) {
         '✨ Presets Personalizados Ilimitados',
         '✨ Presets Pro (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Controle independente por aba',
+        '✨ Sem anúncios irritantes (Ad-Free) 🚫',
         '✨ Suporte Técnico Prioritário',
         '✨ Acesso antecipado a nuevas funções',
-        '✨ Sem anúncios / Experiência limpa',
         '✨ Badge Premium exclusivo na extensão'
       ],
       processingLabel: 'Processando...',
@@ -180,9 +180,9 @@ export default function Premium({ lang }) {
         '✨ Unbegrenzte benutzerdefinierte Presets',
         '✨ Pro-Presets (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Unabhängige Steuerung pro Tab',
+        '✨ Keine nervige Werbung (Ad-Free) 🚫',
         '✨ Prioritärer technischer Support',
         '✨ Vorabzugang zu neuen Funktionen',
-        '✨ Werbefrei / Sauberes Erlebnis',
         '✨ Exklusives Premium-Badge in der Erweiterung'
       ],
       processingLabel: 'Wird verarbeitet...',
@@ -453,55 +453,57 @@ export default function Premium({ lang }) {
             {t.premiumTitle}
           </h2>
 
-          {/* Plan Selector */}
-          <div style={{margin: '15px 0'}}>
-              <div style={{display: 'flex', gap: '10px', background: '#222', padding: '5px', borderRadius: '8px'}}>
-                  <button 
-                      onClick={() => setPlanType('monthly')}
-                      style={{
-                          flex: 1,
-                          padding: '10px',
-                          borderRadius: '5px',
-                          background: planType === 'monthly' ? '#00ff85' : 'transparent',
-                          color: planType === 'monthly' ? '#000' : '#888',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontWeight: 'bold',
-                          transition: 'all 0.2s'
-                      }}
-                  >
-                      {t.optionMonthly}
-                  </button>
-                  <button 
-                      onClick={() => setPlanType('yearly')}
-                      style={{
-                          flex: 1,
-                          padding: '10px',
-                          borderRadius: '5px',
-                          background: planType === 'yearly' ? '#00ff85' : 'transparent',
-                          color: planType === 'yearly' ? '#000' : '#888',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontWeight: 'bold',
-                          position: 'relative',
-                          transition: 'all 0.2s'
-                      }}
-                  >
-                      {t.optionYearly}
-                      <span style={{
-                          position: 'absolute',
-                          top: '-8px',
-                          right: '-5px',
-                          background: '#ff4444',
-                          color: '#fff',
-                          fontSize: '0.6rem',
-                          padding: '2px 5px',
-                          borderRadius: '10px',
-                          zIndex: 10
-                      }}>30% OFF</span>
-                  </button>
-              </div>
-          </div>
+          {/* Plan Selector - ONLY FOR FREE USERS */}
+          {!user.isPremium && (
+            <div style={{margin: '15px 0'}}>
+                <div style={{display: 'flex', gap: '10px', background: '#222', padding: '5px', borderRadius: '8px'}}>
+                    <button 
+                        onClick={() => setPlanType('monthly')}
+                        style={{
+                            flex: 1,
+                            padding: '10px',
+                            borderRadius: '5px',
+                            background: planType === 'monthly' ? '#00ff85' : 'transparent',
+                            color: planType === 'monthly' ? '#000' : '#888',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {t.optionMonthly}
+                    </button>
+                    <button 
+                        onClick={() => setPlanType('yearly')}
+                        style={{
+                            flex: 1,
+                            padding: '10px',
+                            borderRadius: '5px',
+                            background: planType === 'yearly' ? '#00ff85' : 'transparent',
+                            color: planType === 'yearly' ? '#000' : '#888',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            position: 'relative',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {t.optionYearly}
+                        <span style={{
+                            position: 'absolute',
+                            top: '-8px',
+                            right: '-5px',
+                            background: '#ff4444',
+                            color: '#fff',
+                            fontSize: '0.6rem',
+                            padding: '2px 5px',
+                            borderRadius: '10px',
+                            zIndex: 10
+                        }}>30% OFF</span>
+                    </button>
+                </div>
+            </div>
+          )}
 
           <ul style={{listStyle: 'none', padding: 0, lineHeight: '2', fontSize: '0.95rem'}}>
             {t.premiumItems.map((item) => (
@@ -509,41 +511,45 @@ export default function Premium({ lang }) {
             ))}
           </ul>
           
-          <h3 style={{marginTop: '20px', fontSize: '1.8rem', color: '#fff', textAlign: 'center'}}>
-              {planType === 'yearly' ? t.premiumPriceINT_Yearly : t.premiumPriceINT_Monthly}
-          </h3>
+          {!user.isPremium && (
+            <h3 style={{marginTop: '20px', fontSize: '1.8rem', color: '#fff', textAlign: 'center'}}>
+                {planType === 'yearly' ? t.premiumPriceINT_Yearly : t.premiumPriceINT_Monthly}
+            </h3>
+          )}
 
-          <div style={{ marginBottom: '20px', marginTop: '10px' }}>
-              <button 
-                className="pulse-btn"
-                onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2mvgj2pmjfh0pkjatsv8bf' : 'pri_01kk2mxf0828y5x7p8bky7ch47')}
-                style={{
-                    width: '100%',
-                    padding: '18px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: 'linear-gradient(90deg, #00ff85, #00c86a)',
-                    color: '#000',
-                    fontWeight: '900',
-                    fontSize: '1.3rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(0, 255, 133, 0.4)',
-                    transition: 'all 0.3s',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px'
-                }}
-                onMouseOver={(e) => {
-                    e.target.style.transform = 'scale(1.05)';
-                    e.target.style.boxShadow = '0 6px 25px rgba(0, 255, 133, 0.6)';
-                }}
-                onMouseOut={(e) => {
-                    e.target.style.transform = 'scale(1)';
-                    e.target.style.boxShadow = '0 4px 15px rgba(0, 255, 133, 0.4)';
-                }}
-              >
-                {lang === 'es' ? '🚀 ¡Obtener Premium Ahora!' : '🚀 Get Premium Now!'}
-              </button>
-          </div>
+          {!user.isPremium && (
+            <div style={{ marginBottom: '20px', marginTop: '10px' }}>
+                <button 
+                    className="pulse-btn"
+                    onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2mvgj2pmjfh0pkjatsv8bf' : 'pri_01kk2mxf0828y5x7p8bky7ch47')}
+                    style={{
+                        width: '100%',
+                        padding: '18px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: 'linear-gradient(90deg, #00ff85, #00c86a)',
+                        color: '#000',
+                        fontWeight: '900',
+                        fontSize: '1.3rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 15px rgba(0, 255, 133, 0.4)',
+                        transition: 'all 0.3s',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px'
+                    }}
+                    onMouseOver={(e) => {
+                        e.target.style.transform = 'scale(1.05)';
+                        e.target.style.boxShadow = '0 6px 25px rgba(0, 255, 133, 0.6)';
+                    }}
+                    onMouseOut={(e) => {
+                        e.target.style.transform = 'scale(1)';
+                        e.target.style.boxShadow = '0 4px 15px rgba(0, 255, 133, 0.4)';
+                    }}
+                >
+                    {lang === 'es' ? '🚀 ¡Obtener Premium Ahora!' : '🚀 Get Premium Now!'}
+                </button>
+            </div>
+          )}
           
           {/* PAYMENT FORM OR ACTIVE STATUS */}
           {!user.isPremium ? (

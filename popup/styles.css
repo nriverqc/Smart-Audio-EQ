@@ -232,3 +232,23 @@ body {
   border-radius: 4px;
   box-shadow: 0 2px 5px rgba(255, 215, 0, 0.3);
 }
+
+/* ===== ANIMATIONS ===== */
+@keyframes vibrate-pulse {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.02) rotate(1deg); }
+  50% { transform: scale(1) rotate(-1deg); }
+  75% { transform: scale(1.02) rotate(1deg); }
+  100% { transform: scale(1); }
+}
+
+.vibrate-btn {
+  animation: vibrate-pulse 3s infinite ease-in-out;
+  box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+}
+
+.vibrate-btn:hover {
+  animation: none;
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.6);
+}

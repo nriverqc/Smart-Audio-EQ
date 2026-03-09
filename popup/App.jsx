@@ -55,7 +55,8 @@ export default function App() {
       appPassBtn: 'Activar',
       power: 'Encendido',
       getPremium: 'Obtener Premium 💎',
-      manageAppPass: 'Gestionar App Pass'
+      manageAppPass: 'Gestionar App Pass',
+      viewAdvancedWeb: 'Ver panel avanzado en la web 🌐'
     },
     en: {
       visitWebsite: 'Visit Website',
@@ -71,7 +72,8 @@ export default function App() {
       appPassBtn: 'Activate',
       power: 'Power',
       getPremium: 'Get Premium 💎',
-      manageAppPass: 'Manage App Pass'
+      manageAppPass: 'Manage App Pass',
+      viewAdvancedWeb: 'View advanced panel on web 🌐'
     },
     pt: {
       visitWebsite: 'Visite o site',
@@ -87,7 +89,8 @@ export default function App() {
       appPassBtn: 'Ativar',
       power: 'Energia',
       getPremium: 'Obter Premium 💎',
-      manageAppPass: 'Gerenciar App Pass'
+      manageAppPass: 'Gerenciar App Pass',
+      viewAdvancedWeb: 'Ver painel avançado na web 🌐'
     },
     de: {
       visitWebsite: 'Website besuchen',
@@ -103,7 +106,8 @@ export default function App() {
       appPassBtn: 'Aktivieren',
       power: 'Strom',
       getPremium: 'Premium erhalten 💎',
-      manageAppPass: 'App Pass verwalten'
+      manageAppPass: 'App Pass verwalten',
+      viewAdvancedWeb: 'Erweitertes Web-Panel anzeigen 🌐'
     }
   };
 
@@ -221,11 +225,8 @@ export default function App() {
   const toggleEq = async () => {
     const newState = !enabled;
     
-    // Redirect FREE users to the ad-supported page when turning ON
-    if (newState && !isPremium) {
-        chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/', active: false });
-    }
-
+    // REMOVED: Auto-redirecting free users (Bad UX/Spam)
+    
     setEnabled(newState);
     
     if (newState) {
@@ -517,32 +518,83 @@ export default function App() {
                   {lang === 'es' ? '⚡ Enciende el ecualizador para esta pestaña' : '⚡ Turn on the equalizer for this tab'}
               </div>
           ) : (
-              <>
-                  <span style={{color: '#00d2ff'}}>🎯</span>
-                  <div style={{flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                      <span style={{color: '#aaa', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase'}}>
-                          {isActiveTabSelected ? 'Controlling current tab:' : 'Controlling selected tab:'}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                        {activeTabList.find(t => t.id === targetTabId)?.favIconUrl ? (
-                          <img 
-                            src={activeTabList.find(t => t.id === targetTabId).favIconUrl} 
-                            alt="" 
-                            style={{ width: '16px', height: '16px', borderRadius: '2px' }} 
-                            onError={(e) => e.target.src = 'https://www.google.com/s2/favicons?domain=google.com&sz=32'}
-                          />
-                        ) : (
-                          <span style={{fontSize: '12px'}}>🌍</span>
-                        )}
-                        <span style={{color: '#fff', fontWeight: 'bold'}}>
-                            {activeTabList.find(t => t.id === targetTabId)?.title || tabTitle || 'Active Website'}
+              <div style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{color: '#00d2ff'}}>🎯</span>
+                    <div style={{flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        <span style={{color: '#aaa', fontSize: '0.7rem', display: 'block', textTransform: 'uppercase'}}>
+                            {isActiveTabSelected ? 'Controlling current tab:' : 'Controlling selected tab:'}
                         </span>
-                      </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                            {activeTabList.find(t => t.id === targetTabId)?.favIconUrl ? (
+                            <img 
+                                src={activeTabList.find(t => t.id === targetTabId).favIconUrl} 
+                                alt="" 
+                                style={{ width: '16px', height: '16px', borderRadius: '2px' }} 
+                                onError={(e) => e.target.src = 'https://www.google.com/s2/favicons?domain=google.com&sz=32'}
+                            />
+                            ) : (
+                            <span style={{fontSize: '12px'}}>🌍</span>
+                            )}
+                            <span style={{color: '#fff', fontWeight: 'bold'}}>
+                                {activeTabList.find(t => t.id === targetTabId)?.title || tabTitle || 'Active Website'}
+                            </span>
+                        </div>
+                    </div>
+                    {isPremium && <span style={{fontSize: '0.7rem', background: '#ffd700', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold'}}>PRO</span>}
                   </div>
-                  {isPremium && <span style={{fontSize: '0.7rem', background: '#ffd700', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold'}}>PRO</span>}
-              </>
+                  
+                  {/* OPTION 2: Link to web panel when active */}
+                  <div 
+                    onClick={openMainPage}
+                    style={{
+                        marginTop: '8px',
+                        paddingTop: '8px',
+                        borderTop: '1px solid rgba(255,255,255,0.1)',
+                        color: '#00d2ff',
+                        fontSize: '0.75rem',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px'
+                    }}
+                  >
+                    {t("viewAdvancedWeb")}
+                  </div>
+              </div>
           )}
       </div>
+
+      {!isPremium && (
+        <div style={{ padding: '0 10px', marginBottom: '15px' }}>
+            <button 
+                onClick={handleGoPremium} 
+                className="vibrate-btn"
+                style={{
+                    background: 'linear-gradient(45deg, #ffd700, #ffa500)',
+                    border: 'none',
+                    color: '#000',
+                    cursor: 'pointer',
+                    padding: '10px 15px',
+                    borderRadius: '8px',
+                    fontWeight: '900',
+                    width: '100%',
+                    fontSize: '1rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px'
+                }}
+            >
+                <span>💎</span> {t("getPremium")} <span>💎</span>
+            </button>
+        </div>
+      )}
 
       {userEmail ? (
         <div style={{fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '10px', background: '#222', padding: '5px', borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'}}>
@@ -656,10 +708,6 @@ export default function App() {
 
       {!isPremium && (
         <div style={{marginTop: '1rem', textAlign: 'center', borderTop: '1px solid #333', paddingTop: '15px'}}>
-          <button onClick={handleGoPremium} style={{background: '#ffcc00', border: 'none', color: '#000', cursor: 'pointer', padding: '8px 15px', borderRadius: '4px', fontWeight: 'bold', width: '100%', marginBottom: '10px'}}>
-            {t("getPremium")}
-          </button>
-          
           <div style={{marginTop: '10px', background: '#222', padding: '10px', borderRadius: '6px', border: '1px solid #444'}}>
             <p style={{fontSize: '0.75rem', color: '#aaa', margin: '0 0 8px 0'}}>{t("appPassLabel")}</p>
             

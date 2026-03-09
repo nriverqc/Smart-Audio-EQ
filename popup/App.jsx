@@ -222,6 +222,26 @@ export default function App() {
     }
   }, [targetTabId]); // Only trigger on tab switch to avoid recursion
 
+  useEffect(() => {
+    // Escuchar mensajes del background (como reconexión)
+    const listener = (msg) => {
+        if (msg.type === "EQ_ENABLED") {
+            setEnabled(true);
+        }
+        if (msg.type === "EQ_DISABLED") {
+            setEnabled(false);
+        }
+        // Sync with web login
+        if (msg.type === "LOGIN_EXITOSO" || msg.type === "USER_SYNC") {
+            console.log("Popup: Login sync received", msg);
+            setUserEmail(msg.email);
+            setIsPremium(msg.isPremium);
+        }
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    return () => chrome.runtime.onMessage.removeListener(listener);
+  }, []);
+
   const toggleEq = async () => {
     const newState = !enabled;
     
@@ -452,10 +472,18 @@ export default function App() {
                         <button 
                             key={tId}
                             onClick={() => {
+                                // PREMIUM CHECK FOR TAB SWITCHING
+                                if (!isPremium) {
+                                    alert(lang === 'es' ? '🔒 Función Premium: Control independiente por pestaña' : '🔒 Premium Feature: Independent tab control');
+                                    return;
+                                }
+
                                 setTargetTabId(tabId);
                                 if (allActiveTabs[tabId]) {
                                     setEnabled(true);
                                     if (allActiveTabs[tabId].preset) setCurrentPreset(allActiveTabs[tabId].preset);
+                                } else {
+                                    setEnabled(false); // Reset UI if switching to a new tab
                                 }
                             }}
                             style={{

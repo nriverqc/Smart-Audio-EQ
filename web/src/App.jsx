@@ -73,13 +73,15 @@ function AppContent() {
     }
 
     // 2. Relay via Window Message (for Content Script bridge)
-    window.postMessage({
+    // Send to current window AND parent (if iframe)
+    const msg = {
         type: "LOGIN_EXITOSO",
         uid: userData.uid,
         email: userData.email,
         isPremium: userData.isPremium
-    }, "*");
-
+    };
+    window.postMessage(msg, "*");
+    
     // 3. Direct Runtime Message (if ID matches)
     if (window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage) {
         try {
@@ -92,7 +94,7 @@ function AppContent() {
                 user: userData
             }, (response) => {
                  if (window.chrome.runtime.lastError) {
-                     console.log("Extension direct sync failed (expected in dev mode if ID differs)");
+                     console.log("Extension direct sync failed (expected if ID differs or dev mode):", window.chrome.runtime.lastError.message);
                  } else {
                      console.log("Extension direct sync success:", response);
                  }

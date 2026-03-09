@@ -37,16 +37,24 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
 
   // Listen for messages FROM the web page (App.jsx)
   window.addEventListener("message", (event) => {
-    // We only accept messages from ourselves
-    if (event.source !== window) return;
+    // We only accept messages from ourselves or the trusted origin
+    if (event.source !== window && event.origin !== "https://smart-audio-eq.pages.dev") return;
 
     if (event.data.type && event.data.type === "LOGIN_EXITOSO") {
-        console.log("Content Script: Relaying login data to background...");
+        console.log("Content Script: Relaying login data to background...", event.data);
+        
+        // Use the new chrome.runtime.sendMessage API
         chrome.runtime.sendMessage({
             type: "LOGIN_EXITOSO",
             uid: event.data.uid,
             email: event.data.email,
             isPremium: event.data.isPremium
+        }, (response) => {
+             if (chrome.runtime.lastError) {
+                 console.error("Content Script: Error relaying to background:", chrome.runtime.lastError);
+             } else {
+                 console.log("Content Script: Background acknowledged login sync.", response);
+             }
         });
     }
 

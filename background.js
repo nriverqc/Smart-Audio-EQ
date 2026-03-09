@@ -825,7 +825,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   // ===== GESTIÓN DE USUARIOS / LOGIN =====
-  if (msg.type === "LOGIN_EXITOSO") {
+  if (msg.type === "LOGIN_EXITOSO" || msg.type === "USER_SYNC") {
     isPremium = msg.isPremium; // Actualizar estado local
     chrome.storage.local.set({
       email: msg.email,
@@ -833,6 +833,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       isPremium: msg.isPremium
     }, () => {
       console.log("Background: Usuario sincronizado, isPremium:", isPremium);
+      // Notificar a todos los componentes de la extensión (popup, etc)
+      chrome.runtime.sendMessage(msg);
       sendResponse({ success: true });
     });
     return true;
@@ -840,29 +842,37 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 // ===== MENSAJES EXTERNOS (WEB) =====
+// Esta función permite que la web hable DIRECTAMENTE con la extensión
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-    if (message.type === "USER_SYNC" || message.type === "LOGIN_EXITOSO" || message.accion === "SYNC_USER") {
+    console.log("Background: Mensaje externo recibido de", sender.url, message.type);
+    
+    if (message.type === "USER_SYNC" || message.type === "LOGIN_EXITOSO") {
         const email = message.email || (message.user && message.user.email);
         const uid = message.uid || (message.user && message.user.uid);
         const webPremium = message.isPremium || (message.user && message.user.isPremium) || false;
         
-        console.log("Background: Sync received from Web", { email, isPremium: webPremium });
-
-        // Logic: Extension is Premium if Web says so OR if it already has an App Pass
-        chrome.storage.local.get(['isPremium'], async (res) => {
-            // Check App Pass again just to be sure
-            const appPassStatus = await performAutomaticAppPassCheck();
-            const finalPremiumStatus = webPremium || appPassStatus || false;
-
-            chrome.storage.local.set({ 
-                email: email || '', 
-                uid: uid || '', 
-                isPremium: finalPremiumStatus 
+        chrome.storage.local.set({ 
+            email: email || '', 
+            uid: uid || '', 
+            isPremium: webPremium 
+        }, () => {
+            isPremium = webPremium;
+            // Notificar al popup si está abierto
+            chrome.runtime.sendMessage({
+                type: "LOGIN_EXITOSO",
+                email,
+                uid,
+                isPremium: webPremium
             });
-
-            isPremium = finalPremiumStatus;
             sendResponse({ status: "OK", premium: isPremium });
         });
         return true; 
+    }
+    
+    if (message.type === "GET_SESSION") {
+        chrome.storage.local.get(['email', 'uid', 'isPremium'], (res) => {
+            sendResponse(res);
+        });
+        return true;
     }
 });

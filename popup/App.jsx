@@ -175,6 +175,21 @@ export default function App() {
 
     checkState();
 
+    // REQUEST SESSION FROM WEB ON OPEN (Instant sync)
+    // We send a message to the content script of the active tab if it's our website
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0] && tabs[0].url && tabs[0].url.includes("smart-audio-eq.pages.dev")) {
+            chrome.tabs.sendMessage(tabs[0].id, { type: "PREGUNTAR_DATOS" }, (response) => {
+                if (chrome.runtime.lastError) return;
+                if (response && response.email) {
+                    console.log("Popup: Instant sync from current tab", response);
+                    setIsPremium(response.isPremium);
+                    setUserEmail(response.email);
+                }
+            });
+        }
+    });
+
     // Listen for storage changes (e.g. from background.js update)
     const handleStorageChange = (changes, area) => {
         if (area === 'local') {

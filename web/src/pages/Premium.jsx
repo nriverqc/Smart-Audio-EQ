@@ -4,12 +4,12 @@ import { UserContext } from '../App';
 const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
 export default function Premium({ lang }) {
-  const { user, refreshUser, loginWithGoogle, requestExtensionAppPassCheck } = useContext(UserContext);
-  const [loading, setLoading] = useState(false);
+  const { user, refreshUser, loginWithGoogle, requestExtensionAppPassCheck, loading: refreshing } = useContext(UserContext);
+  const [loading, setLoading] = useState(false); // Paddle loading
   const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [appPassCode, setAppPassCode] = useState('');
-  const [planType, setPlanType] = useState('monthly'); // 'monthly' or 'yearly'
+  const [planType, setPlanType] = useState('yearly');
   const displayPrices = { monthly: '$2.99 USD', yearly: '$24.99 USD' };
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
@@ -674,22 +674,20 @@ export default function Premium({ lang }) {
           {/* Refresh Status Button */}
           <div style={{marginTop: '20px', borderTop: '1px solid #333', paddingTop: '10px', textAlign: 'center'}}>
               <button 
-                  onClick={() => {
-                      setLoading(true);
-                      refreshUser();
-                      setTimeout(() => setLoading(false), 2000);
-                  }}
+                  onClick={refreshUser}
+                  disabled={refreshing}
                   style={{
                       background: 'transparent', 
                       border: '1px solid #444', 
-                      color: '#888', 
-                      padding: '5px 10px', 
+                      color: refreshing ? '#555' : '#888', 
+                      padding: '8px 15px', 
                       borderRadius: '5px',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem'
+                      cursor: refreshing ? 'not-allowed' : 'pointer',
+                      fontSize: '0.8rem',
+                      transition: 'all 0.2s'
                   }}
               >
-                  {lang === 'es' ? 'Actualizar estado' : 'Refresh status'}
+                  {refreshing ? (lang === 'es' ? 'Sincronizando...' : 'Syncing...') : (lang === 'es' ? '↻ Actualizar estado' : '↻ Refresh status')}
               </button>
           </div>
 

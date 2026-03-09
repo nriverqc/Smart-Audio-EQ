@@ -39,6 +39,7 @@ function AppContent() {
   };
 
   const [user, setUser] = useState(getInitialUser());
+  const [loading, setLoading] = useState(false); // Global loading for actions
 
   // Automatic Language Detection
   useEffect(() => {
@@ -220,11 +221,22 @@ function AppContent() {
   };
 
   const refreshUser = () => {
-     if (user.email) {
-        fetch(`${API_BASE}/check-license?email=${user.email}&uid=${user.uid}`)
+     if (user.email && user.uid) {
+        setLoading(true);
+        console.log("Web: Forcing license refresh from server...");
+        // Add timestamp to bypass any browser cache
+        fetch(`${API_BASE}/check-license?email=${encodeURIComponent(user.email)}&uid=${encodeURIComponent(user.uid)}&t=${Date.now()}`)
         .then(res => res.json())
         .then(data => {
-          setUser(prev => ({ ...prev, isPremium: data.premium, method: data.method }));
+          const updatedUser = { ...user, isPremium: data.premium, method: data.method, loading: false };
+          setUser(updatedUser);
+          syncWithExtension(updatedUser);
+          setLoading(false);
+          console.log("Web: Manual refresh complete. Premium:", data.premium);
+        })
+        .catch(e => {
+            console.error("Refresh error", e);
+            setLoading(false);
         });
      }
   };
@@ -258,7 +270,7 @@ function AppContent() {
   }, [showLangMenu]);
 
   return (
-    <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, requestExtensionAppPassCheck }}>
+    <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, requestExtensionAppPassCheck, loading }}>
       <div className="app-root">
         <div className="eq-background">
           {Array.from({ length: 10 }).map((_, i) => (

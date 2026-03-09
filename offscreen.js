@@ -22,6 +22,11 @@ chrome.runtime.onConnect.addListener((p) => {
             },
             video: false
           });
+
+          // CRITICAL FIX: Explicitly stop video tracks if any are returned
+          // This prevents the "blue border" or fullscreen issues in some browser versions
+          // even when video: false is requested.
+          stream.getVideoTracks().forEach(track => track.stop());
           
           const isPremium = msg.isPremium || false;
           const tabId = msg.tabId;

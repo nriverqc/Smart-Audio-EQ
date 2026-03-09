@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+ 
 export default function Equalizer({ enabled, isPremium, currentPreset, presetGains, onUserAdjust, targetTabId }) {
   // FREE: 6 bands, PREMIUM: 15 bands
   const isFree = !isPremium;

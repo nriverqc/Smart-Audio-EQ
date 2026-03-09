@@ -1,9 +1,25 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 
 export default function Home({ lang }) {
+  const [searchParams] = useSearchParams();
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    // Check for ?welcome=true in URL (sent by extension on install)
+    if (searchParams.get('welcome') === 'true') {
+      setShowWelcome(true);
+      // Clean URL without reload
+      window.history.replaceState({}, document.title, "/");
+    }
+  }, [searchParams]);
+
   const texts = {
     es: {
+      welcomeTitle: '¡Gracias por instalar Equalizer! 🎉',
+      welcomeMsg: 'Tu audio ahora es mucho mejor. Disfruta de la experiencia.',
+      welcomeBtn: 'Continuar al sitio',
+      // ... existing translations ...
       titleLine1: 'Mejora el audio de tu navegador',
       titleHighlight: 'como un profesional',
       description:
@@ -19,6 +35,9 @@ export default function Home({ lang }) {
       f3Text: 'Todo se procesa de forma local. Nada de tu audio sale de tu navegador.',
     },
     en: {
+      welcomeTitle: 'Thanks for installing Equalizer! 🎉',
+      welcomeMsg: 'Your audio just got a major upgrade. Enjoy the experience.',
+      welcomeBtn: 'Continue to site',
       titleLine1: 'Boost your browser audio',
       titleHighlight: 'like a pro',
       description:
@@ -34,6 +53,9 @@ export default function Home({ lang }) {
       f3Text: 'All processing is local. Your audio never leaves your browser.',
     },
     pt: {
+      welcomeTitle: 'Obrigado por instalar o Equalizer! 🎉',
+      welcomeMsg: 'Seu áudio agora está muito melhor. Aproveite a experiência.',
+      welcomeBtn: 'Continuar para o site',
       titleLine1: 'Melhore o áudio do seu navegador',
       titleHighlight: 'como um profissional',
       description:
@@ -49,6 +71,9 @@ export default function Home({ lang }) {
       f3Text: 'Todo o processamento é local. Seu áudio nunca sai do navegador.',
     },
     de: {
+      welcomeTitle: 'Danke für die Installation von Equalizer! 🎉',
+      welcomeMsg: 'Ihr Audio ist jetzt viel besser. Genießen Sie das Erlebnis.',
+      welcomeBtn: 'Weiter zur Website',
       titleLine1: 'Verbessern Sie Ihren Browser-Sound',
       titleHighlight: 'wie ein Profi',
       description:
@@ -69,6 +94,65 @@ export default function Home({ lang }) {
 
   return (
     <div>
+      {showWelcome && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.85)',
+          backdropFilter: 'blur(5px)',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#1a1a1a',
+            border: '1px solid #00d2ff',
+            boxShadow: '0 0 50px rgba(0, 210, 255, 0.3)',
+            borderRadius: '20px',
+            padding: '40px',
+            maxWidth: '500px',
+            textAlign: 'center',
+            animation: 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+          }}>
+            <style>{`
+              @keyframes popIn {
+                from { transform: scale(0.8); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+              }
+            `}</style>
+            <div style={{fontSize: '4rem', marginBottom: '20px'}}>🎧</div>
+            <h2 style={{color: '#fff', marginBottom: '15px'}}>{t.welcomeTitle}</h2>
+            <p style={{color: '#ccc', fontSize: '1.1rem', marginBottom: '30px', lineHeight: '1.6'}}>
+              {t.welcomeMsg}
+            </p>
+            <button 
+              onClick={() => setShowWelcome(false)}
+              style={{
+                background: 'linear-gradient(90deg, #00d2ff, #00a8cc)',
+                color: '#000',
+                border: 'none',
+                padding: '15px 40px',
+                borderRadius: '50px',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'transform 0.2s',
+                boxShadow: '0 5px 15px rgba(0, 210, 255, 0.4)'
+              }}
+              onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+              onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              {t.welcomeBtn}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="hero">
         <h1 style={{fontSize: '3.5rem', marginBottom: '20px'}}>
           {t.titleLine1} <br />

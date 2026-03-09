@@ -60,36 +60,36 @@ const AdBlockNotice = ({ lang }) => {
 
   const texts = {
     es: {
-      title: '⚠️ Bloqueador Detectado',
-      message: 'Hemos detectado un bloqueador de anuncios.',
-      warning: 'Para usar este sitio, desactiva tu AdBlock y recarga la página.',
-      instruction: 'Si ya lo desactivaste, presiona el botón de abajo.',
-      btn: 'Ya lo desactivé, Verificar',
-      checking: 'Verificando...'
+      title: '👋 ¡Hola! Un pequeño favor',
+      message: 'Esta herramienta se mantiene gracias a los anuncios.',
+      warning: 'Si te resulta útil, considera desactivar AdBlock o usar Premium ❤️',
+      instruction: '',
+      btn: 'Entendido, cerrar',
+      checking: 'Cerrando...'
     },
     en: {
-      title: '⚠️ AdBlocker Detected',
-      message: 'We have detected an ad blocker.',
-      warning: 'To use this site, disable your AdBlock and refresh the page.',
-      instruction: 'If you already disabled it, press the button below.',
-      btn: 'I disabled it, Verify',
-      checking: 'Verifying...'
+      title: '👋 Hi! A small favor',
+      message: 'This tool is supported by ads.',
+      warning: 'If you find it useful, please consider disabling AdBlock or getting Premium ❤️',
+      instruction: '',
+      btn: 'Got it, close',
+      checking: 'Closing...'
     },
     pt: {
-      title: '⚠️ Bloqueador Detectado',
-      message: 'Detectamos um bloqueador de anúncios.',
-      warning: 'Para usar este site, desative seu AdBlock e recarregue a página.',
-      instruction: 'Se você já desativou, pressione o botão abaixo.',
-      btn: 'Já desativei, Verificar',
-      checking: 'Verificando...'
+      title: '👋 Olá! Um pequeno favor',
+      message: 'Esta ferramenta é mantida por anúncios.',
+      warning: 'Se for útil, considere desativar o AdBlock ou usar o Premium ❤️',
+      instruction: '',
+      btn: 'Entendi, fechar',
+      checking: 'Fechando...'
     },
     de: {
-      title: '⚠️ AdBlocker erkannt',
-      message: 'Wir haben einen Werbeblocker erkannt.',
-      warning: 'Um diese Website zu nutzen, deaktivieren Sie Ihren AdBlock und laden Sie die Seite neu.',
-      instruction: 'Wenn Sie ihn bereits deaktiviert haben, drücken Sie die Taste unten.',
-      btn: 'Ich habe ihn deaktiviert, Überprüfen',
-      checking: 'Überprüfen...'
+      title: '👋 Hallo! Ein kleiner Gefallen',
+      message: 'Dieses Tool wird durch Werbung finanziert.',
+      warning: 'Wenn Sie es nützlich finden, deaktivieren Sie bitte AdBlock oder holen Sie sich Premium ❤️',
+      instruction: '',
+      btn: 'Verstanden, schließen',
+      checking: 'Schließen...'
     }
   };
 
@@ -98,47 +98,53 @@ const AdBlockNotice = ({ lang }) => {
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      backgroundColor: 'rgba(0, 0, 0, 0.95)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000000,
-      backdropFilter: 'blur(10px)',
+      bottom: '20px',
+      right: '20px',
+      maxWidth: '350px',
+      backgroundColor: '#1a1a1a',
+      color: 'white',
       padding: '20px',
-      textAlign: 'center'
+      borderRadius: '12px',
+      border: '1px solid #333',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      zIndex: 1000000,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+      animation: 'slideIn 0.5s ease-out'
     }}>
-      <div style={{
-        backgroundColor: '#111',
-        color: 'white',
-        padding: '40px',
-        borderRadius: '20px',
-        border: '1px solid #333',
-        maxWidth: '500px'
-      }}>
-        <div style={{ fontSize: '3rem', marginBottom: '20px' }}>🛡️</div>
-        <h2 style={{ margin: '0 0 15px 0', color: '#ff4444' }}>{t.title}</h2>
-        <p style={{ fontSize: '1.1rem', marginBottom: '20px' }}>{t.message}</p>
-        <p style={{ color: '#aaa', marginBottom: '30px' }}>{t.warning}</p>
-        
-        <button 
-          onClick={handleManualCheck}
-          disabled={checking}
-          className="btn-primary"
-          style={{
-            padding: '15px 30px',
-            fontSize: '1rem',
-            width: '100%',
-            opacity: checking ? 0.7 : 1,
-            cursor: checking ? 'wait' : 'pointer'
-          }}
-        >
-          {checking ? t.checking : t.btn}
-        </button>
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
+      <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+        <span style={{fontSize: '1.5rem'}}>🛡️</span>
+        <h3 style={{margin: 0, fontSize: '1rem', color: '#fff'}}>{t.title}</h3>
       </div>
+      <p style={{margin: 0, fontSize: '0.9rem', color: '#ccc', lineHeight: '1.4'}}>
+        {t.message}
+        <br/>
+        {t.warning}
+      </p>
+      
+      <button 
+        onClick={() => setAdBlocked(false)}
+        style={{
+          background: 'rgba(255,255,255,0.1)',
+          border: 'none',
+          color: '#aaa',
+          padding: '8px',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '0.8rem',
+          alignSelf: 'flex-end',
+          marginTop: '5px'
+        }}
+      >
+        {t.btn}
+      </button>
     </div>
   );
 };

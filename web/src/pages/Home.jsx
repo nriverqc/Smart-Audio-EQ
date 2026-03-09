@@ -153,30 +153,31 @@ export default function Home({ lang }) {
         </div>
       )}
 
-      <div className="hero">
-        <h1 style={{fontSize: '3.5rem', marginBottom: '20px'}}>
+      <div className="hero" style={{padding: '40px 20px', minHeight: 'auto'}}>
+        <h1 style={{fontSize: '2.5rem', marginBottom: '10px', lineHeight: '1.2'}}>
           {t.titleLine1} <br />
           <span style={{color: '#00d2ff', textTransform: 'capitalize'}}>
             {t.titleHighlight}
-            <span className="beta-badge" style={{fontSize: '0.4em', verticalAlign: 'top', marginTop: '10px'}}>BETA</span>
+            <span className="beta-badge" style={{fontSize: '0.4em', verticalAlign: 'top', marginTop: '5px'}}>BETA</span>
           </span>
         </h1>
-        <p style={{fontSize: '1.2rem', color: '#aaa', maxWidth: '600px', margin: '0 auto 10px'}}>
+        <p style={{fontSize: '1rem', color: '#aaa', maxWidth: '600px', margin: '0 auto 10px'}}>
           {t.description}
         </p>
-        <p style={{fontSize: '1rem', color: '#00d2ff', marginBottom: '40px', fontWeight: 'bold'}}>
+        <p style={{fontSize: '0.9rem', color: '#00d2ff', marginBottom: '20px', fontWeight: 'bold'}}>
           {t.compatibility}
         </p>
-        <div style={{display: 'flex', gap: '20px', justifyContent: 'center'}}>
+        <div style={{display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '30px'}}>
           <a 
             className="btn-primary" 
             href="https://chromewebstore.google.com/detail/aohaefkkofgkbneodjflnacpipdnfeng?utm_source=item-share-cb"
             target="_blank"
             rel="noopener noreferrer"
+            style={{padding: '12px 20px', fontSize: '0.9rem'}}
           >
             {t.addButton}
           </a>
-          <Link to="/premium" className="btn-premium">{t.premiumButton}</Link>
+          <Link to="/premium" className="btn-premium" style={{padding: '12px 20px', fontSize: '0.9rem'}}>{t.premiumButton}</Link>
         </div>
       </div>
 

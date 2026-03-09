@@ -693,8 +693,10 @@ export default function Premium({ lang }) {
               </button>
           </div>
 
-          {/* Adsterra Native Banner */}
-          <div id="container-98237cf077449f197b6656eb7fccd1dc" style={{marginTop: '20px', minHeight: '250px'}}></div>
+          {/* Adsterra Native Banner - HIDDEN FOR PREMIUM USERS */}
+          {!user.isPremium && (
+            <div id="container-98237cf077449f197b6656eb7fccd1dc" style={{marginTop: '20px', minHeight: '250px'}}></div>
+          )}
         </div>
       </div>
     </div>

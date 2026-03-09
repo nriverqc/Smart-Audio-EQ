@@ -260,25 +260,8 @@ function AppContent() {
   return (
     <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, requestExtensionAppPassCheck }}>
       <div className="app-root">
-        <div className="floating-icons-container">
-            {/* Random floating music notes */}
-            <div className="floating-icon" style={{ left: '5%', animationDelay: '0s', fontSize: '3rem' }}>🎵</div>
-            <div className="floating-icon" style={{ left: '15%', animationDelay: '5s', fontSize: '2rem' }}>🎼</div>
-            <div className="floating-icon" style={{ left: '25%', animationDelay: '2s', fontSize: '4rem' }}>🎶</div>
-            <div className="floating-icon" style={{ left: '35%', animationDelay: '7s', fontSize: '2.5rem' }}>🎹</div>
-            <div className="floating-icon" style={{ left: '45%', animationDelay: '1s', fontSize: '3rem' }}>🎧</div>
-            <div className="floating-icon" style={{ left: '55%', animationDelay: '6s', fontSize: '3.5rem' }}>🎷</div>
-            <div className="floating-icon" style={{ left: '65%', animationDelay: '3s', fontSize: '2.8rem' }}>🎸</div>
-            <div className="floating-icon" style={{ left: '75%', animationDelay: '8s', fontSize: '4.2rem' }}>🎻</div>
-            <div className="floating-icon" style={{ left: '85%', animationDelay: '4s', fontSize: '3.2rem' }}>🥁</div>
-            <div className="floating-icon" style={{ left: '95%', animationDelay: '9s', fontSize: '2.5rem' }}>🎵</div>
-            <div className="floating-icon" style={{ left: '10%', animationDelay: '11s', fontSize: '3.5rem' }}>📻</div>
-            <div className="floating-icon" style={{ left: '30%', animationDelay: '13s', fontSize: '2.2rem' }}>🎤</div>
-            <div className="floating-icon" style={{ left: '60%', animationDelay: '10s', fontSize: '4rem' }}>🎺</div>
-            <div className="floating-icon" style={{ left: '80%', animationDelay: '12s', fontSize: '3rem' }}>🎼</div>
-        </div>
         <div className="eq-background">
-          {Array.from({ length: 120 }).map((_, i) => (
+          {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="eq-bar" />
           ))}
         </div>

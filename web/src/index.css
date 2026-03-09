@@ -25,14 +25,14 @@ a { color: inherit; text-decoration: none; }
 
 /* 10 Smooth EQ Bands in Background */
 .eq-bar {
-  width: 40px;
-  height: 200px;
-  background: rgba(0, 210, 255, 0.15);
-  border: 1px solid rgba(0, 210, 255, 0.3);
-  border-radius: 4px;
+  width: 30px;
+  height: 350px;
+  background: rgba(0, 210, 255, 0.1);
+  border: 1px solid rgba(0, 210, 255, 0.2);
+  border-radius: 6px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 0 20px rgba(0, 210, 255, 0.05);
+  box-shadow: 0 0 30px rgba(0, 210, 255, 0.03);
 }
 
 .eq-bar::after {
@@ -44,22 +44,22 @@ a { color: inherit; text-decoration: none; }
   height: 100%;
   background: linear-gradient(to top, #00d2ff, #00ff85);
   transform-origin: bottom;
-  animation: eqSmoothRise 4s infinite ease-in-out;
-  box-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
+  animation: eqSmoothRise 6s infinite ease-in-out;
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
 }
 
 @keyframes eqSmoothRise {
-  0% { transform: scaleY(0.2); }
-  25% { transform: scaleY(0.6); }
-  50% { transform: scaleY(0.4); }
-  75% { transform: scaleY(0.8); }
-  100% { transform: scaleY(0.2); }
+  0% { transform: scaleY(0.1); }
+  25% { transform: scaleY(0.5); }
+  50% { transform: scaleY(0.3); }
+  75% { transform: scaleY(0.7); }
+  100% { transform: scaleY(0.1); }
 }
 
-.eq-bar:nth-child(2n)::after { animation-delay: 0.5s; animation-duration: 4.5s; }
-.eq-bar:nth-child(3n)::after { animation-delay: 1.2s; animation-duration: 5s; }
-.eq-bar:nth-child(4n)::after { animation-delay: 0.2s; animation-duration: 3.8s; }
-.eq-bar:nth-child(5n)::after { animation-delay: 1.8s; animation-duration: 5.5s; }
+.eq-bar:nth-child(2n)::after { animation-delay: 1s; animation-duration: 7s; }
+.eq-bar:nth-child(3n)::after { animation-delay: 2s; animation-duration: 8s; }
+.eq-bar:nth-child(4n)::after { animation-delay: 0.5s; animation-duration: 6.5s; }
+.eq-bar:nth-child(5n)::after { animation-delay: 2.5s; animation-duration: 9s; }
 
 .hero { 
   text-align: center; 

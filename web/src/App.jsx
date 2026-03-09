@@ -182,8 +182,8 @@ function AppContent() {
            console.log("Web: No user session to send.");
         }
       }
-      if (event.data.type === "PREMIUM_ACTIVADO_EXT") {
-        console.log("Web: Extension reported Premium activation! Refreshing...");
+      if (event.data.type === "PREMIUM_ACTIVADO_EXT" || event.data.type === "SYNC_STATUS_FROM_EXT") {
+        console.log("Web: Extension reported Premium status update! Refreshing...", event.data);
         refreshUser();
       }
     };

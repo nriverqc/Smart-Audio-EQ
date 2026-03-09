@@ -371,6 +371,11 @@ export default function App() {
     chrome.runtime.sendMessage({ type: 'SYNC_STATUS' }, (response) => {
         setLoading(false);
         if (response && response.success) {
+            // Check if status changed and update local UI
+            chrome.storage.local.get(['isPremium', 'email'], (res) => {
+                if (res.isPremium !== undefined) setIsPremium(res.isPremium);
+                if (res.email) setUserEmail(res.email);
+            });
             alert(response.message);
         } else {
             if (response && response.error && response.error.includes("login")) {

@@ -697,10 +697,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
             // Refresh isPremium from storage in case App Pass check updated it
             const finalStorage = await chrome.storage.local.get(['isPremium']);
-            const isNowPremium = (typeof data.premium === 'boolean' ? data.premium : finalStorage.isPremium) || !!finalStorage.isPremium;
+            
+            // IMPORTANT: If API or AppPass says Premium, we enforce it
+            const isNowPremium = (typeof data.premium === 'boolean' && data.premium === true) || !!finalStorage.isPremium;
 
             isPremium = isNowPremium; // Update global variable too
             await chrome.storage.local.set({ isPremium: isNowPremium });
+            
+            // Notify web tabs to update their UI as well (Bidirectional Sync)
+            if (isNowPremium) {
+                notifyWebTabsOfPremium();
+            } else {
+                // If we are free, also tell web (in case it thinks we are premium)
+                try {
+                    const tabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
+                    tabs.forEach(t => {
+                        chrome.tabs.sendMessage(t.id, { type: "SYNC_STATUS_FROM_EXT", isPremium: false });
+                    });
+                } catch (e) {}
+            }
             
             if (isNowPremium) {
                 sendResponse({ success: true, message: "Premium status synced! 💎" });

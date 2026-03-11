@@ -10,7 +10,7 @@ export default function Premium({ lang }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [appPassCode, setAppPassCode] = useState('');
   const [planType, setPlanType] = useState('yearly');
-  const displayPrices = { monthly: '$2.99 USD', yearly: '$24.99 USD' };
+  const displayPrices = { monthly: '$2.19 USD', yearly: '$18.39 USD' };
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
 
@@ -32,8 +32,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Gratis',
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: displayPrices.monthly + ' / mes',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / año (30% DCTO)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / mes (30% DCTO)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / año (51% DCTO)',
       freeItems: [
         '✅ Ecualizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -60,8 +60,8 @@ export default function Premium({ lang }) {
       successMessage: '¡Pago exitoso! Tu licencia Premium ha sido activada.',
       errorMessage: 'Hubo un error al procesar el pago.',
       planLabel: 'Selecciona tu plan:',
-      optionMonthly: 'Mensual',
-      optionYearly: 'Anual (Ahorra 30%)',
+      optionMonthly: 'Mensual (30% DCTO)',
+      optionYearly: 'Anual (Ahorra 51%)',
       appPassLabel: 'App Pass (Oficial):',
       appPassBtnAuto: 'Verificar automáticamente desde la extensión',
       appPassManualLabel: '¿Tienes un código promocional o manual?',
@@ -76,8 +76,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Free',
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: displayPrices.monthly + ' / mo',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / year (30% OFF)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / mo (30% OFF)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / year (51% OFF)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basic presets (Flat, Rock, Pop, etc.)',
@@ -104,8 +104,8 @@ export default function Premium({ lang }) {
       successMessage: 'Payment successful! Your Premium license has been activated.',
       errorMessage: 'There was an error processing the payment.',
       planLabel: 'Select your plan:',
-      optionMonthly: 'Monthly',
-      optionYearly: 'Yearly (Save 30%)',
+      optionMonthly: 'Monthly (30% OFF)',
+      optionYearly: 'Yearly (Save 51%)',
       appPassLabel: 'App Pass (Official):',
       appPassBtnAuto: 'Verify automatically via extension',
       appPassManualLabel: 'Have a promo or manual code?',
@@ -118,10 +118,10 @@ export default function Premium({ lang }) {
       title: 'Desbloqueie todo o poder',
       subtitle: 'Escolha o plano que melhor se adapta a você.',
       freeTitle: 'Grátis',
-      freePrice: '$0 / para sempre',
+      freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: displayPrices.monthly + ' / mês',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / ano (30% OFF)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / mês (30% OFF)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / ano (51% OFF)',
       freeItems: [
         '✅ Equalizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -148,8 +148,8 @@ export default function Premium({ lang }) {
       successMessage: 'Pagamento bem-sucedido! Sua licença Premium foi ativada.',
       errorMessage: 'Houve um erro ao processar o pagamento.',
       planLabel: 'Selecione seu plano:',
-      optionMonthly: 'Mensal',
-      optionYearly: 'Anual (Economize 30%)',
+      optionMonthly: 'Mensal (30% OFF)',
+      optionYearly: 'Anual (Economize 51%)',
       appPassLabel: 'App Pass (Oficial):',
       appPassBtnAuto: 'Verificar automaticamente via extensão',
       appPassManualLabel: 'Tem um código promocional o manual?',
@@ -164,8 +164,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Kostenlos',
       freePrice: '$0 / für immer',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: displayPrices.monthly + ' / Monat',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / Jahr (30% RABATT)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / Monat (30% RABATT)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / Jahr (51% RABATT)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basis-Presets (Flat, Rock, Pop, etc.)',
@@ -192,8 +192,8 @@ export default function Premium({ lang }) {
       successMessage: 'Zahlung erfolgreich! Ihre Premium-Lizenz wurde aktiviert.',
       errorMessage: 'Beim Verarbeiten der Zahlung ist ein Fehler aufgetreten.',
       planLabel: 'Wählen Sie Ihren Plan:',
-      optionMonthly: 'Monatlich',
-      optionYearly: 'Jährlich (Sparen Sie 30%)',
+      optionMonthly: 'Monatlich (30% RABATT)',
+      optionYearly: 'Jährlich (Sparen Sie 51%)',
       appPassLabel: 'App Pass (Offiziell):',
       appPassBtnAuto: 'Automatisch über Erweiterung verifizieren',
       appPassManualLabel: 'Haben Sie einen Promo- oder manuellen Code?',
@@ -499,7 +499,7 @@ export default function Premium({ lang }) {
                             padding: '2px 5px',
                             borderRadius: '10px',
                             zIndex: 10
-                        }}>30% OFF</span>
+                        }}>51% OFF</span>
                     </button>
                 </div>
             </div>

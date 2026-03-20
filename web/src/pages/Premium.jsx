@@ -468,6 +468,71 @@ export default function Premium({ lang }) {
           </div>
       )}
 
+      {showManageModal && (
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+        }}>
+            <div style={{
+                background: '#1a1a1a',
+                border: '1px solid #333',
+                padding: '30px',
+                borderRadius: '15px',
+                maxWidth: '420px',
+                width: '100%',
+                boxShadow: '0 0 40px rgba(0,210,255,0.2)',
+                textAlign: 'left'
+            }}>
+                <h2 style={{color: '#00d2ff', marginBottom: '10px'}}>
+                  {lang === 'es' ? 'Gestionar suscripción' : 'Manage subscription'}
+                </h2>
+                <p style={{fontSize: '0.9rem', color: '#888', marginBottom: '20px'}}>
+                  {lang === 'es'
+                    ? 'Puedes cancelar la suscripción. Al cancelar, tu acceso Premium se desactiva y el trial quedará marcado como usado.'
+                    : 'You can cancel the subscription. After canceling, Premium access is disabled and the trial will be marked as used.'}
+                </p>
+                <div style={{display: 'flex', gap: '10px'}}>
+                    <button 
+                        onClick={cancelSubscription}
+                        disabled={loading}
+                        style={{
+                            flex: 2,
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: '#ff4444',
+                            color: '#fff',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {lang === 'es' ? 'Cancelar suscripción' : 'Cancel subscription'}
+                    </button>
+                    <button 
+                        onClick={() => setShowManageModal(false)}
+                        style={{
+                            flex: 1,
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid #444',
+                            background: 'transparent',
+                            color: '#fff',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {lang === 'es' ? 'Cerrar' : 'Close'}
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
       <div style={{
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
@@ -683,71 +748,6 @@ export default function Premium({ lang }) {
               >
                   {lang === 'es' ? '¿Ya pagaste? Restaurar compra' : 'Already paid? Restore purchase'}
               </button>
-
-              {showManageModal && (
-                  <div style={{
-                      position: 'fixed',
-                      top: 0, left: 0, right: 0, bottom: 0,
-                      background: 'rgba(0,0,0,0.85)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 10000,
-                      padding: '20px'
-                  }}>
-                      <div style={{
-                          background: '#1a1a1a',
-                          border: '1px solid #333',
-                          padding: '30px',
-                          borderRadius: '15px',
-                          maxWidth: '420px',
-                          width: '100%',
-                          boxShadow: '0 0 40px rgba(0,210,255,0.2)',
-                          textAlign: 'left'
-                      }}>
-                          <h2 style={{color: '#00d2ff', marginBottom: '10px'}}>
-                            {lang === 'es' ? 'Gestionar suscripción' : 'Manage subscription'}
-                          </h2>
-                          <p style={{fontSize: '0.9rem', color: '#888', marginBottom: '20px'}}>
-                            {lang === 'es'
-                              ? 'Puedes cancelar la suscripción. Al cancelar, tu acceso Premium se desactiva y el trial quedará marcado como usado.'
-                              : 'You can cancel the subscription. After canceling, Premium access is disabled and the trial will be marked as used.'}
-                          </p>
-                          <div style={{display: 'flex', gap: '10px'}}>
-                              <button 
-                                  onClick={cancelSubscription}
-                                  disabled={loading}
-                                  style={{
-                                      flex: 2,
-                                      padding: '12px',
-                                      borderRadius: '8px',
-                                      border: 'none',
-                                      background: '#ff4444',
-                                      color: '#fff',
-                                      fontWeight: 'bold',
-                                      cursor: 'pointer'
-                                  }}
-                              >
-                                  {lang === 'es' ? 'Cancelar suscripción' : 'Cancel subscription'}
-                              </button>
-                              <button 
-                                  onClick={() => setShowManageModal(false)}
-                                  style={{
-                                      flex: 1,
-                                      padding: '12px',
-                                      borderRadius: '8px',
-                                      border: '1px solid #444',
-                                      background: 'transparent',
-                                      color: '#fff',
-                                      cursor: 'pointer'
-                                  }}
-                              >
-                                  {lang === 'es' ? 'Cerrar' : 'Close'}
-                              </button>
-                          </div>
-                      </div>
-                  </div>
-              )}
 
               {/* RESTORE MODAL */}
               {showRestoreModal && (

@@ -351,7 +351,104 @@ def paypal_webhook():
 
 @app.route("/register-paypal", methods=["POST"])
 def register_paypal():
-    return jsonify({"error": "PayPal registration is not available in this build."}), 501
+    try:
+        data = request.json or {}
+        email = data.get("email")
+        uid = data.get("uid")
+        order_id = data.get("orderID")
+        subscription_id = data.get("subscriptionID")
+        plan_type = data.get("plan_type", "monthly")
+
+        if not email or not uid:
+            return jsonify({"error": "Missing email or uid"}), 400
+
+        now = datetime.now()
+        expiration_date = now + (timedelta(days=366) if plan_type == "yearly" else timedelta(days=31))
+        status = "active"
+        method = "PayPal"
+        payment_id = order_id
+
+        if subscription_id:
+            token = get_paypal_access_token()
+            if not token:
+                return jsonify({"error": "PayPal Auth Failed"}), 500
+
+            headers = {"Authorization": f"Bearer {token}"}
+            resp = requests.get(f"{PAYPAL_API_BASE}/v1/billing/subscriptions/{subscription_id}", headers=headers)
+            if resp.status_code != 200:
+                return jsonify({"error": "Failed to verify subscription"}), resp.status_code
+
+            sub_data = resp.json()
+            sub_status = sub_data.get("status")
+            if sub_status not in ["ACTIVE", "APPROVED"]:
+                return jsonify({"error": f"Subscription status is {sub_status}"}), 400
+
+            billing_info = sub_data.get("billing_info", {}) or {}
+            next_billing_time = billing_info.get("next_billing_time")
+            if next_billing_time:
+                try:
+                    expiration_date = datetime.strptime(next_billing_time, "%Y-%m-%dT%H:%M:%SZ")
+                except Exception:
+                    expiration_date = now + (timedelta(days=366) if plan_type == "yearly" else timedelta(days=31))
+
+            payment_id = subscription_id
+            method = "PayPal_Subscription"
+
+        elif order_id:
+            verified, _ = verify_paypal_order(order_id)
+            if not verified:
+                return jsonify({"error": "PayPal order verification failed"}), 400
+
+            payment_id = f"PAYPAL_{order_id}"
+
+        else:
+            return jsonify({"error": "Missing orderID or subscriptionID"}), 400
+
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO licenses (email, is_premium, status, payment_id, expiration_date, method)
+                VALUES (?, 1, ?, ?, ?, ?)
+                ON CONFLICT(email) DO UPDATE SET
+                    is_premium=1,
+                    status=excluded.status,
+                    payment_id=excluded.payment_id,
+                    expiration_date=excluded.expiration_date,
+                    method=excluded.method
+                """,
+                (
+                    email.strip().lower(),
+                    status,
+                    payment_id,
+                    expiration_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    method,
+                ),
+            )
+            conn.commit()
+
+        if db:
+            try:
+                db.collection("usuarios").document(uid).set(
+                    {
+                        "email": email.strip().lower(),
+                        "isPremium": True,
+                        "status": status,
+                        "method": method,
+                        "paymentId": payment_id,
+                        "planType": plan_type,
+                        "expirationDate": expiration_date,
+                        "lastPayment": firestore.SERVER_TIMESTAMP,
+                    },
+                    merge=True,
+                )
+            except Exception as e:
+                print(f"Firebase Update Error (PayPal): {e}")
+
+        return jsonify({"status": "approved", "expiration": expiration_date.strftime("%Y-%m-%d %H:%M:%S")})
+    except Exception as e:
+        print(f"Register PayPal Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/paddle-webhook", methods=["POST"])
 @app.route("/paddle-webhook/", methods=["POST"])

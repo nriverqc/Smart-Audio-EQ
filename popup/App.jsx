@@ -16,17 +16,33 @@ export default function App() {
   useEffect(() => {
     let timer;
     if (status === 'trialing' && trialEndDate) {
-        timer = setInterval(() => {
-            const end = new Date(trialEndDate.replace(" ", "T"));
-            const now = new Date();
-            const diff = end.getTime() - now.getTime();
+        const getEndDate = () => {
+            if (typeof trialEndDate === 'string') {
+                const s = trialEndDate.includes('T') ? trialEndDate : trialEndDate.replace(" ", "T");
+                return new Date(s);
+            }
+            if (typeof trialEndDate === 'number') return new Date(trialEndDate);
+            if (trialEndDate && typeof trialEndDate === 'object' && typeof trialEndDate.seconds === 'number') {
+                return new Date(trialEndDate.seconds * 1000);
+            }
+            return new Date(trialEndDate);
+        };
+
+        const updateCountdown = () => {
+            const end = getEndDate();
+            const endMs = end.getTime();
+            if (Number.isNaN(endMs)) {
+                setCountdown("");
+                return;
+            }
+
+            const diff = endMs - Date.now();
             
             if (diff <= 0) {
                 setStatus('expired_trial');
                 setIsPremium(false);
                 chrome.storage.local.set({ isPremium: false, status: 'expired_trial' });
                 setCountdown("");
-                clearInterval(timer);
             } else {
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -39,7 +55,10 @@ export default function App() {
                     setCountdown(`${hours}h ${minutes}m ${seconds}s`);
                 }
             }
-        }, 1000);
+        };
+
+        updateCountdown();
+        timer = setInterval(updateCountdown, 1000);
     }
     return () => clearInterval(timer);
   }, [status, trialEndDate]);
@@ -656,10 +675,10 @@ export default function App() {
             </div>
         )}
 
-        {isPremium && status === 'trialing' && (
+        {status === 'trialing' && trialEndDate && (
             <div style={{ textAlign: 'center', marginBottom: '10px', background: 'rgba(0, 255, 133, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid #00ff85' }}>
                 <p style={{ color: '#00ff85', fontWeight: 'bold', margin: 0, fontSize: '0.85rem' }}>
-                    {t("trialDaysLeft")(countdown)}
+                    {t("trialDaysLeft")(countdown || '...')}
                 </p>
             </div>
         )}

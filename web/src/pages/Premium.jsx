@@ -11,6 +11,7 @@ export default function Premium({ lang }) {
   const [planType, setPlanType] = useState('yearly');
   const [trialCountdown, setTrialCountdown] = useState('');
   const [trialEndMs, setTrialEndMs] = useState(null);
+  const [showManageModal, setShowManageModal] = useState(false);
 
   useEffect(() => {
     // Handle redirect from extension trial button
@@ -22,6 +23,8 @@ export default function Premium({ lang }) {
   const displayPrices = { monthly: '$1.59 USD', yearly: '$9.99 USD' };
   const trialPrices = { monthly: '$0.00 USD' };
   const oldPrices = { monthly: '$2.29 USD', yearly: '$19.99 USD' };
+  const monthlyTrialPriceId = 'pri_01kk2mvgj2pmjfh0pkjatsv8bf';
+  const monthlyNoTrialPriceId = 'pri_01km6gx5sy7t9pb8n3b1zszb3h';
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
 
@@ -60,12 +63,36 @@ export default function Premium({ lang }) {
   }, [user.trialEndDate]);
 
   const isTrial = trialEndMs && Date.now() < trialEndMs;
-  const showPurchaseUI = !user.isPremium || isTrial;
-  const checkoutPlanType = isTrial ? 'monthly' : planType;
+  const usedTrial = !!user.usedTrial;
+  const showPurchaseUI = !user.isPremium;
+  const monthlyPriceId = usedTrial ? monthlyNoTrialPriceId : monthlyTrialPriceId;
 
   useEffect(() => {
-      if (isTrial) setPlanType('monthly');
-  }, [isTrial]);
+      if (!user.isPremium && usedTrial) setPlanType('monthly');
+  }, [user.isPremium, usedTrial]);
+
+  const cancelSubscription = async () => {
+      if (!user.uid && !user.email) return;
+      setLoading(true);
+      try {
+          const res = await fetch(`${API_BASE}/cancel-subscription`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: user.uid, email: user.email })
+          });
+          const data = await res.json();
+          if (res.ok && data.status === 'canceled') {
+              setShowManageModal(false);
+              refreshUser();
+          } else {
+              alert((data && data.error) ? data.error : 'Cancel failed');
+          }
+      } catch (e) {
+          alert('Cancel failed');
+      } finally {
+          setLoading(false);
+      }
+  };
 
   useEffect(() => {
       if (!isTrial || !trialEndMs) {
@@ -400,6 +427,23 @@ export default function Premium({ lang }) {
                     ? `Licencia activa para: ${user.email}` 
                     : `License active for: ${user.email}`}
               </p>
+              <button
+                onClick={() => setShowManageModal(true)}
+                disabled={loading || refreshing}
+                style={{
+                  marginTop: '10px',
+                  background: 'transparent',
+                  border: '1px solid #00d2ff',
+                  color: '#00d2ff',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  width: '100%'
+                }}
+              >
+                {lang === 'es' ? 'Gestionar suscripción' : 'Manage subscription'}
+              </button>
           </div>
       )}
 
@@ -469,7 +513,7 @@ export default function Premium({ lang }) {
           </h2>
 
           {/* Plan Selector */}
-          {showPurchaseUI && !isTrial && (
+          {showPurchaseUI && (
             <div style={{margin: '15px 0'}}>
                 <div style={{display: 'flex', gap: '10px', background: '#222', padding: '5px', borderRadius: '8px'}}>
                     <button 
@@ -534,31 +578,26 @@ export default function Premium({ lang }) {
                     fontSize: '1.2rem',
                     marginRight: '10px'
                 }}>
-                    {checkoutPlanType === 'yearly' ? oldPrices.yearly : oldPrices.monthly}
+                    {planType === 'yearly' ? oldPrices.yearly : oldPrices.monthly}
                 </span>
                 <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
                     <h3 style={{fontSize: '2.2rem', color: '#fff', margin: 0}}>
-                        {checkoutPlanType === 'yearly' ? displayPrices.yearly : trialPrices.monthly}
+                        {planType === 'yearly' ? displayPrices.yearly : (usedTrial ? displayPrices.monthly : trialPrices.monthly)}
                     </h3>
-                    {checkoutPlanType === 'monthly' && !isTrial && (
+                    {planType === 'monthly' && !usedTrial && (
                         <p style={{color: '#00ff85', fontWeight: 'bold', margin: '5px 0'}}>
                             {lang === 'es' ? 'por 3 días' : 'for 3 days'}
                         </p>
                     )}
-                    {checkoutPlanType === 'monthly' && (
+                    {planType === 'monthly' && !usedTrial && (
                         <p style={{color: '#888', fontSize: '0.9rem', margin: 0}}>
                             {lang === 'es' ? `luego ${displayPrices.monthly} / mes` : `then ${displayPrices.monthly} / mo`}
                         </p>
                     )}
-                    {checkoutPlanType === 'yearly' && (
+                    {planType === 'yearly' && (
                         <p style={{color: '#888', fontSize: '0.9rem', margin: 0}}>
                             {lang === 'es' ? '/ año' : '/ year'}
                         </p>
-                    )}
-                    {isTrial && (
-                      <p style={{color: '#00ff85', fontWeight: 'bold', margin: '8px 0 0 0'}}>
-                        {lang === 'es' ? `Te quedan: ${trialCountdown || '...'}` : `Time left: ${trialCountdown || '...'}`}
-                      </p>
                     )}
                 </div>
             </div>
@@ -568,7 +607,7 @@ export default function Premium({ lang }) {
             <div style={{ marginBottom: '20px', marginTop: '10px' }}>
                 <button 
                     className="pulse-btn"
-                    onClick={() => openPaddleCheckout(checkoutPlanType === 'monthly' ? 'pri_01kk2mvgj2pmjfh0pkjatsv8bf' : 'pri_01kk2mxf0828y5x7p8bky7ch47')}
+                    onClick={() => openPaddleCheckout(planType === 'monthly' ? monthlyPriceId : 'pri_01kk2mxf0828y5x7p8bky7ch47')}
                     style={{
                         width: '100%',
                         padding: '18px',
@@ -593,7 +632,7 @@ export default function Premium({ lang }) {
                         e.target.style.boxShadow = '0 4px 15px rgba(0, 255, 133, 0.4)';
                     }}
                 >
-                    {isTrial ? (lang === 'es' ? '✅ Continuar con mensualidad ($1.59/mes)' : '✅ Continue with monthly ($1.59/mo)') : (lang === 'es' ? '🚀 ¡Obtener Premium Ahora!' : '🚀 Get Premium Now!')}
+                    {lang === 'es' ? '🚀 ¡Obtener Premium Ahora!' : '🚀 Get Premium Now!'}
                 </button>
             </div>
           )}
@@ -644,6 +683,71 @@ export default function Premium({ lang }) {
               >
                   {lang === 'es' ? '¿Ya pagaste? Restaurar compra' : 'Already paid? Restore purchase'}
               </button>
+
+              {showManageModal && (
+                  <div style={{
+                      position: 'fixed',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'rgba(0,0,0,0.85)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 10000,
+                      padding: '20px'
+                  }}>
+                      <div style={{
+                          background: '#1a1a1a',
+                          border: '1px solid #333',
+                          padding: '30px',
+                          borderRadius: '15px',
+                          maxWidth: '420px',
+                          width: '100%',
+                          boxShadow: '0 0 40px rgba(0,210,255,0.2)',
+                          textAlign: 'left'
+                      }}>
+                          <h2 style={{color: '#00d2ff', marginBottom: '10px'}}>
+                            {lang === 'es' ? 'Gestionar suscripción' : 'Manage subscription'}
+                          </h2>
+                          <p style={{fontSize: '0.9rem', color: '#888', marginBottom: '20px'}}>
+                            {lang === 'es'
+                              ? 'Puedes cancelar la suscripción. Al cancelar, tu acceso Premium se desactiva y el trial quedará marcado como usado.'
+                              : 'You can cancel the subscription. After canceling, Premium access is disabled and the trial will be marked as used.'}
+                          </p>
+                          <div style={{display: 'flex', gap: '10px'}}>
+                              <button 
+                                  onClick={cancelSubscription}
+                                  disabled={loading}
+                                  style={{
+                                      flex: 2,
+                                      padding: '12px',
+                                      borderRadius: '8px',
+                                      border: 'none',
+                                      background: '#ff4444',
+                                      color: '#fff',
+                                      fontWeight: 'bold',
+                                      cursor: 'pointer'
+                                  }}
+                              >
+                                  {lang === 'es' ? 'Cancelar suscripción' : 'Cancel subscription'}
+                              </button>
+                              <button 
+                                  onClick={() => setShowManageModal(false)}
+                                  style={{
+                                      flex: 1,
+                                      padding: '12px',
+                                      borderRadius: '8px',
+                                      border: '1px solid #444',
+                                      background: 'transparent',
+                                      color: '#fff',
+                                      cursor: 'pointer'
+                                  }}
+                              >
+                                  {lang === 'es' ? 'Cerrar' : 'Close'}
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+              )}
 
               {/* RESTORE MODAL */}
               {showRestoreModal && (

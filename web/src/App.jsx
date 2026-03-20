@@ -33,13 +33,15 @@ function AppContent() {
                 photoURL: data.foto || '',
                 isPremium: data.isPremium || false,
                 status: data.status || (data.isPremium ? 'active' : 'free'),
-                trialEndDate: data.trialEndDate || null,
+                trialEndDate: data.trialEndDate || data.trial_end || null,
                 method: data.method || '',
+                subscriptionId: data.subscriptionId || '',
+                usedTrial: data.usedTrial || false,
                 loading: true // Keep loading true until Firebase confirms session
             };
         }
     } catch (e) { console.error("Error loading cache", e); }
-    return { email: '', uid: '', displayName: '', photoURL: '', isPremium: false, loading: true };
+    return { email: '', uid: '', displayName: '', photoURL: '', isPremium: false, status: 'free', trialEndDate: null, method: '', subscriptionId: '', usedTrial: false, loading: true };
   };
 
   const [user, setUser] = useState(getInitialUser());
@@ -72,6 +74,8 @@ function AppContent() {
             status: userData.status || (userData.isPremium ? 'active' : 'free'),
             trial_end: userData.trialEndDate, // Use trial_end for consistency with ext storage
             method: userData.method,
+            subscriptionId: userData.subscriptionId,
+            usedTrial: userData.usedTrial,
             nombre: userData.displayName,
             foto: userData.photoURL
         }));
@@ -86,7 +90,9 @@ function AppContent() {
         email: userData.email,
         isPremium: userData.isPremium,
         status: userData.status || (userData.isPremium ? 'active' : 'free'),
-        trial_end: userData.trialEndDate
+        trial_end: userData.trialEndDate,
+        subscriptionId: userData.subscriptionId,
+        usedTrial: userData.usedTrial
     };
     window.postMessage(msg, "*");
     
@@ -101,6 +107,8 @@ function AppContent() {
                 isPremium: userData.isPremium,
                 status: userData.status || (userData.isPremium ? 'active' : 'free'),
                 trial_end: userData.trialEndDate,
+                subscriptionId: userData.subscriptionId,
+                usedTrial: userData.usedTrial,
                 user: userData
             }, (response) => {
                  if (window.chrome.runtime.lastError) {
@@ -132,7 +140,11 @@ function AppContent() {
             displayName: firebaseUser.displayName,
             photoURL: firebaseUser.photoURL,
             isPremium: user.isPremium, 
+            status: user.status,
+            trialEndDate: user.trialEndDate,
             method: user.method,
+            subscriptionId: user.subscriptionId,
+            usedTrial: user.usedTrial,
             loading: true
         };
         setUser(baseUser);
@@ -153,6 +165,8 @@ function AppContent() {
                         status: data.status || (data.isPremium ? 'active' : 'free'),
                         trialEndDate: data.trialEndDate ? (data.trialEndDate.toDate ? data.trialEndDate.toDate().toISOString() : data.trialEndDate) : null,
                         method: data.method || prev.method,
+                        subscriptionId: data.subscriptionId || prev.subscriptionId,
+                        usedTrial: data.usedTrial === true ? true : prev.usedTrial,
                         loading: false
                     };
                     // Also sync with extension on every DB change
@@ -254,12 +268,19 @@ function AppContent() {
         fetch(`${API_BASE}/check-license?email=${encodeURIComponent(user.email)}&uid=${encodeURIComponent(user.uid)}&t=${Date.now()}`)
         .then(res => res.json())
         .then(data => {
+          const prev = user;
+          const prevTrialEndMs = prev.trialEndDate ? new Date(String(prev.trialEndDate).includes('T') ? prev.trialEndDate : String(prev.trialEndDate).replace(' ', 'T')).getTime() : null;
+          const prevTrialActive = prevTrialEndMs && !Number.isNaN(prevTrialEndMs) && Date.now() < prevTrialEndMs;
+          const wouldDowngrade = prev.isPremium === true && data.premium === false;
+
           const updatedUser = { 
             ...user, 
-            isPremium: data.premium, 
-            status: data.status,
-            trialEndDate: data.trial_end,
-            method: data.method, 
+            isPremium: (wouldDowngrade && prevTrialActive) ? true : data.premium, 
+            status: (wouldDowngrade && prevTrialActive) ? 'trialing' : data.status,
+            trialEndDate: (wouldDowngrade && prevTrialActive) ? prev.trialEndDate : data.trial_end,
+            method: (wouldDowngrade && prevTrialActive) ? prev.method : data.method,
+            subscriptionId: data.subscriptionId || prev.subscriptionId,
+            usedTrial: (data.usedTrial === true) ? true : prev.usedTrial,
             loading: false 
           };
           setUser(updatedUser);

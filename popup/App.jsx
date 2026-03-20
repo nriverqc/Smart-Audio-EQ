@@ -433,10 +433,6 @@ export default function App() {
     chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/premium?plan=monthly' });
   };
 
-  const handleSubscribeMonthly = () => {
-    chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/premium?plan=monthly' });
-  };
-
   const handlePresetChange = (e) => {
     const presetKey = e.target.value;
     
@@ -732,30 +728,6 @@ export default function App() {
                     style={{ background: 'transparent', border: 'none', color: '#fff', textDecoration: 'underline', cursor: 'pointer', marginTop: '5px', fontSize: '0.8rem' }}
                 >
                     {t("getPremium")}
-                </button>
-            </div>
-        )}
-
-        {isTrialActive && (
-            <div style={{ textAlign: 'center', marginBottom: '10px', background: 'rgba(0, 255, 133, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid #00ff85' }}>
-                <p style={{ color: '#00ff85', fontWeight: 'bold', margin: 0, fontSize: '0.85rem' }}>
-                    {t("trialDaysLeft")(countdown || '...')}
-                </p>
-                <button
-                    onClick={handleSubscribeMonthly}
-                    style={{
-                        marginTop: '6px',
-                        background: 'transparent',
-                        border: '1px solid #00ff85',
-                        color: '#00ff85',
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem',
-                        fontWeight: 'bold'
-                    }}
-                >
-                    {lang === 'es' ? 'Suscribirme ahora ($1.59/mes)' : 'Subscribe now ($1.59/mo)'}
                 </button>
             </div>
         )}

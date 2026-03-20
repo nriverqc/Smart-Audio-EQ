@@ -56,6 +56,7 @@ def init_db():
                 is_premium BOOLEAN DEFAULT 0,
                 status TEXT DEFAULT 'free',
                 payment_id TEXT,
+                subscription_id TEXT,
                 method TEXT,
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 expiration_date TIMESTAMP,
@@ -68,7 +69,8 @@ def init_db():
             ("expiration_date", "TIMESTAMP"),
             ("method", "TEXT"),
             ("status", "TEXT DEFAULT 'free'"),
-            ("trial_end_date", "TIMESTAMP")
+            ("trial_end_date", "TIMESTAMP"),
+            ("subscription_id", "TEXT")
         ]
         for col_name, col_type in columns:
             try:
@@ -515,6 +517,8 @@ def paddle_webhook():
         status = "free"
         trial_end_date = None
         expiration_date = None
+        subscription_id = None
+        used_trial = False
 
         if event_type in [
             "subscription.created",
@@ -525,6 +529,10 @@ def paddle_webhook():
             "transaction.completed",
         ]:
             paddle_status = data.get("status") or ("trialing" if event_type == "subscription.trialing" else "active")
+            if event_type.startswith("subscription."):
+                subscription_id = data.get("id")
+            else:
+                subscription_id = data.get("subscription_id")
 
             billing_period = data.get("current_billing_period") or {}
             expires_at = billing_period.get("ends_at") or billing_period.get("end_at") or data.get("next_billed_at")
@@ -533,6 +541,7 @@ def paddle_webhook():
             trial_ends_at = data.get("trial_ends_at") or data.get("trial_end") or billing_period.get("ends_at")
             if paddle_status == "trialing" or event_type == "subscription.trialing":
                 trial_end_date = parse_iso_dt(trial_ends_at) or (now + timedelta(days=3))
+                used_trial = True
 
             if trial_end_date and now < trial_end_date:
                 is_premium = True
@@ -549,22 +558,28 @@ def paddle_webhook():
         ]:
             is_premium = False
             status = "canceled" if event_type in ["subscription.canceled", "transaction.canceled"] else "past_due"
+            if event_type.startswith("subscription."):
+                subscription_id = data.get("id")
+            else:
+                subscription_id = data.get("subscription_id")
+            used_trial = True
 
         else:
             return jsonify({"status": "ignored", "event": event_type}), 200
 
-        payment_id = data.get("id") or data.get("subscription_id") or data.get("transaction_id")
+        payment_id = data.get("id") or data.get("transaction_id")
 
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                INSERT INTO licenses (email, is_premium, status, payment_id, expiration_date, trial_end_date, method)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO licenses (email, is_premium, status, payment_id, subscription_id, expiration_date, trial_end_date, method)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(email) DO UPDATE SET
                     is_premium=excluded.is_premium,
                     status=excluded.status,
                     payment_id=excluded.payment_id,
+                    subscription_id=excluded.subscription_id,
                     expiration_date=excluded.expiration_date,
                     trial_end_date=excluded.trial_end_date,
                     method=excluded.method
@@ -574,6 +589,7 @@ def paddle_webhook():
                     1 if is_premium else 0,
                     status,
                     f"PADDLE_{payment_id}" if payment_id else None,
+                    subscription_id,
                     expiration_date.strftime("%Y-%m-%d %H:%M:%S") if expiration_date else None,
                     trial_end_date.strftime("%Y-%m-%d %H:%M:%S") if trial_end_date else None,
                     "Paddle",
@@ -588,6 +604,7 @@ def paddle_webhook():
                 "status": status,
                 "method": "Paddle",
                 "paymentId": payment_id,
+                "subscriptionId": subscription_id,
                 "planType": plan_type,
                 "lastPayment": firestore.SERVER_TIMESTAMP,
             }
@@ -595,6 +612,8 @@ def paddle_webhook():
                 update_data["expirationDate"] = expiration_date
             if trial_end_date:
                 update_data["trialEndDate"] = trial_end_date
+            if used_trial:
+                update_data["usedTrial"] = True
 
             if uid:
                 try:
@@ -620,6 +639,132 @@ def paddle_webhook():
 
     except Exception as e:
         print(f"Paddle Webhook Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/cancel-subscription", methods=["POST"])
+def cancel_subscription():
+    try:
+        data = request.json or {}
+        uid = data.get("uid")
+        email = data.get("email")
+
+        if not uid and not email:
+            return jsonify({"error": "Missing uid or email"}), 400
+
+        paddle_api_key = os.getenv("PADDLE_API_KEY")
+        if not paddle_api_key:
+            return jsonify({"error": "PADDLE_API_KEY not configured"}), 503
+
+        paddle_env = (os.getenv("PADDLE_ENV") or "production").lower()
+        base_url = "https://sandbox-api.paddle.com" if paddle_env == "sandbox" else "https://api.paddle.com"
+
+        subscription_id = None
+        email_norm = email.strip().lower() if isinstance(email, str) else None
+
+        if db and uid:
+            try:
+                doc = db.collection("usuarios").document(uid).get()
+                if doc.exists:
+                    u = doc.to_dict() or {}
+                    email_norm = (email_norm or u.get("email") or "").strip().lower() or email_norm
+                    subscription_id = u.get("subscriptionId")
+                    if not subscription_id:
+                        pid = u.get("paymentId")
+                        if isinstance(pid, str) and pid.startswith("sub_"):
+                            subscription_id = pid
+            except Exception as e:
+                print(f"Cancel lookup (uid) error: {e}")
+
+        if db and not subscription_id and email_norm:
+            try:
+                lic_doc = db.collection("licenses_by_email").document(email_norm).get()
+                if lic_doc.exists:
+                    lic = lic_doc.to_dict() or {}
+                    subscription_id = lic.get("subscriptionId")
+                    if not subscription_id:
+                        pid = lic.get("paymentId")
+                        if isinstance(pid, str) and pid.startswith("sub_"):
+                            subscription_id = pid
+            except Exception as e:
+                print(f"Cancel lookup (licenses_by_email) error: {e}")
+
+        if not subscription_id and email_norm:
+            try:
+                with sqlite3.connect(DB_NAME) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT subscription_id, payment_id FROM licenses WHERE email = ?", (email_norm,))
+                    row = cursor.fetchone()
+                    if row:
+                        subscription_id = row[0]
+                        if not subscription_id:
+                            pid = row[1]
+                            if isinstance(pid, str) and "sub_" in pid:
+                                subscription_id = pid.replace("PADDLE_", "")
+            except Exception as e:
+                print(f"Cancel lookup (sqlite) error: {e}")
+
+        if not subscription_id or not str(subscription_id).startswith("sub_"):
+            return jsonify({"error": "Subscription ID not found"}), 404
+
+        headers = {
+            "Authorization": f"Bearer {paddle_api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        resp = requests.post(
+            f"{base_url}/subscriptions/{subscription_id}/cancel",
+            headers=headers,
+            json={"effective_from": "immediately"},
+            timeout=20,
+        )
+        if resp.status_code not in [200, 201]:
+            return jsonify({"error": "Paddle cancel failed", "details": resp.text}), 400
+
+        now = datetime.now()
+
+        if email_norm:
+            with sqlite3.connect(DB_NAME) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE licenses SET is_premium=0, status='canceled', method='Paddle', subscription_id=?, trial_end_date=NULL WHERE email=?",
+                    (subscription_id, email_norm),
+                )
+                conn.commit()
+
+        if db:
+            update_data = {
+                "isPremium": False,
+                "status": "canceled",
+                "method": "Paddle",
+                "subscriptionId": subscription_id,
+                "usedTrial": True,
+                "canceledAt": now,
+            }
+            if email_norm:
+                update_data["email"] = email_norm
+
+            if uid:
+                try:
+                    db.collection("usuarios").document(uid).set(update_data, merge=True)
+                except Exception as e:
+                    print(f"Cancel Firestore (uid) error: {e}")
+
+            if email_norm:
+                try:
+                    docs = db.collection("usuarios").where("email", "==", email_norm).limit(10).get()
+                    for d in docs:
+                        db.collection("usuarios").document(d.id).set(update_data, merge=True)
+                except Exception as e:
+                    print(f"Cancel Firestore (email) error: {e}")
+
+                try:
+                    db.collection("licenses_by_email").document(email_norm).set(update_data, merge=True)
+                except Exception as e:
+                    print(f"Cancel Firestore (licenses_by_email) error: {e}")
+
+        return jsonify({"status": "canceled"}), 200
+    except Exception as e:
+        print(f"Cancel Subscription Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/check-license", methods=["GET"])
@@ -658,7 +803,9 @@ def check_license():
                                     'trialEndDate': lic.get('trialEndDate'),
                                     'method': lic.get('method', 'Paddle'),
                                     'paymentId': lic.get('paymentId'),
+                                    'subscriptionId': lic.get('subscriptionId'),
                                     'planType': lic.get('planType'),
+                                    'usedTrial': lic.get('usedTrial', False) or bool(lic.get('trialEndDate')),
                                     'email': email_norm
                                 }, merge=True)
                                 data = user_ref.get().to_dict()
@@ -699,6 +846,8 @@ def check_license():
                 # Logic for expiration...
                 exp_date = data.get('expirationDate')
                 trial_end = data.get('trialEndDate')
+                subscription_id = data.get('subscriptionId')
+                used_trial = data.get('usedTrial', False) or bool(trial_end)
                 
                 now = datetime.now()
                 
@@ -742,13 +891,15 @@ def check_license():
                     "method": method,
                     "source": "firestore",
                     "trial_end": trial_str,
-                    "expiration": exp_str
+                    "expiration": exp_str,
+                    "subscriptionId": subscription_id,
+                    "usedTrial": True if used_trial else False
                 })
 
         # 2. Check SQLite (Local Fast Cache) as fallback
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT is_premium, status, expiration_date, trial_end_date, method FROM licenses WHERE email = ?", (email,))
+            cursor.execute("SELECT is_premium, status, expiration_date, trial_end_date, method, subscription_id FROM licenses WHERE email = ?", (email,))
             row = cursor.fetchone()
             
             if row:
@@ -757,6 +908,7 @@ def check_license():
                 expiration_str = row[2]
                 trial_end_str = row[3]
                 method = row[4]
+                subscription_id = row[5]
                 
                 now = datetime.now()
                 
@@ -784,7 +936,9 @@ def check_license():
                     "source": "sqlite",
                     "expiration": expiration_str,
                     "trial_end": trial_end_str,
-                    "method": method
+                    "method": method,
+                    "subscriptionId": subscription_id,
+                    "usedTrial": True if trial_end_str else False
                 })
 
         return jsonify({"premium": False, "status": "free"})

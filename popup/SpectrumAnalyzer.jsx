@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-export default function SpectrumAnalyzer({ targetTabId }) {
+export default function SpectrumAnalyzer({ targetTabId, isPremium }) {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
 
@@ -14,7 +14,6 @@ export default function SpectrumAnalyzer({ targetTabId }) {
 
     const draw = async () => {
       try {
-        // Request analyser from background (que lo envía al offscreen)
         const response = await chrome.runtime.sendMessage({
           type: 'GET_ANALYSER_DATA',
           tabId: targetTabId
@@ -29,7 +28,6 @@ export default function SpectrumAnalyzer({ targetTabId }) {
           ? new Uint8Array(response.data) 
           : new Uint8Array(0);
         
-        // Clear canvas
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -38,7 +36,6 @@ export default function SpectrumAnalyzer({ targetTabId }) {
           return;
         }
 
-        // Draw spectrum bars
         const barWidth = (canvas.width / dataArray.length) * 2.5;
         let barHeight;
         let x = 0;
@@ -46,17 +43,27 @@ export default function SpectrumAnalyzer({ targetTabId }) {
         for (let i = 0; i < dataArray.length; i++) {
           barHeight = (dataArray[i] / 255) * canvas.height;
 
-          // Color gradient
-          const hue = (i / dataArray.length) * 360;
-          ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+          if (isPremium) {
+            const hue = (i / dataArray.length) * 360;
+            ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+          } else {
+            // Gray/Limited for free users
+            ctx.fillStyle = `rgba(100, 100, 100, ${0.5 + (dataArray[i] / 510)})`;
+          }
+          
           ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-
           x += barWidth + 1;
+        }
+
+        if (!isPremium) {
+          ctx.fillStyle = "rgba(255, 215, 0, 0.7)";
+          ctx.font = "bold 12px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText("FREE VERSION - SPECTRUM LIMITED", canvas.width / 2, 20);
         }
 
         animationRef.current = requestAnimationFrame(draw);
       } catch (error) {
-        // Silenciar errores cuando EQ no está activo
         animationRef.current = requestAnimationFrame(draw);
       }
     };

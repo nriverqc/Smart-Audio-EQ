@@ -22,8 +22,8 @@ async function performAutomaticAppPassCheck() {
       console.log('✅ Background: Official App Pass detected!');
       
       const storage = await chrome.storage.local.get(['email', 'uid']);
-      isPremium = true; // Update global variable
-      await chrome.storage.local.set({ isPremium: true });
+      isPremium = true; 
+      await chrome.storage.local.set({ isPremium: true, status: 'active' });
       
       // Notify open web tabs immediately
       notifyWebTabsOfPremium();
@@ -696,13 +696,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             await performAutomaticAppPassCheck();
 
             // Refresh isPremium from storage in case App Pass check updated it
-            const finalStorage = await chrome.storage.local.get(['isPremium']);
+            const finalStorage = await chrome.storage.local.get(['isPremium', 'status', 'trial_end']);
             
             // IMPORTANT: If API or AppPass says Premium, we enforce it
             const isNowPremium = (typeof data.premium === 'boolean' && data.premium === true) || !!finalStorage.isPremium;
 
             isPremium = isNowPremium; // Update global variable too
-            await chrome.storage.local.set({ isPremium: isNowPremium });
+            const newStatus = data.status || (isNowPremium ? 'active' : 'free');
+            
+            await chrome.storage.local.set({ 
+                isPremium: isNowPremium, 
+                status: newStatus,
+                trial_end: data.trial_end || null
+            });
             
             // Notify web tabs to update their UI as well (Bidirectional Sync)
             if (isNowPremium) {

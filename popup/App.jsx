@@ -3,10 +3,23 @@ import Equalizer from './Equalizer';
 import SpectrumAnalyzer from './SpectrumAnalyzer';
 import { PRESETS, IS_PREMIUM_PRESET } from './presets';
 import logo from './Logo ecualizador 2.png';
+import PremiumModal from './PremiumModal';
+import ActionModal from './ActionModal';
 
 export default function App() {
   const [enabled, setEnabled] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [status, setStatus] = useState('free');
+  const [trialEndDate, setTrialEndDate] = useState(null);
+
+  const getTrialDaysLeft = () => {
+    if (!trialEndDate) return 0;
+    const end = new Date(trialEndDate.replace(" ", "T"));
+    const diff = end.getTime() - new Date().getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+
+  const trialDaysLeft = getTrialDaysLeft();
   const [currentPreset, setCurrentPreset] = useState('flat');
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,6 +30,29 @@ export default function App() {
   const [appPassCode, setAppPassCode] = useState('');
   const [lang, setLang] = useState('en');
   const [currentTabId, setCurrentTabId] = useState(null);
+
+  // MODAL STATE
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+
+  // SYNC MODAL STATE
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+
+  // GUIDE MODAL STATE (Power ON)
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+
+  const openPremiumModal = (message) => {
+    setModalMessage(message);
+    setIsModalOpen(true);
+  };
+
+  const closePremiumModal = () => setIsModalOpen(false);
+
+  const openSyncModal = () => setIsSyncModalOpen(true);
+  const closeSyncModal = () => setIsSyncModalOpen(false);
+
+  const openGuideModal = () => setIsGuideModalOpen(true);
+  const closeGuideModal = () => setIsGuideModalOpen(false);
 
   const isActiveTabSelected = targetTabId === currentTabId;
 
@@ -54,9 +90,25 @@ export default function App() {
       appPassPlaceholder: 'CÓDIGO-APP-PASS',
       appPassBtn: 'Activar',
       power: 'Encendido',
-      getPremium: 'Obtener Premium 💎',
+      getPremium: 'Desbloquear mejor sonido 🔊',
+      premiumPitch: 'Aumenta volumen, más control y presets ilimitados',
       manageAppPass: 'Gestionar App Pass',
-      viewAdvancedWeb: 'Ver panel avanzado en la web 🌐'
+      viewAdvancedWeb: 'Ver panel avanzado en la web 🌐',
+      premiumPresetWarning: 'Disponible en Premium – Mejora tu audio en segundos',
+      savePresetWarning: '¡Guarda tus propios presets con Premium!',
+      volumeLimitWarning: '¡Pruébalo! Con Premium puedes subir hasta el 300%.',
+      syncLoginTitle: 'Sincronización requerida',
+      syncLoginMsg: 'Debes iniciar sesión para sincronizar tus ajustes y estado Premium.',
+      syncLoginConfirm: 'Ir a la web para iniciar sesión',
+      syncLoginCancel: 'Seguir en la extensión',
+      powerOnGuideTitle: 'Ecualizador Apagado',
+      powerOnGuideMsg: 'Por favor, enciende el ecualizador usando el botón de encendido (ON) para empezar a mejorar tu sonido.',
+      powerOnGuideConfirm: '¡Entendido!',
+      trialDaysLeft: (days) => `Te quedan ${days} días de prueba`,
+      trialEnded: 'Tu prueba terminó',
+      activateSubscription: 'Activa tu suscripción',
+      getFreeTrial: 'Obtener Free Trial 🎁',
+      trialBadge: 'TRIAL',
     },
     en: {
       visitWebsite: 'Visit Website',
@@ -71,9 +123,25 @@ export default function App() {
       appPassPlaceholder: 'APP-PASS-CODE',
       appPassBtn: 'Activate',
       power: 'Power',
-      getPremium: 'Get Premium 💎',
+      getPremium: 'Unlock better sound 🔊',
+      premiumPitch: 'Boost volume, more control and unlimited presets',
       manageAppPass: 'Manage App Pass',
-      viewAdvancedWeb: 'View advanced panel on web 🌐'
+      viewAdvancedWeb: 'View advanced panel on web 🌐',
+      premiumPresetWarning: 'Available in Premium – Improve your audio in seconds',
+      savePresetWarning: 'Save your own presets with Premium!',
+      volumeLimitWarning: 'Try it! With Premium you can go up to 300%.',
+      syncLoginTitle: 'Sync Required',
+      syncLoginMsg: 'You must log in to sync your settings and Premium status.',
+      syncLoginConfirm: 'Go to website to login',
+      syncLoginCancel: 'Stay in extension',
+      powerOnGuideTitle: 'Equalizer is OFF',
+      powerOnGuideMsg: 'Please turn ON the equalizer using the power button to start improving your sound.',
+      powerOnGuideConfirm: 'Got it!',
+      trialDaysLeft: (days) => `${days} days left in trial`,
+      trialEnded: 'Your trial ended',
+      activateSubscription: 'Activate subscription',
+      getFreeTrial: 'Get Free Trial 🎁',
+      trialBadge: 'TRIAL',
     },
     pt: {
       visitWebsite: 'Visite o site',
@@ -88,9 +156,25 @@ export default function App() {
       appPassPlaceholder: 'CÓDIGO-APP-PASS',
       appPassBtn: 'Ativar',
       power: 'Energia',
-      getPremium: 'Obter Premium 💎',
+      getPremium: 'Desbloquear som melhor 🔊',
+      premiumPitch: 'Aumente o volume, mais controle e presets ilimitados',
       manageAppPass: 'Gerenciar App Pass',
-      viewAdvancedWeb: 'Ver painel avançado na web 🌐'
+      viewAdvancedWeb: 'Ver painel avançado na web 🌐',
+      premiumPresetWarning: 'Disponível no Premium – Melhore seu áudio em segundos',
+      savePresetWarning: 'Salve seus propios presets com o Premium!',
+      volumeLimitWarning: 'Tente! Com o Premium você pode subir até 300%.',
+      syncLoginTitle: 'Sincronização Necessária',
+      syncLoginMsg: 'Você deve fazer o login para sincronizar suas configurações e status Premium.',
+      syncLoginConfirm: 'Ir para o site para fazer login',
+      syncLoginCancel: 'Ficar na extensão',
+      powerOnGuideTitle: 'Equalizador Desligado',
+      powerOnGuideMsg: 'Por favor, ligue o equalizador usando o botão de energia (ON) para começar a melhorar o seu som.',
+      powerOnGuideConfirm: 'Entendi!',
+      trialDaysLeft: (days) => `Restam ${days} dias de teste`,
+      trialEnded: 'Seu teste terminou',
+      activateSubscription: 'Ative sua assinatura',
+      getFreeTrial: 'Obter Teste Grátis 🎁',
+      trialBadge: 'TESTE',
     },
     de: {
       visitWebsite: 'Website besuchen',
@@ -105,9 +189,25 @@ export default function App() {
       appPassPlaceholder: 'APP-PASS-CODE',
       appPassBtn: 'Aktivieren',
       power: 'Strom',
-      getPremium: 'Premium erhalten 💎',
+      getPremium: 'Besseren Sound freischalten 🔊',
+      premiumPitch: 'Lautstärke erhöhen, mehr Kontrolle und unbegrenzte Presets',
       manageAppPass: 'App Pass verwalten',
-      viewAdvancedWeb: 'Erweitertes Web-Panel anzeigen 🌐'
+      viewAdvancedWeb: 'Erweitertes Web-Panel anzeigen 🌐',
+      premiumPresetWarning: 'Verfügbar in Premium – Verbessern Sie Ihren Sound in Sekunden',
+      savePresetWarning: 'Speichern Sie Ihre eigenen Presets mit Premium!',
+      volumeLimitWarning: 'Probieren Sie es aus! Mit Premium können Sie bis zu 300% gehen.',
+      syncLoginTitle: 'Synchronisierung Erforderlich',
+      syncLoginMsg: 'Sie müssen sich anmelden, um Ihre Einstellungen und den Premium-Status zu synchronisieren.',
+      syncLoginConfirm: 'Zur Website gehen und anmelden',
+      syncLoginCancel: 'In der Erweiterung bleiben',
+      powerOnGuideTitle: 'Equalizer ist AUS',
+      powerOnGuideMsg: 'Bitte schalten Sie den Equalizer mit dem Power-Button EIN, um Ihren Sound zu verbessern.',
+      powerOnGuideConfirm: 'Verstanden!',
+      trialDaysLeft: (days) => `Noch ${days} Tage Testversion`,
+      trialEnded: 'Testzeitraum abgelaufen',
+      activateSubscription: 'Abonnement aktivieren',
+      getFreeTrial: 'Kostenlose Testversion 🎁',
+      trialBadge: 'TEST',
     }
   };
 
@@ -141,9 +241,11 @@ export default function App() {
         });
 
         // 1. Get global settings
-        chrome.storage.local.get(['isPremium', 'email', 'uid', 'activeTabs'], (result) => {
+        chrome.storage.local.get(['isPremium', 'email', 'uid', 'activeTabs', 'status', 'trial_end'], (result) => {
             if (result.isPremium) setIsPremium(true);
             if (result.email) setUserEmail(result.email);
+            if (result.status) setStatus(result.status);
+            if (result.trial_end) setTrialEndDate(result.trial_end);
             if (result.activeTabs) {
                 setAllActiveTabs(result.activeTabs);
             }
@@ -282,6 +384,39 @@ export default function App() {
     chrome.runtime.sendMessage({ type: 'OPEN_PREMIUM_PAGE' });
   };
 
+  const handleStartTrial = () => {
+    chrome.storage.local.get(['uid'], (res) => {
+        const uid = res.uid;
+        if (!userEmail || !uid) {
+            openSyncModal();
+            return;
+        }
+        setLoading(true);
+        fetch('https://smart-audio-eq-1.onrender.com/start-trial', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, uid: uid })
+        })
+        .then(r => r.json())
+        .then(data => {
+            setLoading(false);
+            if (data.status === 'trialing') {
+                setIsPremium(true);
+                setStatus('trialing');
+                setTrialEndDate(data.trial_end);
+                chrome.storage.local.set({ isPremium: true, status: 'trialing', trial_end: data.trial_end });
+                alert(lang === 'es' ? '¡Prueba de 3 días activada! 🚀' : '3-day trial activated! 🚀');
+            } else {
+                alert(data.error || 'Trial failed');
+            }
+        })
+        .catch(e => {
+            setLoading(false);
+            alert('Network error');
+        });
+    });
+  };
+
   const handleActivateOfficialAppPass = () => {
       chrome.runtime.sendMessage({ type: 'ACTIVATE_OFFICIAL_APP_PASS' });
   };
@@ -309,7 +444,12 @@ export default function App() {
     const presetKey = e.target.value;
     
     if (IS_PREMIUM_PRESET(presetKey) && !isPremium) {
-        alert("This is a Premium preset! Upgrade to unlock.");
+        openPremiumModal(t("premiumPresetWarning"));
+        return;
+    }
+    
+    if (presetKey === 'custom' && !isPremium) {
+        openPremiumModal(t("savePresetWarning"));
         return;
     }
 
@@ -346,7 +486,16 @@ export default function App() {
   };
 
   const onUserAdjust = (newGains) => {
+    if (!isPremium) {
+      // We let them move it but maybe alert once or just keep the preset logic
+      // Actually, let's allow them to move but not "Save" or persistent?
+      // The user said "Guardar presets -> SOLO premium".
+    }
     if (currentPreset !== 'custom') {
+      if (!isPremium) {
+        alert(t("savePresetWarning"));
+        return;
+      }
       setCurrentPreset('custom');
     }
     
@@ -367,6 +516,10 @@ export default function App() {
   };
 
   const refreshStatus = async () => {
+    if (!userEmail) {
+        openSyncModal();
+        return;
+    }
     setLoading(true);
     chrome.runtime.sendMessage({ type: 'SYNC_STATUS' }, (response) => {
         setLoading(false);
@@ -379,8 +532,7 @@ export default function App() {
             alert(response.message);
         } else {
             if (response && response.error && response.error.includes("login")) {
-                 alert(response.error);
-                 handleLogin();
+                 openSyncModal();
             } else {
                  alert(response ? response.error : "Sync failed");
             }
@@ -497,31 +649,93 @@ export default function App() {
         </div>
 
         {/* PROMO BUTTON - MOVED TO TOP FOR FREE USERS */}
-        {!isPremium && (
-            <button 
-                onClick={handleGoPremium} 
-                className="vibrate-btn"
-                style={{
-                    background: 'linear-gradient(90deg, #ffd700, #ffaa00)',
-                    border: 'none',
-                    color: '#000',
-                    cursor: 'pointer',
-                    padding: '8px 10px',
-                    borderRadius: '6px',
-                    fontWeight: '900',
-                    width: '100%',
-                    fontSize: '0.9rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 2px 10px rgba(255, 215, 0, 0.2)'
-                }}
-            >
-                <span>💎</span> {t("getPremium")} <span>💎</span>
-            </button>
+        {!isPremium && status === 'free' && (
+            <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                <button 
+                    onClick={handleStartTrial} 
+                    className="vibrate-btn"
+                    style={{
+                        background: 'linear-gradient(90deg, #00ff85, #00c86a)',
+                        border: 'none',
+                        color: '#000',
+                        cursor: 'pointer',
+                        padding: '10px 15px',
+                        borderRadius: '6px',
+                        fontWeight: '900',
+                        width: '100%',
+                        fontSize: '1rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 15px rgba(0, 255, 133, 0.4)'
+                    }}
+                >
+                    {t("getFreeTrial")}
+                </button>
+            </div>
+        )}
+
+        {!isPremium && (status === 'expired_trial' || status === 'past_due' || status === 'canceled') && (
+            <div style={{ textAlign: 'center', marginBottom: '10px', background: 'rgba(255, 68, 68, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid #ff4444' }}>
+                <p style={{ color: '#ff4444', fontWeight: 'bold', margin: 0 }}>
+                    {status === 'expired_trial' ? t("trialEnded") : t("activateSubscription")}
+                </p>
+                <button 
+                    onClick={handleGoPremium}
+                    style={{ background: 'transparent', border: 'none', color: '#fff', textDecoration: 'underline', cursor: 'pointer', marginTop: '5px', fontSize: '0.8rem' }}
+                >
+                    {t("getPremium")}
+                </button>
+            </div>
+        )}
+
+        {isPremium && status === 'trialing' && (
+            <div style={{ textAlign: 'center', marginBottom: '10px', background: 'rgba(0, 255, 133, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid #00ff85' }}>
+                <p style={{ color: '#00ff85', fontWeight: 'bold', margin: 0, fontSize: '0.85rem' }}>
+                    {t("trialDaysLeft")(trialDaysLeft)}
+                </p>
+            </div>
+        )}
+
+        {!isPremium && status === 'free' && (
+            <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                <button 
+                    onClick={handleGoPremium} 
+                    className="vibrate-btn"
+                    style={{
+                        background: 'linear-gradient(90deg, #ffd700, #ffaa00)',
+                        border: 'none',
+                        color: '#000',
+                        cursor: 'pointer',
+                        padding: '10px 15px',
+                        borderRadius: '6px',
+                        fontWeight: '900',
+                        width: '100%',
+                        fontSize: '1rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 15px rgba(255, 215, 0, 0.4)'
+                    }}
+                >
+                    {t("getPremium")}
+                </button>
+                <p style={{ 
+                    fontSize: '0.8rem', 
+                    color: '#ffd700', 
+                    marginTop: '8px', 
+                    fontWeight: 'bold',
+                    textShadow: '0 0 5px rgba(255, 215, 0, 0.3)'
+                }}>
+                    {t("premiumPitch")}
+                </p>
+            </div>
         )}
       </div>
 
@@ -661,7 +875,9 @@ export default function App() {
         <div style={{fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '10px', background: '#222', padding: '5px', borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'}}>
             <span>👤 <span style={{color: '#fff'}}>{userEmail}</span></span>
             {isPremium ? (
-                <span style={{color: '#ffd700', fontWeight: 'bold'}}>{t("premiumStatus")}</span>
+                <span style={{color: '#ffd700', fontWeight: 'bold'}}>
+                    {status === 'trialing' ? `• ${t("trialBadge")} 🎁` : t("premiumStatus")}
+                </span>
             ) : (
                 <span style={{color: '#ccc'}}>{t("freeStatus")}</span>
             )}
@@ -763,11 +979,48 @@ export default function App() {
         presetGains={PRESETS[currentPreset]}
         onUserAdjust={onUserAdjust}
         targetTabId={targetTabId}
+        volumeLimitWarning={t("volumeLimitWarning")}
+        openPremiumModal={openPremiumModal}
+        openGuideModal={openGuideModal}
       />
 
       {enabled && (
-        <SpectrumAnalyzer targetTabId={targetTabId} />
+        <SpectrumAnalyzer targetTabId={targetTabId} isPremium={isPremium} />
       )}
+
+      {/* MODAL PREMIUM */}
+      <PremiumModal 
+        isOpen={isModalOpen} 
+        message={modalMessage} 
+        onClose={closePremiumModal} 
+        onUpgrade={handleGoPremium} 
+      />
+
+      {/* MODAL SYNC/LOGIN */}
+      <ActionModal 
+        isOpen={isSyncModalOpen}
+        title={t("syncLoginTitle")}
+        message={t("syncLoginMsg")}
+        confirmText={t("syncLoginConfirm")}
+        cancelText={t("syncLoginCancel")}
+        onClose={closeSyncModal}
+        onConfirm={() => {
+            closeSyncModal();
+            handleLogin();
+        }}
+      />
+
+      {/* MODAL GUIDE (Power ON) */}
+      <ActionModal 
+        isOpen={isGuideModalOpen}
+        title={t("powerOnGuideTitle")}
+        icon="💡"
+        message={t("powerOnGuideMsg")}
+        confirmText={t("powerOnGuideConfirm")}
+        cancelText=""
+        onClose={closeGuideModal}
+        onConfirm={closeGuideModal}
+      />
 
       {/* FOOTER / PREMIUM PROMOS - ONLY FOR FREE USERS */}
       {!isPremium && (

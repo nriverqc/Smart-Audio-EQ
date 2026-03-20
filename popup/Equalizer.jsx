@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
  
-export default function Equalizer({ enabled, isPremium, currentPreset, presetGains, onUserAdjust, targetTabId }) {
+export default function Equalizer({ enabled, isPremium, currentPreset, presetGains, onUserAdjust, targetTabId, volumeLimitWarning, openPremiumModal, openGuideModal }) {
   // FREE: 6 bands, PREMIUM: 15 bands
   const isFree = !isPremium;
   const bands = isFree 
@@ -78,6 +78,16 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
 
   const changeVolume = (v) => {
     const newVol = parseInt(v);
+    
+    // LIMIT FREE USERS TO 120%
+    if (isFree && newVol > 120) {
+        if (openPremiumModal) {
+            openPremiumModal(volumeLimitWarning || "¡Pruébalo! Con Premium puedes subir hasta el 300%.");
+        }
+        setVolume(120);
+        return;
+    }
+
     setVolume(newVol);
     
     // Enviar volumen normalizado (0 a 3, donde 1 es volumen normal)
@@ -105,7 +115,14 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
       <div className="eq-title">⚙️ {isPremium ? 'Ecualizador Pro (15 Bandas)' : 'Ecualizador (6 Bandas)'}</div>
       
       {/* Master Volume */}
-      <div className="master-volume">
+      <div className="master-volume" 
+        onClick={() => {
+            if (!enabled && openGuideModal) {
+                openGuideModal();
+            }
+        }}
+        style={{ cursor: !enabled ? 'pointer' : 'default' }}
+      >
         <div className="volume-label">
           <span>🔊 Volumen Maestro</span>
           <span className="volume-value">{volume}%</span>
@@ -119,6 +136,7 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
             onChange={(e) => changeVolume(e.target.value)}
             className="volume-slider"
             disabled={!enabled}
+            style={{ pointerEvents: !enabled ? 'none' : 'auto' }}
           />
       </div>
 

@@ -10,7 +10,8 @@ export default function Premium({ lang }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [appPassCode, setAppPassCode] = useState('');
   const [planType, setPlanType] = useState('yearly');
-  const displayPrices = { monthly: '$2.19 USD', yearly: '$18.39 USD' };
+  const displayPrices = { monthly: '$1.59 USD', yearly: '$9.99 USD' };
+  const oldPrices = { monthly: '$2.29 USD', yearly: '$19.99 USD' };
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
 
@@ -32,8 +33,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Gratis',
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: displayPrices.monthly + ' / mes (30% DCTO)',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / año (51% DCTO)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / mes (Prueba 3 días GRATIS)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / año (50% DCTO)',
       freeItems: [
         '✅ Ecualizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -76,8 +77,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Free',
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: displayPrices.monthly + ' / mo (30% OFF)',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / year (51% OFF)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / mo (3-day FREE Trial)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / year (50% OFF)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basic presets (Flat, Rock, Pop, etc.)',
@@ -120,8 +121,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Grátis',
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: displayPrices.monthly + ' / mês (30% OFF)',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / ano (51% OFF)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / mês (Teste 3 dias GRÁTIS)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / ano (50% OFF)',
       freeItems: [
         '✅ Equalizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -164,8 +165,8 @@ export default function Premium({ lang }) {
       freeTitle: 'Kostenlos',
       freePrice: '$0 / für immer',
       premiumTitle: 'Premium 💎',
-      premiumPriceINT_Monthly: displayPrices.monthly + ' / Monat (30% RABATT)',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / Jahr (51% RABATT)',
+      premiumPriceINT_Monthly: displayPrices.monthly + ' / Monat (3 Tage KOSTENLOS)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / Jahr (50% RABATT)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basis-Presets (Flat, Rock, Pop, etc.)',
@@ -499,7 +500,7 @@ export default function Premium({ lang }) {
                             padding: '2px 5px',
                             borderRadius: '10px',
                             zIndex: 10
-                        }}>51% OFF</span>
+                        }}>50% OFF</span>
                     </button>
                 </div>
             </div>
@@ -512,9 +513,19 @@ export default function Premium({ lang }) {
           </ul>
           
           {!user.isPremium && (
-            <h3 style={{marginTop: '20px', fontSize: '1.8rem', color: '#fff', textAlign: 'center'}}>
-                {planType === 'yearly' ? t.premiumPriceINT_Yearly : t.premiumPriceINT_Monthly}
-            </h3>
+            <div style={{textAlign: 'center', marginBottom: '15px'}}>
+                <span style={{
+                    textDecoration: 'line-through', 
+                    color: '#666', 
+                    fontSize: '1.2rem',
+                    marginRight: '10px'
+                }}>
+                    {planType === 'yearly' ? oldPrices.yearly : oldPrices.monthly}
+                </span>
+                <h3 style={{display: 'inline-block', fontSize: '2.2rem', color: '#fff', margin: 0}}>
+                    {planType === 'yearly' ? displayPrices.yearly : displayPrices.monthly}
+                </h3>
+            </div>
           )}
 
           {!user.isPremium && (

@@ -49,23 +49,27 @@ def init_db():
             CREATE TABLE IF NOT EXISTS licenses (
                 email TEXT PRIMARY KEY,
                 is_premium BOOLEAN DEFAULT 0,
+                status TEXT DEFAULT 'free',
                 payment_id TEXT,
                 method TEXT,
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expiration_date TIMESTAMP
+                expiration_date TIMESTAMP,
+                trial_end_date TIMESTAMP
             )
         """)
         
         # Migration: Add columns if they don't exist
-        try:
-            cursor.execute("ALTER TABLE licenses ADD COLUMN expiration_date TIMESTAMP")
-        except sqlite3.OperationalError:
-            pass
-            
-        try:
-            cursor.execute("ALTER TABLE licenses ADD COLUMN method TEXT")
-        except sqlite3.OperationalError:
-            pass
+        columns = [
+            ("expiration_date", "TIMESTAMP"),
+            ("method", "TEXT"),
+            ("status", "TEXT DEFAULT 'free'"),
+            ("trial_end_date", "TIMESTAMP")
+        ]
+        for col_name, col_type in columns:
+            try:
+                cursor.execute(f"ALTER TABLE licenses ADD COLUMN {col_name} {col_type}")
+            except sqlite3.OperationalError:
+                pass
             
         conn.commit()
 
@@ -498,79 +502,106 @@ def paddle_webhook():
             return jsonify({"status": "ignored", "reason": "no_email"}), 200
 
         # 3. Handle specific events
-        if event_type in ["transaction.paid", "transaction.completed", "subscription.activated", "subscription.updated"]:
-            print(f"✅ Activating Premium for {email} (UID: {uid}) via Paddle")
+        if event_type in ["transaction.paid", "transaction.completed", "subscription.activated", "subscription.updated", "subscription.trialing"]:
+            print(f"✅ Activating/Updating Premium for {email} (UID: {uid}) via Paddle")
             
-            # Calculate expiration (monthly vs yearly)
+            # Status from Paddle
+            paddle_status = data.get("status", "active")
+            # Map Paddle status to our internal status
+            status = "trialing" if paddle_status == "trialing" else "active"
+            
+            # Calculate expiration
             days_to_add = 31 # Default monthly
             
             items = data.get("items", [])
             for item in items:
-                # Paddle v2 can have price_id in item or item['price']['id']
                 price_info = item.get("price", {})
                 price_id = item.get("price_id") or price_info.get("id")
                 
-                print(f"🔍 Webhook Item Price ID: {price_id}")
-                
-                if price_id == "pri_01kk2mxf0828y5x7p8bky7ch47": # Anual (Live)
+                if price_id == "pri_01kk2mxf0828y5x7p8bky7ch47": # Anual
                     days_to_add = 366
                     break
-                elif price_id == "pri_01kk2mvgj2pmjfh0pkjatsv8bf": # Mensual (Live)
+                elif price_id == "pri_01kk2mvgj2pmjfh0pkjatsv8bf": # Mensual
                     days_to_add = 31
                     break
 
-            expiration_date = datetime.now() + timedelta(days=days_to_add)
-            payment_id = data.get("id") or data.get("transaction_id")
+            now = datetime.now()
+            expiration_date = now + timedelta(days=days_to_add)
+            
+            # If trialing, Paddle usually provides trial_end
+            trial_end_date = None
+            if status == "trialing":
+                trial_end_str = data.get("current_billing_period", {}).get("ends_at")
+                if trial_end_str:
+                    try:
+                        trial_end_date = datetime.strptime(trial_end_str.split(".")[0], "%Y-%m-%dT%H:%M:%S")
+                    except:
+                        trial_end_date = now + timedelta(days=3) # Fallback 3 days
+                else:
+                    trial_end_date = now + timedelta(days=3)
+
+            payment_id = data.get("id") or data.get("subscription_id")
 
             # Update SQLite
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO licenses (email, is_premium, payment_id, expiration_date, method)
-                    VALUES (?, 1, ?, ?, ?)
+                    INSERT INTO licenses (email, is_premium, status, payment_id, expiration_date, trial_end_date, method)
+                    VALUES (?, 1, ?, ?, ?, ?, ?)
                     ON CONFLICT(email) DO UPDATE SET
                     is_premium=1,
+                    status=excluded.status,
                     payment_id=excluded.payment_id,
                     expiration_date=excluded.expiration_date,
+                    trial_end_date=excluded.trial_end_date,
                     method=excluded.method
-                """, (email, f"PADDLE_{payment_id}", expiration_date, "Paddle"))
+                """, (email, status, f"PADDLE_{payment_id}", expiration_date, trial_end_date, "Paddle"))
                 conn.commit()
 
             # Update Firestore
             if db and uid:
                 try:
                     user_ref = db.collection('usuarios').document(uid)
-                    user_ref.set({
+                    update_data = {
                         'isPremium': True,
+                        'status': status,
                         'lastPayment': firestore.SERVER_TIMESTAMP,
                         'expirationDate': expiration_date,
                         'paymentId': payment_id,
                         'method': 'Paddle',
                         'email': email
-                    }, merge=True)
+                    }
+                    if trial_end_date:
+                        update_data['trialEndDate'] = trial_end_date
+                        
+                    user_ref.set(update_data, merge=True)
                 except Exception as e:
                     print(f"Firebase Update Error: {e}")
 
-            return jsonify({"status": "success", "message": "Premium activated"})
+            return jsonify({"status": "success", "message": f"Premium {status} activated"})
 
         elif event_type in ["subscription.canceled", "subscription.past_due"]:
-            print(f"❌ Deactivating Premium for {email} (UID: {uid}) - Subscription Status: {event_type}")
+            new_status = "canceled" if event_type == "subscription.canceled" else "past_due"
+            print(f"❌ Updating Premium for {email} (UID: {uid}) - Status: {new_status}")
             
             # Update SQLite
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
-                cursor.execute("UPDATE licenses SET is_premium=0 WHERE email=?", (email,))
+                cursor.execute("UPDATE licenses SET is_premium=0, status=? WHERE email=?", (new_status, email))
                 conn.commit()
 
             # Update Firestore
             if db and uid:
                 try:
                     user_ref = db.collection('usuarios').document(uid)
-                    user_ref.update({'isPremium': False})
+                    user_ref.update({
+                        'isPremium': False,
+                        'status': new_status
+                    })
                 except Exception as e:
                     print(f"Firebase Update Error: {e}")
 
-            return jsonify({"status": "success", "message": "Premium deactivated"})
+            return jsonify({"status": "success", "message": f"Premium status updated to {new_status}"})
 
         return jsonify({"status": "ignored", "event": event_type}), 200
 
@@ -718,8 +749,7 @@ def check_license():
     if not email:
         return jsonify({"premium": False, "error": "No email provided"})
         
-    # Force sync logic to trigger Render deploy
-    print(f"Checking license for: {email} (v1.0.5)")
+    print(f"Checking license for: {email} (v1.1.0 - Trials active)")
 
     try:
         # 1. Check Firestore FIRST if UID is provided (Admin override)
@@ -728,68 +758,165 @@ def check_license():
             doc = user_ref.get()
             if doc.exists:
                 data = doc.to_dict()
-                if data.get('isPremium') is False:
-                    # Sync FALSE back to SQLite
-                    with sqlite3.connect(DB_NAME) as conn:
-                        cursor = conn.cursor()
-                        cursor.execute("UPDATE licenses SET is_premium=0 WHERE email=?", (email,))
-                        conn.commit()
-                    return jsonify({"premium": False, "source": "firestore_override"})
+                status = data.get('status', 'free')
+                is_premium_db = data.get('isPremium', False)
                 
-                if data.get('isPremium') is True:
-                    # Logic for expiration...
-                    exp_date = data.get('expirationDate')
-                    if exp_date:
-                        now = datetime.now(exp_date.tzinfo)
-                        if now > exp_date:
-                             return jsonify({"premium": False, "status": "expired_firestore"})
-                    
-                    # Sync TRUE back to SQLite
+                # Manual deactivation in DB
+                if is_premium_db is False and status not in ['trialing', 'active']:
                     with sqlite3.connect(DB_NAME) as conn:
                         cursor = conn.cursor()
-                        exp_str = exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None
-                        method = data.get('method')
-                        cursor.execute("""
-                            INSERT INTO licenses (email, is_premium, expiration_date, method)
-                            VALUES (?, 1, ?, ?)
-                            ON CONFLICT(email) DO UPDATE SET is_premium=1, expiration_date=excluded.expiration_date, method=excluded.method
-                        """, (email, exp_str, method))
+                        cursor.execute("UPDATE licenses SET is_premium=0, status='free' WHERE email=?", (email,))
                         conn.commit()
-                    return jsonify({"premium": True, "source": "firestore", "method": data.get('method')})
+                    return jsonify({"premium": False, "status": "free", "source": "firestore_override"})
+                
+                # Logic for expiration...
+                exp_date = data.get('expirationDate')
+                trial_end = data.get('trialEndDate')
+                
+                now = datetime.now()
+                
+                # Handle Trialing status from DB
+                if status == 'trialing' and trial_end:
+                    if now > trial_end:
+                        status = 'expired_trial'
+                        is_premium_db = False
+                    else:
+                        is_premium_db = True
+                
+                # Handle Active/Subscription from DB
+                elif status == 'active' and exp_date:
+                    if now > exp_date:
+                        status = 'past_due' # Or expired
+                        is_premium_db = False
+                    else:
+                        is_premium_db = True
+                
+                # Sync back to SQLite
+                with sqlite3.connect(DB_NAME) as conn:
+                    cursor = conn.cursor()
+                    exp_str = exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None
+                    trial_str = trial_end.strftime("%Y-%m-%d %H:%M:%S") if trial_end else None
+                    cursor.execute("""
+                        INSERT INTO licenses (email, is_premium, status, expiration_date, trial_end_date, method)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(email) DO UPDATE SET 
+                            is_premium=excluded.is_premium, 
+                            status=excluded.status, 
+                            expiration_date=excluded.expiration_date,
+                            trial_end_date=excluded.trial_end_date,
+                            method=excluded.method
+                    """, (email, 1 if is_premium_db else 0, status, exp_str, trial_str, data.get('method')))
+                    conn.commit()
+                
+                return jsonify({
+                    "premium": is_premium_db,
+                    "status": status,
+                    "source": "firestore",
+                    "trial_end": trial_end.strftime("%Y-%m-%d %H:%M:%S") if trial_end else None,
+                    "expiration": exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None
+                })
 
         # 2. Check SQLite (Local Fast Cache) as fallback
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT is_premium, expiration_date, method FROM licenses WHERE email = ?", (email,))
+            cursor.execute("SELECT is_premium, status, expiration_date, trial_end_date, method FROM licenses WHERE email = ?", (email,))
             row = cursor.fetchone()
             
             if row:
                 is_premium = bool(row[0])
-                expiration_str = row[1]
-                method = row[2]
+                status = row[1]
+                expiration_str = row[2]
+                trial_end_str = row[3]
+                method = row[4]
                 
-                if is_premium and expiration_str:
+                now = datetime.now()
+                
+                # Re-verify local status for trials
+                if status == 'trialing' and trial_end_str:
                     try:
-                        if "." in expiration_str:
-                             expiration_date = datetime.strptime(expiration_str, "%Y-%m-%d %H:%M:%S.%f")
-                        else:
-                             expiration_date = datetime.strptime(expiration_str, "%Y-%m-%d %H:%M:%S")
-                             
-                        if datetime.now() > expiration_date:
-                            return jsonify({"premium": False, "status": "expired", "expiration": expiration_str})
-                        else:
-                            return jsonify({"premium": True, "source": "sqlite", "expiration": expiration_str, "method": method})
-                    except Exception as e:
-                        return jsonify({"premium": True, "source": "sqlite_fallback", "method": method})
+                        trial_end = datetime.strptime(trial_end_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
+                        if now > trial_end:
+                            is_premium = False
+                            status = 'expired_trial'
+                    except: pass
+                
+                # Re-verify local status for active sub
+                elif status == 'active' and expiration_str:
+                    try:
+                        exp_date = datetime.strptime(expiration_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
+                        if now > exp_date:
+                            is_premium = False
+                            status = 'past_due'
+                    except: pass
 
-                elif is_premium:
-                     return jsonify({"premium": True, "source": "sqlite_legacy", "expiration": "lifetime", "method": method})
+                return jsonify({
+                    "premium": is_premium,
+                    "status": status,
+                    "source": "sqlite",
+                    "expiration": expiration_str,
+                    "trial_end": trial_end_str,
+                    "method": method
+                })
 
-        return jsonify({"premium": False})
+        return jsonify({"premium": False, "status": "free"})
         
     except Exception as e:
         print(f"Check License Error: {e}")
         return jsonify({"premium": False, "error": str(e)})
+
+@app.route("/start-trial", methods=["POST"])
+def start_trial():
+    """Initializes a 3-day trial for a user"""
+    try:
+        data = request.json or {}
+        email = data.get("email")
+        uid = data.get("uid")
+        
+        if not email or not uid:
+            return jsonify({"error": "Missing email or uid"}), 400
+            
+        # Check if user already had a trial
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT status, trial_end_date FROM licenses WHERE email = ?", (email,))
+            row = cursor.fetchone()
+            
+            if row and row[1]: # Already has trial info
+                return jsonify({"error": "Trial already used or started", "status": row[0]}), 403
+
+            # Start 3-day trial
+            trial_end = datetime.now() + timedelta(days=3)
+            trial_str = trial_end.strftime("%Y-%m-%d %H:%M:%S")
+            
+            cursor.execute("""
+                INSERT INTO licenses (email, is_premium, status, trial_end_date, method)
+                VALUES (?, 1, 'trialing', ?, 'FreeTrial')
+                ON CONFLICT(email) DO UPDATE SET 
+                    is_premium=1, 
+                    status='trialing', 
+                    trial_end_date=excluded.trial_end_date,
+                    method='FreeTrial'
+            """, (email, trial_str))
+            conn.commit()
+            
+        # Sync to Firestore
+        if db:
+            try:
+                user_ref = db.collection('usuarios').document(uid)
+                user_ref.set({
+                    'isPremium': True,
+                    'status': 'trialing',
+                    'trialEndDate': trial_end,
+                    'method': 'FreeTrial',
+                    'email': email
+                }, merge=True)
+            except Exception as e:
+                print(f"Firebase Trial Sync Error: {e}")
+                
+        return jsonify({"status": "trialing", "trial_end": trial_str})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/sync-user", methods=["POST"])
 def sync_user():

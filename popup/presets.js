@@ -27,6 +27,6 @@ export const PRESETS = {
 };
 
 export const IS_PREMIUM_PRESET = (key) => {
-  const free = ['flat', 'vocal', 'guitar', 'bass-light', 'custom'];
+  const free = ['flat', 'vocal', 'bass-light'];
   return !free.includes(key);
 };

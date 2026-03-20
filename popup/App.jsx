@@ -530,7 +530,10 @@ export default function App() {
                 if (res.status) setStatus(res.status);
                 if (res.trial_end) setTrialEndDate(res.trial_end);
             });
-            alert(response.message);
+            
+            // Show real info instead of a generic message
+            const fullMsg = response.detail ? `${response.message}\n${response.detail}` : response.message;
+            alert(fullMsg);
         } else {
             if (response && response.error && response.error.includes("login")) {
                  openSyncModal();

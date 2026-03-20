@@ -778,17 +778,19 @@ def check_license():
                 status = data.get('status', 'free')
                 is_premium_db = data.get('isPremium', False)
                 
-                # Manual deactivation in DB
+                # Manual deactivation or status change in DB
                 if is_premium_db is False and status not in ['trialing', 'active']:
                     with sqlite3.connect(DB_NAME) as conn:
                         cursor = conn.cursor()
-                        cursor.execute("UPDATE licenses SET is_premium=0, status='free' WHERE email=?", (email,))
+                        # Wipe local status if DB says user is free
+                        cursor.execute("UPDATE licenses SET is_premium=0, status='free', method=NULL, trial_end_date=NULL, expiration_date=NULL WHERE email=?", (email,))
                         conn.commit()
                     return jsonify({"premium": False, "status": "free", "source": "firestore_override"})
                 
                 # Logic for expiration...
                 exp_date = data.get('expirationDate')
                 trial_end = data.get('trialEndDate')
+                method = data.get('method', 'Unknown')
                 
                 now = datetime.now()
                 
@@ -970,10 +972,91 @@ def sync_user():
 
 @app.route("/restore-purchase", methods=["POST"])
 def restore_purchase():
-    """Checks for existing Premium status (simplified for PayPal/AppPass)"""
-    # This route is now simpler as we check SQLite/Firestore in check-license
-    # But we can keep it for manual "restore" button logic if needed.
-    return jsonify({"status": "check_license_instead", "message": "Use check-license endpoint"})
+    """Manually restore purchase using a Payment ID or Payer Email"""
+    try:
+        data = request.json or {}
+        email = data.get("email") # Current logged in user
+        uid = data.get("uid")
+        payment_id = data.get("payment_id")
+        payer_email = data.get("payer_email")
+        
+        if not email or not uid:
+            return jsonify({"error": "Missing user data"}), 400
+            
+        print(f"Restore Purchase Request: {email} (UID: {uid}) - ID: {payment_id} - Payer: {payer_email}")
+
+        # 1. Search in Firestore for this Payment ID or Payer Email
+        if db:
+            query = None
+            if payment_id:
+                # Paddle IDs: sub_... txn_... 
+                # PayPal IDs: P-..., 8..., PAYPAL_...
+                # App Pass IDs: PROMO_..., OFFICIAL_APP_PASS_...
+                query = db.collection('usuarios').where('paymentId', '==', payment_id).limit(1)
+            elif payer_email:
+                query = db.collection('usuarios').where('email', '==', payer_email).limit(1)
+            
+            if query:
+                docs = query.get()
+                for doc in docs:
+                    data_db = doc.to_dict()
+                    if data_db.get('isPremium') is True:
+                        # Success! Found a valid premium account
+                        # Sync it to the current user's Firestore doc too
+                        user_ref = db.collection('usuarios').document(uid)
+                        user_ref.set({
+                            'isPremium': True,
+                            'status': data_db.get('status', 'active'),
+                            'expirationDate': data_db.get('expirationDate'),
+                            'trialEndDate': data_db.get('trialEndDate'),
+                            'method': data_db.get('method', 'Restored'),
+                            'paymentId': data_db.get('paymentId'),
+                            'restoredFrom': doc.id
+                        }, merge=True)
+                        
+                        return jsonify({
+                            "status": "restored", 
+                            "message": "¡Suscripción encontrada y restaurada! 🚀",
+                            "premium": True
+                        })
+
+        # 2. Search in SQLite if Firestore fails (Legacy or fast cache)
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            if payment_id:
+                cursor.execute("SELECT email, status, expiration_date, method FROM licenses WHERE payment_id = ? OR payment_id = ?", (payment_id, f"PADDLE_{payment_id}"))
+            elif payer_email:
+                cursor.execute("SELECT email, status, expiration_date, method FROM licenses WHERE email = ?", (payer_email,))
+            else:
+                return jsonify({"status": "not_found", "message": "No se proporcionaron datos de búsqueda."})
+                
+            row = cursor.fetchone()
+            if row:
+                found_email, status, expiration, method = row
+                # Re-verify if actually premium
+                if status in ['active', 'trialing']:
+                    # Sync to Firestore for current user
+                    if db:
+                        user_ref = db.collection('usuarios').document(uid)
+                        user_ref.set({
+                            'isPremium': True,
+                            'status': status,
+                            'method': method,
+                            'paymentId': payment_id or found_email,
+                            'email': email # Use current email
+                        }, merge=True)
+                        
+                    return jsonify({
+                        "status": "restored", 
+                        "message": "¡Suscripción restaurada correctamente! 💎",
+                        "premium": True
+                    })
+
+        return jsonify({"status": "not_found", "message": "No se encontró ninguna suscripción con esos datos."})
+        
+    except Exception as e:
+        print(f"Restore Purchase Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/support", methods=["POST"])
 def support():

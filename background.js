@@ -700,18 +700,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             await performAutomaticAppPassCheck();
 
             // Refresh isPremium from storage in case App Pass check updated it
-            const finalStorage = await chrome.storage.local.get(['isPremium', 'status', 'trial_end']);
+            const finalStorage = await chrome.storage.local.get(['isPremium', 'status', 'trial_end', 'method']);
             
             // IMPORTANT: If API or AppPass says Premium, we enforce it
             const isNowPremium = (typeof data.premium === 'boolean' && data.premium === true) || !!finalStorage.isPremium;
 
             isPremium = isNowPremium; // Update global variable too
             const newStatus = data.status || (isNowPremium ? 'active' : 'free');
+            const finalMethod = data.method || finalStorage.method || 'Unknown';
             
             await chrome.storage.local.set({ 
                 isPremium: isNowPremium, 
                 status: newStatus,
-                trial_end: data.trial_end || null
+                method: finalMethod,
+                trial_end: data.trial_end || finalStorage.trial_end || null
             });
             
             // Notify web tabs to update their UI as well (Bidirectional Sync)
@@ -728,9 +730,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             }
             
             if (isNowPremium) {
-                sendResponse({ success: true, message: "Premium status synced! 💎" });
+                const statusMsg = newStatus === 'trialing' ? "Trial activo 🎁" : "Premium activo 💎";
+                const methodMsg = `Metodo: ${finalMethod}`;
+                sendResponse({ 
+                    success: true, 
+                    message: `Sincronización completa: ${statusMsg}`, 
+                    detail: `Plan: ${finalMethod}`
+                });
             } else {
-                sendResponse({ success: true, message: "Status: Free. If you bought Premium, please wait a minute." });
+                sendResponse({ 
+                    success: true, 
+                    message: "Estado: Gratis.",
+                    detail: "Si compraste Premium, espera un minuto o verifica tu pago."
+                });
             }
 
         } catch (e) {

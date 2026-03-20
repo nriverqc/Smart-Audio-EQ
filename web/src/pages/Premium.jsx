@@ -301,22 +301,14 @@ export default function Premium({ lang }) {
     }
   };
 
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [restoreId, setRestoreId] = useState('');
+  const [restoreEmail, setRestoreEmail] = useState('');
+
   const restorePurchase = async () => {
       if (!user.email) {
           alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
           return;
-      }
-
-      // Ask user for alternate email or payment ID
-      const paymentIdInput = prompt(lang === 'es' 
-          ? '¿Tienes el ID de la operación (Pago)? Si es así, ingrésalo aquí. Si no, déjalo vacío.' 
-          : 'Do you have the Operation ID (Payment ID)? If so, enter it here. If not, leave blank.');
-      
-      let payerEmailInput = '';
-      if (!paymentIdInput) {
-           payerEmailInput = prompt(lang === 'es'
-              ? `¿Pagaste con un email diferente a ${user.email}? Ingrésalo aquí. (Deja vacío para usar tu email actual)`
-              : `Did you pay with a different email than ${user.email}? Enter it here. (Leave blank to use current email)`);
       }
 
       setLoading(true);
@@ -327,16 +319,17 @@ export default function Premium({ lang }) {
               body: JSON.stringify({ 
                   email: user.email, 
                   uid: user.uid,
-                  payer_email: payerEmailInput ? payerEmailInput.trim() : null,
-                  payment_id: paymentIdInput ? paymentIdInput.trim() : null
+                  payer_email: restoreEmail ? restoreEmail.trim() : null,
+                  payment_id: restoreId ? restoreId.trim() : null
               })
           });
           const data = await res.json();
           if (data.status === 'restored') {
               alert(data.message);
+              setShowRestoreModal(false);
               refreshUser();
           } else if (data.status === 'not_found') {
-              alert(lang === 'es' ? 'No se encontraron pagos aprobados con esos datos.' : 'No approved payments found with those details.');
+              alert(data.message || (lang === 'es' ? 'No se encontraron pagos aprobados con esos datos.' : 'No approved payments found with those details.'));
           } else {
               alert('Error: ' + (data.error || 'Unknown'));
           }
@@ -344,7 +337,8 @@ export default function Premium({ lang }) {
           console.error(e);
           alert('Error restoring purchase');
       } finally {
-          setLoading(false);
+          setLoading(true); // Wait for refresh
+          setTimeout(() => setLoading(false), 2000);
       }
   };
 
@@ -677,7 +671,7 @@ export default function Premium({ lang }) {
               
               {/* RESTORE PURCHASE BUTTON */}
               <button 
-                  onClick={restorePurchase} 
+                  onClick={() => setShowRestoreModal(true)} 
                   disabled={loading}
                   style={{
                       marginTop: '15px', 
@@ -691,8 +685,86 @@ export default function Premium({ lang }) {
                       textDecoration: 'underline'
                   }}
               >
-                  {lang === 'es' ? '¿Ya pagaste? Ingresar ID de pago' : 'Already paid? Enter Payment ID'}
+                  {lang === 'es' ? '¿Ya pagaste? Restaurar compra' : 'Already paid? Restore purchase'}
               </button>
+
+              {/* RESTORE MODAL */}
+              {showRestoreModal && (
+                  <div style={{
+                      position: 'fixed',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'rgba(0,0,0,0.85)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 10000,
+                      padding: '20px'
+                  }}>
+                      <div style={{
+                          background: '#1a1a1a',
+                          border: '1px solid #333',
+                          padding: '30px',
+                          borderRadius: '15px',
+                          maxWidth: '450px',
+                          width: '100%',
+                          boxShadow: '0 0 40px rgba(0,210,255,0.2)'
+                      }}>
+                          <h2 style={{color: '#00d2ff', marginBottom: '10px'}}>Restaurar Premium 💎</h2>
+                          <p style={{fontSize: '0.9rem', color: '#888', marginBottom: '20px'}}>
+                              Si ya compraste y no aparece como activo, ingresa tu ID de pago (Paddle o PayPal) o el email con el que pagaste.
+                          </p>
+                          
+                          <div style={{marginBottom: '15px', textAlign: 'left'}}>
+                              <label style={{fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px'}}>ID de Pago / Suscripción:</label>
+                              <input 
+                                  type="text"
+                                  placeholder="sub_... o txn_... o P-..."
+                                  value={restoreId}
+                                  onChange={(e) => setRestoreId(e.target.value)}
+                                  style={{
+                                      width: '100%', padding: '12px', borderRadius: '8px', 
+                                      background: '#222', border: '1px solid #444', color: '#fff'
+                                  }}
+                              />
+                          </div>
+
+                          <div style={{marginBottom: '20px', textAlign: 'left'}}>
+                              <label style={{fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px'}}>O Email de Pago:</label>
+                              <input 
+                                  type="email"
+                                  placeholder="tu-email-de-pago@ejemplo.com"
+                                  value={restoreEmail}
+                                  onChange={(e) => setRestoreEmail(e.target.value)}
+                                  style={{
+                                      width: '100%', padding: '12px', borderRadius: '8px', 
+                                      background: '#222', border: '1px solid #444', color: '#fff'
+                                  }}
+                              />
+                          </div>
+
+                          <div style={{display: 'flex', gap: '10px'}}>
+                              <button 
+                                  onClick={restorePurchase}
+                                  style={{
+                                      flex: 2, padding: '12px', borderRadius: '8px', border: 'none',
+                                      background: '#00ff85', color: '#000', fontWeight: 'bold', cursor: 'pointer'
+                                  }}
+                              >
+                                  Verificar y Activar
+                              </button>
+                              <button 
+                                  onClick={() => setShowRestoreModal(false)}
+                                  style={{
+                                      flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #444',
+                                      background: 'transparent', color: '#fff', cursor: 'pointer'
+                                  }}
+                              >
+                                  Cancelar
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+              )}
             </>
           ) : (
             <div style={{marginTop: '20px', textAlign: 'center', padding: '15px', background: 'rgba(0, 255, 133, 0.1)', border: '1px solid #00ff85', borderRadius: '8px'}}>

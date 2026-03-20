@@ -769,7 +769,7 @@ def check_license():
     print(f"Checking license for: {email} (v1.1.0 - Trials active)")
 
     try:
-        # 1. Check Firestore FIRST if UID is provided (Admin override)
+        # 1. Check Firestore FIRST if UID is provided (Direct User Match)
         if db and uid:
             user_ref = db.collection('usuarios').document(uid)
             doc = user_ref.get()
@@ -785,7 +785,28 @@ def check_license():
                         # Wipe local status if DB says user is free
                         cursor.execute("UPDATE licenses SET is_premium=0, status='free', method=NULL, trial_end_date=NULL, expiration_date=NULL WHERE email=?", (email,))
                         conn.commit()
-                    return jsonify({"premium": False, "status": "free", "source": "firestore_override"})
+                    
+                    # DEEP SEARCH: If not premium by UID, maybe they are premium by EMAIL (different account/webhook sync)
+                    # This is the "Automatic Restore" logic
+                    users_by_email = db.collection('usuarios').where('email', '==', email).where('isPremium', '==', True).limit(1).get()
+                    if len(users_by_email) > 0:
+                        premium_doc = users_by_email[0].to_dict()
+                        print(f"✨ Deep Search found premium for {email} in another document. Linking...")
+                        # Link this premium status to the current UID
+                        user_ref.set({
+                            'isPremium': True,
+                            'status': premium_doc.get('status', 'active'),
+                            'expirationDate': premium_doc.get('expirationDate'),
+                            'trialEndDate': premium_doc.get('trialEndDate'),
+                            'method': premium_doc.get('method', 'Auto-Linked'),
+                            'paymentId': premium_doc.get('paymentId')
+                        }, merge=True)
+                        # Recursive call or just update local variables to continue
+                        data = user_ref.get().to_dict()
+                        status = data.get('status')
+                        is_premium_db = True
+                    else:
+                        return jsonify({"premium": False, "status": "free", "source": "firestore_override"})
                 
                 # Logic for expiration...
                 exp_date = data.get('expirationDate')
@@ -827,12 +848,13 @@ def check_license():
                             expiration_date=excluded.expiration_date,
                             trial_end_date=excluded.trial_end_date,
                             method=excluded.method
-                    """, (email, 1 if is_premium_db else 0, status, exp_str, trial_str, data.get('method')))
+                    """, (email, 1 if is_premium_db else 0, status, exp_str, trial_str, method))
                     conn.commit()
                 
                 return jsonify({
                     "premium": is_premium_db,
                     "status": status,
+                    "method": method,
                     "source": "firestore",
                     "trial_end": trial_end.strftime("%Y-%m-%d %H:%M:%S") if trial_end else None,
                     "expiration": exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None

@@ -711,30 +711,36 @@ export default function Premium({ lang }) {
                       }}>
                           <h2 style={{color: '#00d2ff', marginBottom: '10px'}}>Restaurar Premium 💎</h2>
                           <p style={{fontSize: '0.9rem', color: '#888', marginBottom: '20px'}}>
-                              Si ya compraste y no aparece como activo, ingresa tu ID de pago (Paddle o PayPal) o el email con el que pagaste.
+                              {lang === 'es' 
+                                ? 'Si ya compraste y no aparece como activo, ingresa tu email de pago (Recomendado) o tu ID de suscripción.' 
+                                : 'If you already paid and it doesn\'t show as active, enter your payment email (Recommended) or your subscription ID.'}
                           </p>
                           
                           <div style={{marginBottom: '15px', textAlign: 'left'}}>
-                              <label style={{fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px'}}>ID de Pago / Suscripción:</label>
+                              <label style={{fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px'}}>
+                                  {lang === 'es' ? 'Email con el que pagaste (RECOMENDADO):' : 'Email used for payment (RECOMMENDED):'}
+                              </label>
                               <input 
-                                  type="text"
-                                  placeholder="sub_... o txn_... o P-..."
-                                  value={restoreId}
-                                  onChange={(e) => setRestoreId(e.target.value)}
+                                  type="email"
+                                  placeholder="ejemplo@correo.com"
+                                  value={restoreEmail}
+                                  onChange={(e) => setRestoreEmail(e.target.value)}
                                   style={{
                                       width: '100%', padding: '12px', borderRadius: '8px', 
-                                      background: '#222', border: '1px solid #444', color: '#fff'
+                                      background: '#222', border: '1px solid #00ff85', color: '#fff'
                                   }}
                               />
                           </div>
 
                           <div style={{marginBottom: '20px', textAlign: 'left'}}>
-                              <label style={{fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px'}}>O Email de Pago:</label>
+                              <label style={{fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px'}}>
+                                  {lang === 'es' ? 'O ID de Pago / Suscripción:' : 'Or Payment / Subscription ID:'}
+                              </label>
                               <input 
-                                  type="email"
-                                  placeholder="tu-email-de-pago@ejemplo.com"
-                                  value={restoreEmail}
-                                  onChange={(e) => setRestoreEmail(e.target.value)}
+                                  type="text"
+                                  placeholder="sub_... o txn_... o P-..."
+                                  value={restoreId}
+                                  onChange={(e) => setRestoreId(e.target.value)}
                                   style={{
                                       width: '100%', padding: '12px', borderRadius: '8px', 
                                       background: '#222', border: '1px solid #444', color: '#fff'

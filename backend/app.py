@@ -756,7 +756,23 @@ def cancel_subscription():
             timeout=20,
         )
         if resp.status_code not in [200, 201]:
-            return jsonify({"error": "Paddle cancel failed", "details": resp.text}), 400
+            details = None
+            request_id = None
+            try:
+                body = resp.json() or {}
+                details = body
+                meta = body.get("meta") or {}
+                request_id = meta.get("request_id") or meta.get("requestId")
+            except Exception:
+                details = resp.text
+
+            return jsonify({
+                "error": "Paddle cancel failed",
+                "subscriptionId": subscription_id,
+                "status_code": resp.status_code,
+                "request_id": request_id,
+                "details": details
+            }), 400
 
         now = datetime.now()
 

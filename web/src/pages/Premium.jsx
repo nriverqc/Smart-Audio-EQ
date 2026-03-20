@@ -85,7 +85,16 @@ export default function Premium({ lang }) {
               setShowManageModal(false);
               refreshUser();
           } else {
-              alert((data && data.error) ? data.error : 'Cancel failed');
+              const parts = [];
+              if (data && data.error) parts.push(data.error);
+              if (data && data.subscriptionId) parts.push(`Subscription: ${data.subscriptionId}`);
+              if (data && data.status_code) parts.push(`HTTP: ${data.status_code}`);
+              if (data && data.request_id) parts.push(`Request ID: ${data.request_id}`);
+              if (data && data.details) {
+                  const d = typeof data.details === 'string' ? data.details : JSON.stringify(data.details);
+                  parts.push(d);
+              }
+              alert(parts.length ? parts.join('\n') : 'Cancel failed');
           }
       } catch (e) {
           alert('Cancel failed');

@@ -703,6 +703,43 @@ def cancel_subscription():
             except Exception as e:
                 print(f"Cancel lookup (sqlite) error: {e}")
 
+        if not subscription_id and email_norm:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {paddle_api_key}",
+                    "Accept": "application/json",
+                    "Paddle-Version": "1",
+                }
+
+                cust_resp = requests.get(
+                    f"{base_url}/customers",
+                    headers=headers,
+                    params={"email": email_norm, "per_page": 10},
+                    timeout=20,
+                )
+                if cust_resp.status_code == 200:
+                    cust_data = cust_resp.json() or {}
+                    customers = cust_data.get("data") or []
+                    customer_id = customers[0].get("id") if len(customers) > 0 else None
+                    if customer_id and str(customer_id).startswith("ctm_"):
+                        subs_resp = requests.get(
+                            f"{base_url}/subscriptions",
+                            headers=headers,
+                            params={"customer_id": customer_id, "status": "trialing,active", "per_page": 20},
+                            timeout=20,
+                        )
+                        if subs_resp.status_code == 200:
+                            subs_data = subs_resp.json() or {}
+                            subs = subs_data.get("data") or []
+                            for s in subs:
+                                sid = s.get("id")
+                                sstatus = s.get("status")
+                                if sid and str(sid).startswith("sub_") and sstatus in ["trialing", "active"]:
+                                    subscription_id = sid
+                                    break
+            except Exception as e:
+                print(f"Cancel lookup (paddle api) error: {e}")
+
         if not subscription_id or not str(subscription_id).startswith("sub_"):
             return jsonify({"error": "Subscription ID not found"}), 404
 
@@ -710,6 +747,7 @@ def cancel_subscription():
             "Authorization": f"Bearer {paddle_api_key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "Paddle-Version": "1",
         }
         resp = requests.post(
             f"{base_url}/subscriptions/{subscription_id}/cancel",

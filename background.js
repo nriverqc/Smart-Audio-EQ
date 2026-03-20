@@ -15,42 +15,8 @@ async function notifyWebTabsOfPremium() {
     } catch (e) { console.log("Error notifying tabs", e); }
 }
 
-async function performAutomaticAppPassCheck() {
-  try {
-    const response = await checkAppPass();
-    if (response.status === 'ok' && response.appPassToken) {
-      console.log('✅ Background: Official App Pass detected!');
-      
-      const storage = await chrome.storage.local.get(['email', 'uid']);
-      isPremium = true; 
-      await chrome.storage.local.set({ isPremium: true, status: 'active' });
-      
-      // Notify open web tabs immediately
-      notifyWebTabsOfPremium();
-      
-      if (storage.email && storage.uid) {
-        // Verify token with backend to persist in DB
-        fetch("https://smart-audio-eq-1.onrender.com/verify-official-app-pass", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: storage.email,
-            uid: storage.uid,
-            token: response.appPassToken
-          })
-        }).catch(e => console.log("Backend sync failed, but local premium is active"));
-      }
-      return true;
-    } else {
-      console.log('ℹ️ Background: No official App Pass detected:', response.message);
-      // We DO NOT set isPremium to false here, because they might have PayPal premium
-      return false;
-    }
-  } catch (e) {
-    console.warn('❌ Background: App Pass SDK Check failed:', e.message);
-    return false;
-  }
-}
+/* REMOVED APP PASS LOGIC */
+
 
 // Check on startup
 chrome.runtime.onStartup.addListener(() => {
@@ -696,24 +662,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             }
             const data = await res.json();
 
-            // 5. Also check Official App Pass SDK as part of sync
-            await performAutomaticAppPassCheck();
-
-            // Refresh isPremium from storage in case App Pass check updated it
+            // 5. Cleanup old variables if present
             const finalStorage = await chrome.storage.local.get(['isPremium', 'status', 'trial_end', 'method']);
             
-            // IMPORTANT: If API or AppPass says Premium, we enforce it
-            const isNowPremium = (typeof data.premium === 'boolean' && data.premium === true) || !!finalStorage.isPremium;
+            // IMPORTANT: If API says Premium, we enforce it
+            const isNowPremium = (typeof data.premium === 'boolean' && data.premium === true);
 
             isPremium = isNowPremium; // Update global variable too
             const newStatus = data.status || (isNowPremium ? 'active' : 'free');
-            const finalMethod = data.method || finalStorage.method || 'Unknown';
+            const finalMethod = data.method || 'Unknown';
             
             await chrome.storage.local.set({ 
                 isPremium: isNowPremium, 
                 status: newStatus,
                 method: finalMethod,
-                trial_end: data.trial_end || finalStorage.trial_end || null
+                trial_end: data.trial_end || null
             });
             
             // Notify web tabs to update their UI as well (Bidirectional Sync)

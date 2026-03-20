@@ -412,8 +412,8 @@ export default function App() {
   };
 
   const handleStartTrial = () => {
-    // Redirigir a la página web de Premium para que activen el trial vía Paddle
-    chrome.runtime.sendMessage({ type: 'OPEN_PREMIUM_PAGE' });
+    // Redirigir a la página web de Premium con el plan mensual seleccionado (que tiene el trial)
+    chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/premium?plan=monthly' });
   };
 
   const handleActivateOfficialAppPass = () => {

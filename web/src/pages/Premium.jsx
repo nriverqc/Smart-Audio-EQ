@@ -8,8 +8,15 @@ export default function Premium({ lang }) {
   const [loading, setLoading] = useState(false); // Paddle loading
   const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [appPassCode, setAppPassCode] = useState('');
   const [planType, setPlanType] = useState('yearly');
+
+  useEffect(() => {
+    // Handle redirect from extension trial button
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('plan') === 'monthly') {
+        setPlanType('monthly');
+    }
+  }, []);
   const displayPrices = { monthly: '$1.59 USD', yearly: '$9.99 USD' };
   const trialPrices = { monthly: '$0.00 USD' };
   const oldPrices = { monthly: '$2.29 USD', yearly: '$19.99 USD' };
@@ -64,11 +71,6 @@ export default function Premium({ lang }) {
       planLabel: 'Selecciona tu plan:',
       optionMonthly: 'Mensual (30% DCTO)',
       optionYearly: 'Anual (Ahorra 51%)',
-      appPassLabel: 'App Pass (Oficial):',
-      appPassBtnAuto: 'Verificar automáticamente desde la extensión',
-      appPassManualLabel: '¿Tienes un código promocional o manual?',
-      appPassPlaceholder: 'CÓDIGO-PROMO',
-      appPassBtn: 'Activar código',
       comingSoon: 'Suscripción Premium',
       comingSoonMsg: 'Obtén acceso a todas las funciones Pro de forma inmediata.'
     },
@@ -108,11 +110,6 @@ export default function Premium({ lang }) {
       planLabel: 'Select your plan:',
       optionMonthly: 'Monthly (30% OFF)',
       optionYearly: 'Yearly (Save 51%)',
-      appPassLabel: 'App Pass (Official):',
-      appPassBtnAuto: 'Verify automatically via extension',
-      appPassManualLabel: 'Have a promo or manual code?',
-      appPassPlaceholder: 'PROMO-CODE',
-      appPassBtn: 'Activate code',
       comingSoon: 'Premium Subscription',
       comingSoonMsg: 'Get access to all Pro features immediately.'
     },
@@ -152,11 +149,6 @@ export default function Premium({ lang }) {
       planLabel: 'Selecione seu plano:',
       optionMonthly: 'Mensal (30% OFF)',
       optionYearly: 'Anual (Economize 51%)',
-      appPassLabel: 'App Pass (Oficial):',
-      appPassBtnAuto: 'Verificar automaticamente via extensão',
-      appPassManualLabel: 'Tem um código promocional o manual?',
-      appPassPlaceholder: 'CÓDIGO-PROMO',
-      appPassBtn: 'Ativar código',
       comingSoon: 'Assinatura Premium',
       comingSoonMsg: 'Obtenha acesso a todos os recursos Pro imediatamente.'
     },
@@ -196,11 +188,6 @@ export default function Premium({ lang }) {
       planLabel: 'Wählen Sie Ihren Plan:',
       optionMonthly: 'Monatlich (30% RABATT)',
       optionYearly: 'Jährlich (Sparen Sie 51%)',
-      appPassLabel: 'App Pass (Offiziell):',
-      appPassBtnAuto: 'Automatisch über Erweiterung verifizieren',
-      appPassManualLabel: 'Haben Sie einen Promo- oder manuellen Code?',
-      appPassPlaceholder: 'PROMO-CODE',
-      appPassBtn: 'Code aktivieren',
       comingSoon: 'Premium-Abonnement',
       comingSoonMsg: 'Erhalten Sie sofortigen Zugriff auf alle Pro-Funktionen.'
     },
@@ -263,43 +250,6 @@ export default function Premium({ lang }) {
   useEffect(() => {
     window.testPaddle = (id) => openPaddleCheckout(id || 'pri_01kk2ntgc0py83xjw60tnw7x2c');
   }, [user]);
-
-  const verifyAppPass = async () => {
-    if (!user.uid) {
-        alert(lang === 'es' ? 'Por favor inicia sesión primero.' : 'Please login first.');
-        loginWithGoogle();
-        return;
-    }
-    if (!appPassCode.trim()) {
-        alert(lang === 'es' ? 'Por favor ingresa un código.' : 'Please enter a code.');
-        return;
-    }
-
-    setLoading(true);
-    try {
-        const res = await fetch(`${API_BASE}/verify-app-pass`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: user.email,
-                uid: user.uid,
-                code: appPassCode.trim()
-            })
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-            alert(data.message);
-            refreshUser();
-        } else {
-            alert('Error: ' + (data.error || 'Unknown'));
-        }
-    } catch (e) {
-        console.error(e);
-        alert('Network error');
-    } finally {
-        setLoading(false);
-    }
-  };
 
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [restoreId, setRestoreId] = useState('');
@@ -610,73 +560,6 @@ export default function Premium({ lang }) {
                   </div>}
               </div>
 
-              {/* APP PASS SECTION */}
-              <div style={{
-                  marginTop: '20px', 
-                  border: '1px solid rgba(0, 210, 255, 0.2)', 
-                  padding: '15px', 
-                  borderRadius: '10px',
-                  background: 'rgba(0, 210, 255, 0.03)',
-                  textAlign: 'left'
-              }}>
-                  <label style={{display: 'block', marginBottom: '10px', fontSize: '1rem', color: '#00d2ff', fontWeight: 'bold'}}>
-                      🚀 {t.appPassLabel}
-                  </label>
-                  <button 
-                      onClick={requestExtensionAppPassCheck}
-                      disabled={loading}
-                      style={{
-                          width: '100%',
-                          padding: '12px',
-                          borderRadius: '5px',
-                          border: 'none',
-                          background: 'linear-gradient(90deg, #00d2ff, #00a8cc)',
-                          color: '#000',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          marginBottom: '15px',
-                          fontSize: '1rem'
-                      }}
-                  >
-                      {t.appPassBtnAuto}
-                  </button>
-
-                  <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
-                      <input 
-                          type="text"
-                          placeholder={t.appPassPlaceholder}
-                          value={appPassCode}
-                          onChange={(e) => setAppPassCode(e.target.value.toUpperCase())}
-                          style={{
-                              flex: 1,
-                              padding: '10px',
-                              borderRadius: '5px',
-                              border: '1px solid #444',
-                              background: '#111',
-                              color: '#fff',
-                              fontSize: '0.9rem'
-                          }}
-                      />
-                      <button 
-                          onClick={verifyAppPass}
-                          disabled={loading}
-                          style={{
-                              padding: '10px 15px',
-                              borderRadius: '5px',
-                              border: '1px solid #444',
-                              background: '#333',
-                              color: '#fff',
-                              fontWeight: 'bold',
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap',
-                              fontSize: '0.9rem'
-                          }}
-                      >
-                          {loading ? '...' : t.appPassBtn}
-                      </button>
-                  </div>
-              </div>
-              
               {/* RESTORE PURCHASE BUTTON */}
               <button 
                   onClick={() => setShowRestoreModal(true)} 

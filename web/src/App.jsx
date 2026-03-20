@@ -274,13 +274,6 @@ function AppContent() {
      }
   };
 
-  const requestExtensionAppPassCheck = () => {
-      console.log("Web: Requesting forced App Pass check...");
-      window.postMessage({ type: "CHECK_APP_PASS_REQUEST" }, "*");
-      // Also trigger a local refresh after a short delay to catch the message from extension
-      setTimeout(() => refreshUser(), 2000);
-  };
-
   const langLabels = {
     es: { label: 'Español', flag: '/flags/es.svg', premium: 'PREMIUM 💎', free: 'GRATIS', home: 'Inicio', goPremium: 'Ir a Premium', footer: 'Todos los derechos reservados.', privacy: 'Política de Privacidad', terms: 'Términos', refund: 'Reembolsos', contact: 'Contacto', login: 'Iniciar Sesión' },
     en: { label: 'English', flag: '/flags/en.svg', premium: 'PREMIUM 💎', free: 'FREE', home: 'Home', goPremium: 'Go Premium', footer: 'All rights reserved.', privacy: 'Privacy Policy', terms: 'Terms', refund: 'Refunds', contact: 'Contact', login: 'Login' },
@@ -303,7 +296,7 @@ function AppContent() {
   }, [showLangMenu]);
 
   return (
-    <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, requestExtensionAppPassCheck, loading }}>
+    <UserContext.Provider value={{ user, setUser, lang, refreshUser, loginWithGoogle, logout, loading }}>
       <div className="app-root">
         <div className="eq-background">
           {Array.from({ length: 10 }).map((_, i) => (

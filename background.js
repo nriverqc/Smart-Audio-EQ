@@ -64,10 +64,14 @@ chrome.runtime.onStartup.addListener(() => {
             fetch(`https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(res.email)}&uid=${encodeURIComponent(res.uid)}`)
             .then(r => r.json())
             .then(data => {
-                // ONLY update if the server actually responds with a boolean
+                // Update full state from API
                 if (typeof data.premium === 'boolean') {
                     isPremium = data.premium;
-                    chrome.storage.local.set({ isPremium: data.premium });
+                    chrome.storage.local.set({ 
+                        isPremium: data.premium,
+                        status: data.status || (data.premium ? 'active' : 'free'),
+                        trial_end: data.trial_end || null
+                    });
                 }
             }).catch(e => console.log("Startup license check failed (offline?) - keeping local status"));
         }
@@ -851,7 +855,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.storage.local.set({
       email: msg.email,
       uid: msg.uid,
-      isPremium: msg.isPremium
+      isPremium: msg.isPremium,
+      status: msg.status || (msg.isPremium ? 'active' : 'free'),
+      trial_end: msg.trial_end || null
     }, () => {
       console.log("Background: Usuario sincronizado, isPremium:", isPremium);
       // Notificar a todos los componentes de la extensión (popup, etc)
@@ -871,11 +877,15 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
         const email = message.email || (message.user && message.user.email);
         const uid = message.uid || (message.user && message.user.uid);
         const webPremium = message.isPremium || (message.user && message.user.isPremium) || false;
+        const status = message.status || (message.user && message.user.status) || (webPremium ? 'active' : 'free');
+        const trial_end = message.trial_end || (message.user && message.user.trial_end) || null;
         
         chrome.storage.local.set({ 
             email: email || '', 
             uid: uid || '', 
-            isPremium: webPremium 
+            isPremium: webPremium,
+            status: status,
+            trial_end: trial_end
         }, () => {
             isPremium = webPremium;
             // Notificar al popup si está abierto
@@ -883,7 +893,9 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
                 type: "LOGIN_EXITOSO",
                 email,
                 uid,
-                isPremium: webPremium
+                isPremium: webPremium,
+                status: status,
+                trial_end: trial_end
             });
             sendResponse({ status: "OK", premium: isPremium });
         });

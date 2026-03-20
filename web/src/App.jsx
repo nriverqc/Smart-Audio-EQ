@@ -30,6 +30,8 @@ function AppContent() {
                 displayName: data.nombre || '',
                 photoURL: data.foto || '',
                 isPremium: data.isPremium || false,
+                status: data.status || (data.isPremium ? 'active' : 'free'),
+                trialEndDate: data.trialEndDate || null,
                 method: data.method || '',
                 loading: true // Keep loading true until Firebase confirms session
             };
@@ -57,7 +59,7 @@ function AppContent() {
   const EXTENSION_ID = "aohaefkkofgkbneodjflnacpipdnfeng"; 
 
   const syncWithExtension = (userData) => {
-    console.log("Web: Syncing with extension...", userData.email, "Premium:", userData.isPremium);
+    console.log("Web: Syncing with extension...", userData.email, "Premium:", userData.isPremium, "Status:", userData.status);
     
     // 1. Update localStorage (for Content Script initial check)
     try {
@@ -65,6 +67,8 @@ function AppContent() {
             uid: userData.uid,
             email: userData.email,
             isPremium: userData.isPremium,
+            status: userData.status || (userData.isPremium ? 'active' : 'free'),
+            trial_end: userData.trialEndDate, // Use trial_end for consistency with ext storage
             method: userData.method,
             nombre: userData.displayName,
             foto: userData.photoURL
@@ -74,12 +78,13 @@ function AppContent() {
     }
 
     // 2. Relay via Window Message (for Content Script bridge)
-    // Send to current window AND parent (if iframe)
     const msg = {
         type: "LOGIN_EXITOSO",
         uid: userData.uid,
         email: userData.email,
-        isPremium: userData.isPremium
+        isPremium: userData.isPremium,
+        status: userData.status || (userData.isPremium ? 'active' : 'free'),
+        trial_end: userData.trialEndDate
     };
     window.postMessage(msg, "*");
     
@@ -92,6 +97,8 @@ function AppContent() {
                 uid: userData.uid,
                 email: userData.email,
                 isPremium: userData.isPremium,
+                status: userData.status || (userData.isPremium ? 'active' : 'free'),
+                trial_end: userData.trialEndDate,
                 user: userData
             }, (response) => {
                  if (window.chrome.runtime.lastError) {
@@ -135,6 +142,8 @@ function AppContent() {
             const updatedUser = { 
               ...baseUser,
               isPremium: data.premium, 
+              status: data.status,
+              trialEndDate: data.trial_end,
               method: data.method,
               loading: false 
             };
@@ -228,7 +237,14 @@ function AppContent() {
         fetch(`${API_BASE}/check-license?email=${encodeURIComponent(user.email)}&uid=${encodeURIComponent(user.uid)}&t=${Date.now()}`)
         .then(res => res.json())
         .then(data => {
-          const updatedUser = { ...user, isPremium: data.premium, method: data.method, loading: false };
+          const updatedUser = { 
+            ...user, 
+            isPremium: data.premium, 
+            status: data.status,
+            trialEndDate: data.trial_end,
+            method: data.method, 
+            loading: false 
+          };
           setUser(updatedUser);
           syncWithExtension(updatedUser);
           setLoading(false);

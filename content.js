@@ -48,7 +48,9 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
             type: "LOGIN_EXITOSO",
             uid: event.data.uid,
             email: event.data.email,
-            isPremium: event.data.isPremium
+            isPremium: event.data.isPremium,
+            status: event.data.status,
+            trial_end: event.data.trial_end
         }, (response) => {
              if (chrome.runtime.lastError) {
                  console.error("Content Script: Error relaying to background:", chrome.runtime.lastError);

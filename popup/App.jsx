@@ -310,6 +310,8 @@ export default function App() {
                     console.log("Popup: Instant sync from current tab", response);
                     setIsPremium(response.isPremium);
                     setUserEmail(response.email);
+                    if (response.status) setStatus(response.status);
+                    if (response.trial_end) setTrialEndDate(response.trial_end);
                 }
             });
         }
@@ -376,6 +378,8 @@ export default function App() {
             console.log("Popup: Login sync received", msg);
             setUserEmail(msg.email);
             setIsPremium(msg.isPremium);
+            if (msg.status) setStatus(msg.status);
+            if (msg.trial_end) setTrialEndDate(msg.trial_end);
         }
     };
     chrome.runtime.onMessage.addListener(listener);
@@ -520,9 +524,11 @@ export default function App() {
         setLoading(false);
         if (response && response.success) {
             // Check if status changed and update local UI
-            chrome.storage.local.get(['isPremium', 'email'], (res) => {
+            chrome.storage.local.get(['isPremium', 'email', 'status', 'trial_end'], (res) => {
                 if (res.isPremium !== undefined) setIsPremium(res.isPremium);
                 if (res.email) setUserEmail(res.email);
+                if (res.status) setStatus(res.status);
+                if (res.trial_end) setTrialEndDate(res.trial_end);
             });
             alert(response.message);
         } else {

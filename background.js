@@ -592,9 +592,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
         try {
             // 1. Get current stored email
-            const storage = await chrome.storage.local.get(['email', 'uid']);
+            const storage = await chrome.storage.local.get(['email', 'uid', 'isPremium', 'status', 'trial_end', 'method']);
             let email = storage.email;
             let uid = storage.uid;
+            const prevPremium = !!storage.isPremium;
+            const prevStatus = storage.status;
+            const prevTrialEnd = storage.trial_end;
+            const prevMethod = storage.method;
 
             // 2. If no email, try identity
             if (!email) {
@@ -614,9 +618,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 
                 if (webTab) {
                     try {
-                        const response = await new Promise((resolve) => {
-                             chrome.tabs.sendMessage(webTab.id, { type: "PREGUNTAR_DATOS" }, resolve);
-                        });
+                        const response = await sendMessageToTab(webTab.id, { type: "PREGUNTAR_DATOS" }, true);
                         if (response && response.email) {
                             email = response.email;
                             uid = response.uid || uid;
@@ -628,8 +630,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                     } catch (e) { console.warn("Web tab sync failed", e); }
                 }
                 
-                sendResponse({ success: false, error: "Please login first to sync status." });
-                return;
+                if (!email) {
+                    sendResponse({ success: false, error: "Please login first to sync status." });
+                    return;
+                }
             }
 
             // 4. If we have email, check API
@@ -637,31 +641,50 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             const res = await fetch(apiUrl);
             if (!res.ok) {
                 // Keep current isPremium status on network errors
-                const current = await chrome.storage.local.get(['isPremium']);
-                sendResponse({ success: true, message: current.isPremium ? "Premium (cached) 💎" : "Status: Free." });
+                sendResponse({ 
+                    success: true, 
+                    message: prevPremium ? "Premium (cached) 💎" : "Status: Free.",
+                    detail: "Network error. Keeping local status."
+                });
                 return;
             }
             const data = await res.json();
 
-            // 5. Cleanup old variables if present
-            const finalStorage = await chrome.storage.local.get(['isPremium', 'status', 'trial_end', 'method']);
-            
-            // IMPORTANT: If API says Premium, we enforce it
-            const isNowPremium = (typeof data.premium === 'boolean' && data.premium === true);
+            const hasUid = !!uid;
+            const apiPremium = (typeof data.premium === 'boolean') ? data.premium : null;
+            const apiStatus = data.status;
+            const apiMethod = data.method || null;
+            const apiTrialEnd = data.trial_end || null;
+            const apiSource = data.source || null;
 
-            isPremium = isNowPremium; // Update global variable too
-            const newStatus = data.status || (isNowPremium ? 'active' : 'free');
-            const finalMethod = data.method || 'Unknown';
-            
+            const uncertain =
+                hasUid === false &&
+                apiPremium === false &&
+                (apiSource === null || apiSource === 'none');
+
+            let finalIsPremium = apiPremium === true ? true : (apiPremium === false ? false : prevPremium);
+            let finalStatus = apiStatus || (finalIsPremium ? 'active' : 'free');
+            let finalMethod = apiMethod;
+            let finalTrialEnd = apiTrialEnd;
+
+            if (uncertain) {
+                finalIsPremium = prevPremium;
+                finalStatus = prevStatus || (finalIsPremium ? 'active' : 'free');
+                finalMethod = prevMethod || null;
+                finalTrialEnd = prevTrialEnd || null;
+            }
+
+            isPremium = finalIsPremium;
+
             await chrome.storage.local.set({ 
-                isPremium: isNowPremium, 
-                status: newStatus,
+                isPremium: finalIsPremium, 
+                status: finalStatus,
                 method: finalMethod,
-                trial_end: data.trial_end || null
+                trial_end: finalTrialEnd
             });
             
             // Notify web tabs to update their UI as well (Bidirectional Sync)
-            if (isNowPremium) {
+            if (finalIsPremium) {
                 notifyWebTabsOfPremium();
             } else {
                 // If we are free, also tell web (in case it thinks we are premium)
@@ -673,19 +696,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 } catch (e) {}
             }
             
-            if (isNowPremium) {
-                const statusMsg = newStatus === 'trialing' ? "Trial activo 🎁" : "Premium activo 💎";
-                const methodMsg = `Metodo: ${finalMethod}`;
+            if (finalIsPremium) {
+                const statusMsg = finalStatus === 'trialing' ? "Trial activo 🎁" : "Premium activo 💎";
                 sendResponse({ 
                     success: true, 
                     message: `Sincronización completa: ${statusMsg}`, 
-                    detail: `Plan: ${finalMethod}`
+                    detail: finalMethod ? `Metodo: ${finalMethod}` : ""
                 });
             } else {
                 sendResponse({ 
                     success: true, 
                     message: "Estado: Gratis.",
-                    detail: "Si compraste Premium, espera un minuto o verifica tu pago."
+                    detail: uncertain ? "No se pudo verificar (faltan datos de sesión). Abre la web y vuelve a sincronizar." : "Si compraste Premium, espera un minuto o verifica tu pago."
                 });
             }
 

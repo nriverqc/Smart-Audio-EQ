@@ -793,6 +793,22 @@ export default function App() {
         )}
       </div>
 
+      {status === 'trialing' && trialEndDate && (
+        <div style={{
+            margin: '0 0 12px 0',
+            padding: '6px 10px',
+            borderRadius: '999px',
+            border: '1px solid rgba(0, 255, 133, 0.6)',
+            background: 'rgba(0, 255, 133, 0.08)',
+            color: '#00ff85',
+            fontWeight: 'bold',
+            fontSize: '0.75rem',
+            textAlign: 'center'
+        }}>
+          {lang === 'es' ? `TRIAL • ${countdown || '...'}` : `TRIAL • ${countdown || '...'}`}
+        </div>
+      )}
+
       {isPremium && Object.keys(allActiveTabs).length > 0 && (
         <div style={{
             background: 'rgba(255, 255, 255, 0.05)',

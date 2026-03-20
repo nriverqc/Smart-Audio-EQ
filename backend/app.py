@@ -502,7 +502,14 @@ def paddle_webhook():
             return jsonify({"status": "ignored", "reason": "no_email"}), 200
 
         # 3. Handle specific events
-        if event_type in ["transaction.paid", "transaction.completed", "subscription.activated", "subscription.updated", "subscription.trialing"]:
+        if event_type in [
+            "transaction.paid", 
+            "transaction.completed", 
+            "subscription.created",
+            "subscription.activated", 
+            "subscription.updated", 
+            "subscription.trialing"
+        ]:
             print(f"✅ Activating/Updating Premium for {email} (UID: {uid}) via Paddle")
             
             # Status from Paddle
@@ -580,9 +587,19 @@ def paddle_webhook():
 
             return jsonify({"status": "success", "message": f"Premium {status} activated"})
 
-        elif event_type in ["subscription.canceled", "subscription.past_due"]:
-            new_status = "canceled" if event_type == "subscription.canceled" else "past_due"
-            print(f"❌ Updating Premium for {email} (UID: {uid}) - Status: {new_status}")
+        elif event_type in [
+            "subscription.canceled", 
+            "subscription.past_due", 
+            "transaction.payment_failed", 
+            "transaction.canceled"
+        ]:
+            new_status = "canceled"
+            if event_type == "subscription.past_due" or event_type == "transaction.payment_failed":
+                new_status = "past_due"
+            elif event_type == "transaction.canceled":
+                new_status = "canceled"
+                
+            print(f"❌ Updating Premium for {email} (UID: {uid}) - Status: {new_status} (Event: {event_type})")
             
             # Update SQLite
             with sqlite3.connect(DB_NAME) as conn:

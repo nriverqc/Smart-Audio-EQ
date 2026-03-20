@@ -592,13 +592,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
         try {
             // 1. Get current stored email
-            const storage = await chrome.storage.local.get(['email', 'uid', 'isPremium', 'status', 'trial_end', 'method']);
+            const storage = await chrome.storage.local.get(['email', 'uid', 'isPremium', 'status', 'trial_end', 'method', 'usedTrial']);
             let email = storage.email;
             let uid = storage.uid;
             const prevPremium = !!storage.isPremium;
             const prevStatus = storage.status;
             const prevTrialEnd = storage.trial_end;
             const prevMethod = storage.method;
+            const prevUsedTrial = !!storage.usedTrial;
 
             // 2. If no email, try identity
             if (!email) {
@@ -656,6 +657,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             const apiMethod = data.method || null;
             const apiTrialEnd = data.trial_end || null;
             const apiSource = data.source || null;
+            const apiUsedTrial = data.usedTrial === true ? true : null;
 
             const uncertain =
                 hasUid === false &&
@@ -666,12 +668,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             let finalStatus = apiStatus || (finalIsPremium ? 'active' : 'free');
             let finalMethod = apiMethod;
             let finalTrialEnd = apiTrialEnd;
+            let finalUsedTrial = apiUsedTrial === true ? true : prevUsedTrial;
 
             if (uncertain) {
                 finalIsPremium = prevPremium;
                 finalStatus = prevStatus || (finalIsPremium ? 'active' : 'free');
                 finalMethod = prevMethod || null;
                 finalTrialEnd = prevTrialEnd || null;
+                finalUsedTrial = prevUsedTrial;
             }
 
             isPremium = finalIsPremium;
@@ -680,7 +684,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 isPremium: finalIsPremium, 
                 status: finalStatus,
                 method: finalMethod,
-                trial_end: finalTrialEnd
+                trial_end: finalTrialEnd,
+                usedTrial: finalUsedTrial
             });
             
             // Notify web tabs to update their UI as well (Bidirectional Sync)
@@ -781,7 +786,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       uid: msg.uid,
       isPremium: msg.isPremium,
       status: msg.status || (msg.isPremium ? 'active' : 'free'),
-      trial_end: msg.trial_end || null
+      trial_end: msg.trial_end || null,
+      usedTrial: msg.usedTrial === true
     }, () => {
       console.log("Background: Usuario sincronizado, isPremium:", isPremium);
       // Notificar a todos los componentes de la extensión (popup, etc)
@@ -803,13 +809,15 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
         const webPremium = message.isPremium || (message.user && message.user.isPremium) || false;
         const status = message.status || (message.user && message.user.status) || (webPremium ? 'active' : 'free');
         const trial_end = message.trial_end || (message.user && message.user.trial_end) || null;
+        const usedTrial = message.usedTrial === true || (message.user && message.user.usedTrial) === true;
         
         chrome.storage.local.set({ 
             email: email || '', 
             uid: uid || '', 
             isPremium: webPremium,
             status: status,
-            trial_end: trial_end
+            trial_end: trial_end,
+            usedTrial: usedTrial
         }, () => {
             isPremium = webPremium;
             // Notificar al popup si está abierto
@@ -819,7 +827,8 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
                 uid,
                 isPremium: webPremium,
                 status: status,
-                trial_end: trial_end
+                trial_end: trial_end,
+                usedTrial: usedTrial
             });
             sendResponse({ status: "OK", premium: isPremium });
         });

@@ -12,6 +12,7 @@ export default function App() {
   const [status, setStatus] = useState('free');
   const [trialEndDate, setTrialEndDate] = useState(null);
   const [countdown, setCountdown] = useState("");
+  const [usedTrial, setUsedTrial] = useState(false);
 
   const getTrialEndMs = (value) => {
     if (!value) return null;
@@ -281,11 +282,12 @@ export default function App() {
         });
 
         // 1. Get global settings
-        chrome.storage.local.get(['isPremium', 'email', 'uid', 'activeTabs', 'status', 'trial_end'], (result) => {
+        chrome.storage.local.get(['isPremium', 'email', 'uid', 'activeTabs', 'status', 'trial_end', 'usedTrial'], (result) => {
             if (result.isPremium) setIsPremium(true);
             if (result.email) setUserEmail(result.email);
             if (result.status) setStatus(result.status);
             if (result.trial_end) setTrialEndDate(result.trial_end);
+            if (result.usedTrial === true || !!result.trial_end || result.status === 'expired_trial') setUsedTrial(true);
             if (result.activeTabs) {
                 setAllActiveTabs(result.activeTabs);
             }
@@ -329,6 +331,7 @@ export default function App() {
                     setUserEmail(response.email);
                     if (response.status) setStatus(response.status);
                     if (response.trial_end) setTrialEndDate(response.trial_end);
+                    if (response.usedTrial === true || !!response.trial_end || response.status === 'expired_trial') setUsedTrial(true);
                 }
             });
         }
@@ -340,6 +343,8 @@ export default function App() {
             if (changes.isPremium) setIsPremium(changes.isPremium.newValue);
             if (changes.email) setUserEmail(changes.email.newValue);
             if (changes.activeTabs) setAllActiveTabs(changes.activeTabs.newValue || {});
+            if (changes.usedTrial && changes.usedTrial.newValue === true) setUsedTrial(true);
+            if (changes.trial_end && changes.trial_end.newValue) setUsedTrial(true);
             
             // Sync current tab state if target tab data changed
             if (changes.activeTabs && targetTabId) {
@@ -543,11 +548,12 @@ export default function App() {
         setLoading(false);
         if (response && response.success) {
             // Check if status changed and update local UI
-            chrome.storage.local.get(['isPremium', 'email', 'status', 'trial_end', 'method'], (res) => {
+            chrome.storage.local.get(['isPremium', 'email', 'status', 'trial_end', 'method', 'usedTrial'], (res) => {
                 if (res.isPremium !== undefined) setIsPremium(res.isPremium);
                 if (res.email) setUserEmail(res.email);
                 if (res.status) setStatus(res.status);
                 if (res.trial_end) setTrialEndDate(res.trial_end);
+                if (res.usedTrial === true || !!res.trial_end || res.status === 'expired_trial') setUsedTrial(true);
 
                 const remaining = res.status === 'trialing' ? formatRemaining(res.trial_end) : '';
                 const title = res.status === 'trialing'
@@ -689,7 +695,7 @@ export default function App() {
         </div>
 
         {/* PROMO BUTTON - MOVED TO TOP FOR FREE USERS */}
-        {!isPremium && status === 'free' && (
+        {!isPremium && status === 'free' && !usedTrial && (
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
                 <button 
                     onClick={handleStartTrial} 
@@ -732,7 +738,7 @@ export default function App() {
             </div>
         )}
 
-        {!isPremium && status === 'free' && (
+        {!isPremium && status === 'free' && usedTrial && (
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
                 <button 
                     onClick={handleGoPremium} 

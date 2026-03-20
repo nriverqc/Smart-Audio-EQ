@@ -23,21 +23,26 @@ resend.api_key = os.getenv("RESEND_API_KEY", "re_hkj5p2Fs_BBLyhPFKEPcSyqCbtuJeJ6
 # Database setup
 DB_NAME = "licenses.db"
 
-# App Pass Configuration
-APP_PASS_CODE = os.getenv("APP_PASS_CODE", "SMART-AUDIO-PRO-2026")
-
 # Initialize Firebase Admin
-# NOTE: You must add your serviceAccountKey.json file to the backend folder!
 cred = None
 db = None
 try:
-    if os.path.exists("serviceAccountKey.json"):
-        cred = credentials.Certificate("serviceAccountKey.json")
-        firebase_admin.initialize_app(cred)
-        db = firestore.client()
-        print("Firebase Admin Initialized")
+    if not firebase_admin._apps:
+        sa_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+        if sa_json:
+            cred = credentials.Certificate(json.loads(sa_json))
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            print("Firebase Admin Initialized (env)")
+        elif os.path.exists("serviceAccountKey.json"):
+            cred = credentials.Certificate("serviceAccountKey.json")
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            print("Firebase Admin Initialized (file)")
+        else:
+            print("WARNING: Firebase credentials not found. Firestore updates will fail.")
     else:
-        print("WARNING: serviceAccountKey.json not found. Firestore updates will fail.")
+        db = firestore.client()
 except Exception as e:
     print(f"Error initializing Firebase: {e}")
 
@@ -346,12 +351,179 @@ def paypal_webhook():
 
 @app.route("/register-paypal", methods=["POST"])
 def register_paypal():
-    # ... (keeping existing logic for paypal as it is not app pass)
-    pass
+    return jsonify({"error": "PayPal registration is not available in this build."}), 501
 
-# REMOVED: paddle-webhook already handles this. 
-# REMOVED: verify-official-app-pass
-# REMOVED: verify-app-pass
+@app.route("/paddle-webhook", methods=["POST"])
+@app.route("/paddle-webhook/", methods=["POST"])
+def paddle_webhook():
+    try:
+        payload = request.json or {}
+        event_type = payload.get("event_type") or payload.get("eventType")
+        data = payload.get("data") or {}
+
+        if not event_type:
+            return jsonify({"status": "ignored", "reason": "no_event_type"}), 200
+
+        custom_data = data.get("custom_data") or data.get("customData") or {}
+        if isinstance(custom_data, str):
+            try:
+                custom_data = json.loads(custom_data)
+            except Exception:
+                custom_data = {}
+
+        email = (custom_data.get("email") or (data.get("customer") or {}).get("email") or data.get("customer_email"))
+        uid = (custom_data.get("uid") or custom_data.get("user_id") or custom_data.get("userId"))
+
+        if not email:
+            return jsonify({"status": "ignored", "reason": "no_email"}), 200
+
+        email_norm = email.strip().lower()
+
+        def parse_iso_dt(value):
+            if not value:
+                return None
+            if isinstance(value, datetime):
+                return value
+            if hasattr(value, "to_datetime"):
+                try:
+                    return value.to_datetime()
+                except Exception:
+                    return None
+            s = str(value)
+            s = s.replace("Z", "")
+            if "." in s:
+                s = s.split(".", 1)[0]
+            try:
+                return datetime.strptime(s, "%Y-%m-%dT%H:%M:%S")
+            except Exception:
+                return None
+
+        items = data.get("items") or []
+        price_id = None
+        for item in items:
+            pinfo = item.get("price") or {}
+            price_id = item.get("price_id") or pinfo.get("id")
+            if price_id:
+                break
+
+        plan_type = "monthly"
+        if price_id == "pri_01kk2mxf0828y5x7p8bky7ch47":
+            plan_type = "yearly"
+        elif price_id == "pri_01kk2mvgj2pmjfh0pkjatsv8bf":
+            plan_type = "monthly"
+
+        now = datetime.now()
+
+        is_premium = False
+        status = "free"
+        trial_end_date = None
+        expiration_date = None
+
+        if event_type in [
+            "subscription.created",
+            "subscription.trialing",
+            "subscription.activated",
+            "subscription.updated",
+            "transaction.paid",
+            "transaction.completed",
+        ]:
+            paddle_status = data.get("status") or ("trialing" if event_type == "subscription.trialing" else "active")
+
+            billing_period = data.get("current_billing_period") or {}
+            expires_at = billing_period.get("ends_at") or billing_period.get("end_at") or data.get("next_billed_at")
+            expiration_date = parse_iso_dt(expires_at)
+
+            trial_ends_at = data.get("trial_ends_at") or data.get("trial_end") or billing_period.get("ends_at")
+            if paddle_status == "trialing" or event_type == "subscription.trialing":
+                trial_end_date = parse_iso_dt(trial_ends_at) or (now + timedelta(days=3))
+
+            if trial_end_date and now < trial_end_date:
+                is_premium = True
+                status = "trialing"
+            else:
+                is_premium = True
+                status = "active"
+
+        elif event_type in [
+            "subscription.canceled",
+            "subscription.past_due",
+            "transaction.payment_failed",
+            "transaction.canceled",
+        ]:
+            is_premium = False
+            status = "canceled" if event_type in ["subscription.canceled", "transaction.canceled"] else "past_due"
+
+        else:
+            return jsonify({"status": "ignored", "event": event_type}), 200
+
+        payment_id = data.get("id") or data.get("subscription_id") or data.get("transaction_id")
+
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO licenses (email, is_premium, status, payment_id, expiration_date, trial_end_date, method)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(email) DO UPDATE SET
+                    is_premium=excluded.is_premium,
+                    status=excluded.status,
+                    payment_id=excluded.payment_id,
+                    expiration_date=excluded.expiration_date,
+                    trial_end_date=excluded.trial_end_date,
+                    method=excluded.method
+                """,
+                (
+                    email_norm,
+                    1 if is_premium else 0,
+                    status,
+                    f"PADDLE_{payment_id}" if payment_id else None,
+                    expiration_date.strftime("%Y-%m-%d %H:%M:%S") if expiration_date else None,
+                    trial_end_date.strftime("%Y-%m-%d %H:%M:%S") if trial_end_date else None,
+                    "Paddle",
+                ),
+            )
+            conn.commit()
+
+        if db:
+            update_data = {
+                "email": email_norm,
+                "isPremium": is_premium,
+                "status": status,
+                "method": "Paddle",
+                "paymentId": payment_id,
+                "planType": plan_type,
+                "lastPayment": firestore.SERVER_TIMESTAMP,
+            }
+            if expiration_date:
+                update_data["expirationDate"] = expiration_date
+            if trial_end_date:
+                update_data["trialEndDate"] = trial_end_date
+
+            if uid:
+                try:
+                    db.collection("usuarios").document(uid).set(update_data, merge=True)
+                except Exception as e:
+                    print(f"Firebase Paddle update error (uid): {e}")
+
+            try:
+                docs = db.collection("usuarios").where("email", "==", email_norm).limit(10).get()
+                for d in docs:
+                    db.collection("usuarios").document(d.id).set(update_data, merge=True)
+            except Exception as e:
+                print(f"Firebase Paddle update error (email): {e}")
+
+            try:
+                db.collection("licenses_by_email").document(email_norm).set(
+                    {**update_data, "uid": uid or None}, merge=True
+                )
+            except Exception as e:
+                print(f"Firebase Paddle update error (licenses_by_email): {e}")
+
+        return jsonify({"status": "ok"}), 200
+
+    except Exception as e:
+        print(f"Paddle Webhook Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/check-license", methods=["GET"])
 def check_license():
@@ -374,29 +546,50 @@ def check_license():
                 is_premium_db = data.get('isPremium', False)
                 method = data.get('method', 'Unknown')
                 
-                # Deep Search Logic (Automatic Restore)
-                # If not premium OR if they have the OLD App Pass method, search for a better license
-                if not is_premium_db or method == 'Official_App_Pass':
-                    users_by_email = db.collection('usuarios').where('email', '==', email).where('isPremium', '==', True).limit(1).get()
+                email_norm = email.strip().lower()
+
+                if not is_premium_db:
+                    try:
+                        lic_doc = db.collection('licenses_by_email').document(email_norm).get()
+                        if lic_doc.exists:
+                            lic = lic_doc.to_dict() or {}
+                            if lic.get('isPremium') is True:
+                                user_ref.set({
+                                    'isPremium': True,
+                                    'status': lic.get('status', 'active'),
+                                    'expirationDate': lic.get('expirationDate'),
+                                    'trialEndDate': lic.get('trialEndDate'),
+                                    'method': lic.get('method', 'Paddle'),
+                                    'paymentId': lic.get('paymentId'),
+                                    'planType': lic.get('planType'),
+                                    'email': email_norm
+                                }, merge=True)
+                                data = user_ref.get().to_dict()
+                                status = data.get('status')
+                                is_premium_db = True
+                                method = data.get('method', method)
+                    except Exception as e:
+                        print(f"Email license lookup error: {e}")
+
+                if not is_premium_db:
+                    users_by_email = db.collection('usuarios').where('email', '==', email_norm).where('isPremium', '==', True).limit(1).get()
                     if len(users_by_email) > 0:
                         premium_doc = users_by_email[0].to_dict()
                         p_method = premium_doc.get('method', 'Restored')
-                        
-                        # Only link if it's a valid new method
-                        if p_method != 'Official_App_Pass':
-                            print(f"✨ Auto-linking premium for {email} (Method: {p_method})")
-                            user_ref.set({
-                                'isPremium': True,
-                                'status': premium_doc.get('status', 'active'),
-                                'expirationDate': premium_doc.get('expirationDate'),
-                                'trialEndDate': premium_doc.get('trialEndDate'),
-                                'method': p_method,
-                                'paymentId': premium_doc.get('paymentId')
-                            }, merge=True)
-                            data = user_ref.get().to_dict()
-                            status = data.get('status')
-                            is_premium_db = True
-                            method = p_method
+                        user_ref.set({
+                            'isPremium': True,
+                            'status': premium_doc.get('status', 'active'),
+                            'expirationDate': premium_doc.get('expirationDate'),
+                            'trialEndDate': premium_doc.get('trialEndDate'),
+                            'method': p_method,
+                            'paymentId': premium_doc.get('paymentId'),
+                            'planType': premium_doc.get('planType'),
+                            'email': email_norm
+                        }, merge=True)
+                        data = user_ref.get().to_dict()
+                        status = data.get('status')
+                        is_premium_db = True
+                        method = p_method
 
                 # Manual deactivation in DB
                 if is_premium_db is False and status not in ['trialing', 'active']:

@@ -1,11 +1,8 @@
-import { checkAppPass, activateAppPass, manageAppPass } from '@chrome-stats/app-pass-sdk';
-
 // Service Worker con gestión de Offscreen Document
 // Migrado para cumplir con Manifest V3 y evitar problemas de CSP/Autoplay
 
 console.log("Equalizer – Web Audio: Background Service Worker iniciado");
 
-// ===== AUTOMATIC APP PASS CHECK (SDK) =====
 async function notifyWebTabsOfPremium() {
     try {
         const tabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
@@ -15,40 +12,27 @@ async function notifyWebTabsOfPremium() {
     } catch (e) { console.log("Error notifying tabs", e); }
 }
 
-/* REMOVED APP PASS LOGIC */
-
-
-// Check on startup
 chrome.runtime.onStartup.addListener(() => {
     console.log("Background: Browser startup. Re-verifying status...");
-    performAutomaticAppPassCheck();
-    // Also try to sync license if we have credentials
     chrome.storage.local.get(['email', 'uid', 'isPremium'], (res) => {
-        if (res.isPremium) isPremium = true; // Trust local storage first
+        if (res.isPremium) isPremium = true;
         
         if (res.email && res.uid) {
             fetch(`https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(res.email)}&uid=${encodeURIComponent(res.uid)}`)
             .then(r => r.json())
             .then(data => {
-                // Update full state from API
                 if (typeof data.premium === 'boolean') {
                     isPremium = data.premium;
                     chrome.storage.local.set({ 
                         isPremium: data.premium,
                         status: data.status || (data.premium ? 'active' : 'free'),
+                        method: data.method || null,
                         trial_end: data.trial_end || null
                     });
                 }
-            }).catch(e => console.log("Startup license check failed (offline?) - keeping local status"));
+            }).catch(() => {});
         }
     });
-});
-
-performAutomaticAppPassCheck();
-// Check every 6 hours
-chrome.alarms.create('check-app-pass', { periodInMinutes: 360 });
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'check-app-pass') performAutomaticAppPassCheck();
 });
 
 // ===== GESTIÓN DE OFFSCREEN DOCUMENT =====
@@ -713,60 +697,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
     })();
     return true; // Respuesta asíncrona
-  }
-
-  if (msg.type === "VERIFY_APP_PASS") {
-    (async () => {
-        try {
-            const storage = await chrome.storage.local.get(['email', 'uid']);
-            if (!storage.email || !storage.uid) {
-                sendResponse({ success: false, error: "Please login first." });
-                return;
-            }
-
-            const res = await fetch("https://smart-audio-eq-1.onrender.com/verify-app-pass", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: storage.email,
-                    uid: storage.uid,
-                    code: msg.code
-                })
-            });
-
-            if (!res.ok) throw new Error("Server error");
-            const data = await res.json();
-
-            if (data.status === "success") {
-                await chrome.storage.local.set({ isPremium: true });
-                
-                // Notify open web tabs about the new Premium status
-                try {
-                    const tabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
-                    tabs.forEach(t => {
-                        chrome.tabs.sendMessage(t.id, { type: "PREMIUM_ACTIVADO_EXT" });
-                    });
-                } catch (e) { console.log("Failed to notify web tabs", e); }
-
-                sendResponse({ success: true, message: data.message });
-            } else {
-                sendResponse({ success: false, error: data.error || "Invalid code" });
-            }
-        } catch (e) {
-            sendResponse({ success: false, error: e.message });
-        }
-    })();
-    return true;
-  }
-
-  if (msg.type === "ACTIVATE_OFFICIAL_APP_PASS") {
-    activateAppPass().then(res => sendResponse(res)).catch(e => sendResponse({ success: false, error: e.message }));
-    return true;
-  }
-
-  if (msg.type === "MANAGE_OFFICIAL_APP_PASS") {
-    manageAppPass().then(() => sendResponse({ success: true })).catch(e => sendResponse({ success: false, error: e.message }));
-    return true;
   }
 
   if (msg.type === "GET_TAB_STATUS") {

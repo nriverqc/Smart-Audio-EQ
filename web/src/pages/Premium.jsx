@@ -4,7 +4,7 @@ import { UserContext } from '../App';
 const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
 export default function Premium({ lang }) {
-  const { user, refreshUser, loginWithGoogle, requestExtensionAppPassCheck, loading: refreshing } = useContext(UserContext);
+  const { user, refreshUser, loginWithGoogle, loading: refreshing } = useContext(UserContext);
   const [loading, setLoading] = useState(false); // Paddle loading
   const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -304,9 +304,6 @@ export default function Premium({ lang }) {
             : 'Your 3-day free trial is active! 🎁';
       }
       
-      if (method.includes('Official_App_Pass') || method.includes('App_Pass')) {
-          return lang === 'es' ? '¡Gracias por usar App Pass! 🚀' : 'Thanks for using App Pass! 🚀';
-      }
       if (method.includes('PayPal')) {
           return lang === 'es' ? '¡Gracias por tu suscripción vía PayPal! 💎' : 'Thanks for your PayPal subscription! 💎';
       }

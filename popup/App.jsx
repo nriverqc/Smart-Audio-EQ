@@ -50,7 +50,6 @@ export default function App() {
   const [allActiveTabs, setAllActiveTabs] = useState({});
   const [targetTabId, setTargetTabId] = useState(null);
   const [activeTabList, setActiveTabList] = useState([]);
-  const [appPassCode, setAppPassCode] = useState('');
   const [lang, setLang] = useState('en');
   const [currentTabId, setCurrentTabId] = useState(null);
 
@@ -109,13 +108,9 @@ export default function App() {
       syncStatus: 'Sincronizar estado',
       signInText: 'Inicia sesión en la web para sincronizar:',
       loginSync: 'Iniciar Sesión',
-      appPassLabel: '¿Tienes un App Pass?',
-      appPassPlaceholder: 'CÓDIGO-APP-PASS',
-      appPassBtn: 'Activar',
       power: 'Encendido',
       getPremium: 'Desbloquear mejor sonido 🔊',
       premiumPitch: 'Aumenta volumen, más control y presets ilimitados',
-      manageAppPass: 'Gestionar App Pass',
       viewAdvancedWeb: 'Ver panel avanzado en la web 🌐',
       premiumPresetWarning: 'Disponible en Premium – Mejora tu audio en segundos',
       savePresetWarning: '¡Guarda tus propios presets con Premium!',
@@ -142,13 +137,9 @@ export default function App() {
       syncStatus: 'Sync Status',
       signInText: 'Sign in on our website to sync:',
       loginSync: 'Login / Sync',
-      appPassLabel: 'Have an App Pass?',
-      appPassPlaceholder: 'APP-PASS-CODE',
-      appPassBtn: 'Activate',
       power: 'Power',
       getPremium: 'Unlock better sound 🔊',
       premiumPitch: 'Boost volume, more control and unlimited presets',
-      manageAppPass: 'Manage App Pass',
       viewAdvancedWeb: 'View advanced panel on web 🌐',
       premiumPresetWarning: 'Available in Premium – Improve your audio in seconds',
       savePresetWarning: 'Save your own presets with Premium!',
@@ -175,13 +166,9 @@ export default function App() {
       syncStatus: 'Status de sincronização',
       signInText: 'Faça login no site para sincronizar:',
       loginSync: 'Entrar / Sincronizar',
-      appPassLabel: 'Tem um App Pass?',
-      appPassPlaceholder: 'CÓDIGO-APP-PASS',
-      appPassBtn: 'Ativar',
       power: 'Energia',
       getPremium: 'Desbloquear som melhor 🔊',
       premiumPitch: 'Aumente o volume, mais controle e presets ilimitados',
-      manageAppPass: 'Gerenciar App Pass',
       viewAdvancedWeb: 'Ver painel avançado na web 🌐',
       premiumPresetWarning: 'Disponível no Premium – Melhore seu áudio em segundos',
       savePresetWarning: 'Salve seus propios presets com o Premium!',
@@ -193,7 +180,7 @@ export default function App() {
       powerOnGuideTitle: 'Equalizador Desligado',
       powerOnGuideMsg: 'Por favor, ligue o equalizador usando o botão de energia (ON) para começar a melhorar o seu som.',
       powerOnGuideConfirm: 'Entendi!',
-      trialDaysLeft: (days) => `Restam ${days} dias de teste`,
+      trialDaysLeft: (cd) => `Tempo de teste: ${cd}`,
       trialEnded: 'Seu teste terminou',
       activateSubscription: 'Ative sua assinatura',
       getFreeTrial: 'Obter Teste Grátis 🎁',
@@ -208,13 +195,9 @@ export default function App() {
       syncStatus: 'Sync-Status',
       signInText: 'Anmelden zum Synchronisieren:',
       loginSync: 'Anmelden / Sync',
-      appPassLabel: 'Hast du einen App Pass?',
-      appPassPlaceholder: 'APP-PASS-CODE',
-      appPassBtn: 'Aktivieren',
       power: 'Strom',
       getPremium: 'Besseren Sound freischalten 🔊',
       premiumPitch: 'Lautstärke erhöhen, mehr Kontrolle und unbegrenzte Presets',
-      manageAppPass: 'App Pass verwalten',
       viewAdvancedWeb: 'Erweitertes Web-Panel anzeigen 🌐',
       premiumPresetWarning: 'Verfügbar in Premium – Verbessern Sie Ihren Sound in Sekunden',
       savePresetWarning: 'Speichern Sie Ihre eigenen Presets mit Premium!',
@@ -226,7 +209,7 @@ export default function App() {
       powerOnGuideTitle: 'Equalizer ist AUS',
       powerOnGuideMsg: 'Bitte schalten Sie den Equalizer mit dem Power-Button EIN, um Ihren Sound zu verbessern.',
       powerOnGuideConfirm: 'Verstanden!',
-      trialDaysLeft: (days) => `Noch ${days} Tage Testversion`,
+      trialDaysLeft: (cd) => `Testzeit: ${cd}`,
       trialEnded: 'Testzeitraum abgelaufen',
       activateSubscription: 'Abonnement aktivieren',
       getFreeTrial: 'Kostenlose Testversion 🎁',
@@ -414,29 +397,6 @@ export default function App() {
   const handleStartTrial = () => {
     // Redirigir a la página web de Premium con el plan mensual seleccionado (que tiene el trial)
     chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/premium?plan=monthly' });
-  };
-
-  const handleActivateOfficialAppPass = () => {
-      chrome.runtime.sendMessage({ type: 'ACTIVATE_OFFICIAL_APP_PASS' });
-  };
-
-  const handleManageOfficialAppPass = () => {
-      chrome.runtime.sendMessage({ type: 'MANAGE_OFFICIAL_APP_PASS' });
-  };
-
-  const handleAppPassVerify = () => {
-      if (!appPassCode.trim()) return;
-      setLoading(true);
-      chrome.runtime.sendMessage({ type: 'VERIFY_APP_PASS', code: appPassCode.trim() }, (response) => {
-          setLoading(false);
-          if (response && response.success) {
-              alert(response.message);
-              setIsPremium(true);
-              setAppPassCode('');
-          } else {
-              alert(response ? response.error : "Verification failed");
-          }
-      });
   };
 
   const handlePresetChange = (e) => {
@@ -1026,89 +986,6 @@ export default function App() {
         onConfirm={closeGuideModal}
       />
 
-      {/* FOOTER / PREMIUM PROMOS - ONLY FOR FREE USERS */}
-      {!isPremium && (
-        <div style={{marginTop: '1rem', textAlign: 'center', borderTop: '1px solid #333', paddingTop: '15px'}}>
-          <div style={{marginTop: '10px', background: '#222', padding: '10px', borderRadius: '6px', border: '1px solid #444'}}>
-            <p style={{fontSize: '0.75rem', color: '#aaa', margin: '0 0 8px 0'}}>{t("appPassLabel")}</p>
-            
-            {/* Manual Code Input */}
-            <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
-              <input 
-                type="text" 
-                placeholder={t("appPassPlaceholder")}
-                value={appPassCode}
-                onChange={(e) => setAppPassCode(e.target.value.toUpperCase())}
-                style={{
-                  flex: 1,
-                  background: '#111',
-                  border: '1px solid #555',
-                  color: '#fff',
-                  fontSize: '11px',
-                  padding: '5px',
-                  borderRadius: '4px'
-                }}
-              />
-              <button 
-                onClick={handleAppPassVerify}
-                disabled={loading || !appPassCode.trim()}
-                style={{
-                  background: '#444',
-                  color: '#fff',
-                  border: '1px solid #666',
-                  padding: '5px 10px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  cursor: 'pointer'
-                }}
-              >
-                {t("appPassBtn")}
-              </button>
-            </div>
-
-            {/* Official App Pass SDK Button */}
-            <button 
-              onClick={handleActivateOfficialAppPass}
-              style={{
-                width: '100%',
-                background: 'linear-gradient(45deg, #00d2ff, #00a8cc)',
-                color: '#000',
-                border: 'none',
-                padding: '8px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                marginBottom: '5px'
-              }}
-            >
-              🚀 {t("getPremium")} (App Pass)
-            </button>
-            <p style={{fontSize: '9px', color: '#888', margin: 0}}>
-              One pass for many extensions
-            </p>
-          </div>
-        </div>
-      )}
-      
-      {isPremium && (
-          <div style={{marginTop: '10px', textAlign: 'center'}}>
-              <button 
-                onClick={handleManageOfficialAppPass}
-                style={{
-                    background: 'transparent',
-                    border: '1px solid #444',
-                    color: '#888',
-                    fontSize: '10px',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                }}
-              >
-                  {t("manageAppPass")}
-              </button>
-          </div>
-      )}
     </div>
   );
 }

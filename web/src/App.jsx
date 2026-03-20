@@ -9,6 +9,8 @@ import Contact from './pages/Contact';
 import SupportWidget from './components/SupportWidget';
 import { auth, googleProvider } from './firebase';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db as firestoreDB } from './firebase';
 import AdBlockNotice from './components/AdBlockNotice';
 
 export const UserContext = createContext(null);
@@ -129,29 +131,45 @@ function AppContent() {
             uid: firebaseUser.uid,
             displayName: firebaseUser.displayName,
             photoURL: firebaseUser.photoURL,
-            isPremium: user.isPremium, // Keep current (cached) premium status
+            isPremium: user.isPremium, 
             method: user.method,
             loading: true
         };
         setUser(baseUser);
 
-        // Check license in backend
+        // 1. REAL-TIME LISTENER FOR FIRESTORE
+        // This ensures that if a webhook updates the DB, the UI updates INSTANTLY
+        const userDocRef = doc(firestoreDB, 'usuarios', firebaseUser.uid);
+        const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log("🔥 Firestore Real-time Update:", data.email, "Premium:", data.isPremium);
+                
+                // Update local state immediately
+                setUser(prev => {
+                    const updated = {
+                        ...prev,
+                        isPremium: data.isPremium || false,
+                        status: data.status || (data.isPremium ? 'active' : 'free'),
+                        trialEndDate: data.trialEndDate ? (data.trialEndDate.toDate ? data.trialEndDate.toDate().toISOString() : data.trialEndDate) : null,
+                        method: data.method || prev.method,
+                        loading: false
+                    };
+                    // Also sync with extension on every DB change
+                    syncWithExtension(updated);
+                    return updated;
+                });
+            }
+        }, (err) => {
+            console.error("Firestore listener error:", err);
+        });
+
+        // 2. BACKEND SYNC (Legacy/Backup for SQLite sync)
         fetch(`${API_BASE}/check-license?email=${firebaseUser.email}&uid=${firebaseUser.uid}`)
           .then(res => res.json())
           .then(data => {
-            const updatedUser = { 
-              ...baseUser,
-              isPremium: data.premium, 
-              status: data.status,
-              trialEndDate: data.trial_end,
-              method: data.method,
-              loading: false 
-            };
-            setUser(updatedUser);
-            // Sync with extension and update cache
-            syncWithExtension(updatedUser);
-
-            // Sync user to Firestore to ensure document exists
+            // ... already handled by snapshot mostly, but good to have for sync-user call
+            // Sync user to Firestore to ensure document exists if it doesn't
             fetch(`${API_BASE}/sync-user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -163,11 +181,10 @@ function AppContent() {
                 })
             }).catch(e => console.error("Sync error:", e));
           })
-          .catch(err => {
-            console.error("Error checking license:", err);
-            // If offline, trust the cached premium status for now
-            setUser(prev => ({ ...prev, loading: false }));
-          });
+          .catch(err => console.error("Error checking license:", err));
+
+        // Cleanup snapshot on logout or unmount
+        return () => unsubscribeSnapshot();
       } else {
         console.log("No hay sesión.");
         setUser({ email: '', uid: '', displayName: '', photoURL: '', isPremium: false, loading: false });

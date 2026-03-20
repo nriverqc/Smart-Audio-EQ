@@ -346,6 +346,14 @@ export default function Premium({ lang }) {
 
   const getThanksMessage = () => {
       const method = user.method || '';
+      const status = user.status || '';
+      
+      if (status === 'trialing') {
+          return lang === 'es' 
+            ? '¡Tu prueba gratuita de 3 días está activa! 🎁' 
+            : 'Your 3-day free trial is active! 🎁';
+      }
+      
       if (method.includes('Official_App_Pass') || method.includes('App_Pass')) {
           return lang === 'es' ? '¡Gracias por usar App Pass! 🚀' : 'Thanks for using App Pass! 🚀';
       }

@@ -13,25 +13,27 @@ export default function App() {
   const [trialEndDate, setTrialEndDate] = useState(null);
   const [countdown, setCountdown] = useState("");
 
+  const getTrialEndMs = (value) => {
+    if (!value) return null;
+    if (typeof value === 'string') {
+      const s = value.includes('T') ? value : value.replace(' ', 'T');
+      const d = new Date(s);
+      const ms = d.getTime();
+      return Number.isNaN(ms) ? null : ms;
+    }
+    if (typeof value === 'number') return value;
+    if (value && typeof value === 'object' && typeof value.seconds === 'number') return value.seconds * 1000;
+    const d = new Date(value);
+    const ms = d.getTime();
+    return Number.isNaN(ms) ? null : ms;
+  };
+
   useEffect(() => {
     let timer;
-    if (status === 'trialing' && trialEndDate) {
-        const getEndDate = () => {
-            if (typeof trialEndDate === 'string') {
-                const s = trialEndDate.includes('T') ? trialEndDate : trialEndDate.replace(" ", "T");
-                return new Date(s);
-            }
-            if (typeof trialEndDate === 'number') return new Date(trialEndDate);
-            if (trialEndDate && typeof trialEndDate === 'object' && typeof trialEndDate.seconds === 'number') {
-                return new Date(trialEndDate.seconds * 1000);
-            }
-            return new Date(trialEndDate);
-        };
-
+    if (trialEndDate) {
         const updateCountdown = () => {
-            const end = getEndDate();
-            const endMs = end.getTime();
-            if (Number.isNaN(endMs)) {
+            const endMs = getTrialEndMs(trialEndDate);
+            if (!endMs) {
                 setCountdown("");
                 return;
             }
@@ -44,6 +46,7 @@ export default function App() {
                 chrome.storage.local.set({ isPremium: false, status: 'expired_trial' });
                 setCountdown("");
             } else {
+                setStatus('trialing');
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -578,6 +581,9 @@ export default function App() {
     });
   };
 
+  const trialEndMs = getTrialEndMs(trialEndDate);
+  const isTrialActive = !!trialEndMs && trialEndMs > Date.now();
+
   return (
     <div>
       {/* HEADER: Title, Premium Button, Visit Web */}
@@ -730,7 +736,7 @@ export default function App() {
             </div>
         )}
 
-        {status === 'trialing' && trialEndDate && (
+        {isTrialActive && (
             <div style={{ textAlign: 'center', marginBottom: '10px', background: 'rgba(0, 255, 133, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid #00ff85' }}>
                 <p style={{ color: '#00ff85', fontWeight: 'bold', margin: 0, fontSize: '0.85rem' }}>
                     {t("trialDaysLeft")(countdown || '...')}
@@ -793,7 +799,7 @@ export default function App() {
         )}
       </div>
 
-      {status === 'trialing' && trialEndDate && (
+      {isTrialActive && (
         <div style={{
             margin: '0 0 12px 0',
             padding: '6px 10px',
@@ -946,7 +952,7 @@ export default function App() {
             <span>👤 <span style={{color: '#fff'}}>{userEmail}</span></span>
             {isPremium ? (
                 <span style={{color: '#ffd700', fontWeight: 'bold'}}>
-                    {status === 'trialing' ? `• ${t("trialBadge")} 🎁` : t("premiumStatus")}
+                    {isTrialActive ? `• ${t("trialBadge")} 🎁` : t("premiumStatus")}
                 </span>
             ) : (
                 <span style={{color: '#ccc'}}>{t("freeStatus")}</span>

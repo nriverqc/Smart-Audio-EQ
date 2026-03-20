@@ -11,15 +11,38 @@ export default function App() {
   const [isPremium, setIsPremium] = useState(false);
   const [status, setStatus] = useState('free');
   const [trialEndDate, setTrialEndDate] = useState(null);
+  const [countdown, setCountdown] = useState("");
 
-  const getTrialDaysLeft = () => {
-    if (!trialEndDate) return 0;
-    const end = new Date(trialEndDate.replace(" ", "T"));
-    const diff = end.getTime() - new Date().getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  };
-
-  const trialDaysLeft = getTrialDaysLeft();
+  useEffect(() => {
+    let timer;
+    if (status === 'trialing' && trialEndDate) {
+        timer = setInterval(() => {
+            const end = new Date(trialEndDate.replace(" ", "T"));
+            const now = new Date();
+            const diff = end.getTime() - now.getTime();
+            
+            if (diff <= 0) {
+                setStatus('expired_trial');
+                setIsPremium(false);
+                chrome.storage.local.set({ isPremium: false, status: 'expired_trial' });
+                setCountdown("");
+                clearInterval(timer);
+            } else {
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                if (days > 0) {
+                    setCountdown(`${days}d ${hours}h ${minutes}m`);
+                } else {
+                    setCountdown(`${hours}h ${minutes}m ${seconds}s`);
+                }
+            }
+        }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [status, trialEndDate]);
   const [currentPreset, setCurrentPreset] = useState('flat');
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -104,10 +127,10 @@ export default function App() {
       powerOnGuideTitle: 'Ecualizador Apagado',
       powerOnGuideMsg: 'Por favor, enciende el ecualizador usando el botón de encendido (ON) para empezar a mejorar tu sonido.',
       powerOnGuideConfirm: '¡Entendido!',
-      trialDaysLeft: (days) => `Te quedan ${days} días de prueba`,
+      trialDaysLeft: (cd) => `Tiempo de prueba: ${cd}`,
       trialEnded: 'Tu prueba terminó',
       activateSubscription: 'Activa tu suscripción',
-      getFreeTrial: 'Obtener Free Trial 🎁',
+      getFreeTrial: 'Obtener 3 Días GRATIS 🎁',
       trialBadge: 'TRIAL',
     },
     en: {
@@ -137,10 +160,10 @@ export default function App() {
       powerOnGuideTitle: 'Equalizer is OFF',
       powerOnGuideMsg: 'Please turn ON the equalizer using the power button to start improving your sound.',
       powerOnGuideConfirm: 'Got it!',
-      trialDaysLeft: (days) => `${days} days left in trial`,
+      trialDaysLeft: (cd) => `Trial time: ${cd}`,
       trialEnded: 'Your trial ended',
       activateSubscription: 'Activate subscription',
-      getFreeTrial: 'Get Free Trial 🎁',
+      getFreeTrial: 'Get 3 Days FREE 🎁',
       trialBadge: 'TRIAL',
     },
     pt: {
@@ -385,36 +408,8 @@ export default function App() {
   };
 
   const handleStartTrial = () => {
-    chrome.storage.local.get(['uid'], (res) => {
-        const uid = res.uid;
-        if (!userEmail || !uid) {
-            openSyncModal();
-            return;
-        }
-        setLoading(true);
-        fetch('https://smart-audio-eq-1.onrender.com/start-trial', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: userEmail, uid: uid })
-        })
-        .then(r => r.json())
-        .then(data => {
-            setLoading(false);
-            if (data.status === 'trialing') {
-                setIsPremium(true);
-                setStatus('trialing');
-                setTrialEndDate(data.trial_end);
-                chrome.storage.local.set({ isPremium: true, status: 'trialing', trial_end: data.trial_end });
-                alert(lang === 'es' ? '¡Prueba de 3 días activada! 🚀' : '3-day trial activated! 🚀');
-            } else {
-                alert(data.error || 'Trial failed');
-            }
-        })
-        .catch(e => {
-            setLoading(false);
-            alert('Network error');
-        });
-    });
+    // Redirigir a la página web de Premium para que activen el trial vía Paddle
+    chrome.runtime.sendMessage({ type: 'OPEN_PREMIUM_PAGE' });
   };
 
   const handleActivateOfficialAppPass = () => {
@@ -695,7 +690,7 @@ export default function App() {
         {isPremium && status === 'trialing' && (
             <div style={{ textAlign: 'center', marginBottom: '10px', background: 'rgba(0, 255, 133, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid #00ff85' }}>
                 <p style={{ color: '#00ff85', fontWeight: 'bold', margin: 0, fontSize: '0.85rem' }}>
-                    {t("trialDaysLeft")(trialDaysLeft)}
+                    {t("trialDaysLeft")(countdown)}
                 </p>
             </div>
         )}

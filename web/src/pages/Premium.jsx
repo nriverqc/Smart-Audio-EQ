@@ -11,6 +11,7 @@ export default function Premium({ lang }) {
   const [appPassCode, setAppPassCode] = useState('');
   const [planType, setPlanType] = useState('yearly');
   const displayPrices = { monthly: '$1.59 USD', yearly: '$9.99 USD' };
+  const trialPrices = { monthly: '$0.00 USD' };
   const oldPrices = { monthly: '$2.29 USD', yearly: '$19.99 USD' };
   const emailRef = React.useRef(email);
   const userRef = React.useRef(user);
@@ -522,9 +523,26 @@ export default function Premium({ lang }) {
                 }}>
                     {planType === 'yearly' ? oldPrices.yearly : oldPrices.monthly}
                 </span>
-                <h3 style={{display: 'inline-block', fontSize: '2.2rem', color: '#fff', margin: 0}}>
-                    {planType === 'yearly' ? displayPrices.yearly : displayPrices.monthly}
-                </h3>
+                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+                    <h3 style={{fontSize: '2.2rem', color: '#fff', margin: 0}}>
+                        {planType === 'yearly' ? displayPrices.yearly : trialPrices.monthly}
+                    </h3>
+                    {planType === 'monthly' && (
+                        <p style={{color: '#00ff85', fontWeight: 'bold', margin: '5px 0'}}>
+                            {lang === 'es' ? 'por 3 días' : 'for 3 days'}
+                        </p>
+                    )}
+                    {planType === 'monthly' && (
+                        <p style={{color: '#888', fontSize: '0.9rem', margin: 0}}>
+                            {lang === 'es' ? `luego ${displayPrices.monthly} / mes` : `then ${displayPrices.monthly} / mo`}
+                        </p>
+                    )}
+                    {planType === 'yearly' && (
+                        <p style={{color: '#888', fontSize: '0.9rem', margin: 0}}>
+                            {lang === 'es' ? '/ año' : '/ year'}
+                        </p>
+                    )}
+                </div>
             </div>
           )}
 

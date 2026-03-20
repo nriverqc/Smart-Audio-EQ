@@ -792,7 +792,7 @@ def check_license():
                 
                 now = datetime.now()
                 
-                # Handle Trialing status from DB
+                # IMPORTANT: Strict expiration check
                 if status == 'trialing' and trial_end:
                     if now > trial_end:
                         status = 'expired_trial'
@@ -800,13 +800,16 @@ def check_license():
                     else:
                         is_premium_db = True
                 
-                # Handle Active/Subscription from DB
                 elif status == 'active' and exp_date:
                     if now > exp_date:
-                        status = 'past_due' # Or expired
+                        status = 'past_due'
                         is_premium_db = False
                     else:
                         is_premium_db = True
+                
+                # Re-verify if is_premium_db is manually False in DB
+                if data.get('isPremium') is False:
+                    is_premium_db = False
                 
                 # Sync back to SQLite
                 with sqlite3.connect(DB_NAME) as conn:

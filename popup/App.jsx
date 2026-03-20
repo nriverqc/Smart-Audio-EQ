@@ -78,6 +78,10 @@ export default function App() {
 
   // SYNC MODAL STATE
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [statusModalTitle, setStatusModalTitle] = useState('');
+  const [statusModalMessage, setStatusModalMessage] = useState('');
+  const [statusModalIcon, setStatusModalIcon] = useState('');
 
   // GUIDE MODAL STATE (Power ON)
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
@@ -91,6 +95,14 @@ export default function App() {
 
   const openSyncModal = () => setIsSyncModalOpen(true);
   const closeSyncModal = () => setIsSyncModalOpen(false);
+
+  const openStatusModal = ({ title, message, icon }) => {
+    setStatusModalTitle(title || '');
+    setStatusModalMessage(message || '');
+    setStatusModalIcon(icon || '');
+    setIsStatusModalOpen(true);
+  };
+  const closeStatusModal = () => setIsStatusModalOpen(false);
 
   const openGuideModal = () => setIsGuideModalOpen(true);
   const closeGuideModal = () => setIsGuideModalOpen(false);
@@ -418,6 +430,10 @@ export default function App() {
     chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/premium?plan=monthly' });
   };
 
+  const handleSubscribeMonthly = () => {
+    chrome.tabs.create({ url: 'https://smart-audio-eq.pages.dev/premium?plan=monthly' });
+  };
+
   const handlePresetChange = (e) => {
     const presetKey = e.target.value;
     
@@ -493,6 +509,31 @@ export default function App() {
     chrome.storage.local.set({ customGains: newGains });
   };
 
+  const formatRemaining = (trialEnd) => {
+    let end;
+    if (!trialEnd) return '';
+    if (typeof trialEnd === 'string') {
+      const s = trialEnd.includes('T') ? trialEnd : trialEnd.replace(' ', 'T');
+      end = new Date(s);
+    } else if (typeof trialEnd === 'number') {
+      end = new Date(trialEnd);
+    } else if (trialEnd && typeof trialEnd === 'object' && typeof trialEnd.seconds === 'number') {
+      end = new Date(trialEnd.seconds * 1000);
+    } else {
+      end = new Date(trialEnd);
+    }
+    const ms = end.getTime();
+    if (Number.isNaN(ms)) return '';
+    const diff = ms - Date.now();
+    if (diff <= 0) return '0s';
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    return `${hours}h ${minutes}m ${seconds}s`;
+  };
+
   const refreshStatus = async () => {
     if (!userEmail) {
         openSyncModal();
@@ -503,21 +544,35 @@ export default function App() {
         setLoading(false);
         if (response && response.success) {
             // Check if status changed and update local UI
-            chrome.storage.local.get(['isPremium', 'email', 'status', 'trial_end'], (res) => {
+            chrome.storage.local.get(['isPremium', 'email', 'status', 'trial_end', 'method'], (res) => {
                 if (res.isPremium !== undefined) setIsPremium(res.isPremium);
                 if (res.email) setUserEmail(res.email);
                 if (res.status) setStatus(res.status);
                 if (res.trial_end) setTrialEndDate(res.trial_end);
+
+                const remaining = res.status === 'trialing' ? formatRemaining(res.trial_end) : '';
+                const title = res.status === 'trialing'
+                  ? (lang === 'es' ? 'Trial activo 🎁' : 'Trial active 🎁')
+                  : (res.isPremium ? (lang === 'es' ? 'Premium activo 💎' : 'Premium active 💎') : (lang === 'es' ? 'Estado: Gratis' : 'Status: Free'));
+                const lines = [];
+                if (res.status === 'trialing' && remaining) lines.push((lang === 'es' ? `Tiempo restante: ${remaining}` : `Time left: ${remaining}`));
+                if (res.method) lines.push((lang === 'es' ? `Método: ${res.method}` : `Method: ${res.method}`));
+                if (!res.isPremium) lines.push(lang === 'es' ? 'Si ya pagaste, espera un minuto y vuelve a sincronizar.' : 'If you already paid, wait a minute and sync again.');
+                openStatusModal({
+                  title,
+                  icon: res.status === 'trialing' ? '🎁' : (res.isPremium ? '💎' : 'ℹ️'),
+                  message: lines.join('\n') || (response.detail ? `${response.message}\n${response.detail}` : response.message)
+                });
             });
-            
-            // Show real info instead of a generic message
-            const fullMsg = response.detail ? `${response.message}\n${response.detail}` : response.message;
-            alert(fullMsg);
         } else {
             if (response && response.error && response.error.includes("login")) {
                  openSyncModal();
             } else {
-                 alert(response ? response.error : "Sync failed");
+                 openStatusModal({
+                   title: lang === 'es' ? 'Error al sincronizar' : 'Sync error',
+                   icon: '⚠️',
+                   message: response ? response.error : (lang === 'es' ? 'Falló la sincronización.' : 'Sync failed.')
+                 });
             }
         }
     });
@@ -680,6 +735,22 @@ export default function App() {
                 <p style={{ color: '#00ff85', fontWeight: 'bold', margin: 0, fontSize: '0.85rem' }}>
                     {t("trialDaysLeft")(countdown || '...')}
                 </p>
+                <button
+                    onClick={handleSubscribeMonthly}
+                    style={{
+                        marginTop: '6px',
+                        background: 'transparent',
+                        border: '1px solid #00ff85',
+                        color: '#00ff85',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold'
+                    }}
+                >
+                    {lang === 'es' ? 'Suscribirme ahora ($1.59/mes)' : 'Subscribe now ($1.59/mo)'}
+                </button>
             </div>
         )}
 
@@ -991,6 +1062,17 @@ export default function App() {
             closeSyncModal();
             handleLogin();
         }}
+      />
+
+      <ActionModal 
+        isOpen={isStatusModalOpen}
+        title={statusModalTitle}
+        icon={statusModalIcon}
+        message={statusModalMessage}
+        confirmText={lang === 'es' ? 'OK' : 'OK'}
+        cancelText=""
+        onClose={closeStatusModal}
+        onConfirm={closeStatusModal}
       />
 
       {/* MODAL GUIDE (Power ON) */}

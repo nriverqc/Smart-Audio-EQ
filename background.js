@@ -619,14 +619,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                         });
                         if (response && response.email) {
                             email = response.email;
-                            uid = response.uid;
+                            uid = response.uid || uid;
                             await chrome.storage.local.set({ 
                                 email: response.email, 
-                                uid: response.uid,
-                                isPremium: response.isPremium
+                                uid: uid
                             });
-                            sendResponse({ success: true, message: "Synced with open web tab! ✅" });
-                            return;
                         }
                     } catch (e) { console.warn("Web tab sync failed", e); }
                 }

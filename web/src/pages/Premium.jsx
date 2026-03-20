@@ -9,6 +9,8 @@ export default function Premium({ lang }) {
   const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [planType, setPlanType] = useState('yearly');
+  const [trialCountdown, setTrialCountdown] = useState('');
+  const [trialEndMs, setTrialEndMs] = useState(null);
 
   useEffect(() => {
     // Handle redirect from extension trial button
@@ -33,6 +35,61 @@ export default function Premium({ lang }) {
   useEffect(() => {
       emailRef.current = email;
   }, [email]);
+
+  useEffect(() => {
+      const parseDate = (value) => {
+          if (!value) return null;
+          if (value instanceof Date) return value;
+          if (typeof value === 'number') return new Date(value);
+          if (typeof value === 'string') {
+              const s = value.includes('T') ? value : value.replace(' ', 'T');
+              const d = new Date(s);
+              return Number.isNaN(d.getTime()) ? null : d;
+          }
+          if (typeof value === 'object') {
+              if (typeof value.seconds === 'number') return new Date(value.seconds * 1000);
+              if (typeof value.toDate === 'function') return value.toDate();
+          }
+          const d = new Date(value);
+          return Number.isNaN(d.getTime()) ? null : d;
+      };
+
+      const end = parseDate(user.trialEndDate);
+      const ms = end ? end.getTime() : null;
+      setTrialEndMs(ms && !Number.isNaN(ms) ? ms : null);
+  }, [user.trialEndDate]);
+
+  const isTrial = trialEndMs && Date.now() < trialEndMs;
+  const showPurchaseUI = !user.isPremium || isTrial;
+  const checkoutPlanType = isTrial ? 'monthly' : planType;
+
+  useEffect(() => {
+      if (isTrial) setPlanType('monthly');
+  }, [isTrial]);
+
+  useEffect(() => {
+      if (!isTrial || !trialEndMs) {
+          setTrialCountdown('');
+          return;
+      }
+      const tick = () => {
+          const diff = trialEndMs - Date.now();
+          if (diff <= 0) {
+              setTrialCountdown('0s');
+              refreshUser();
+              return;
+          }
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          if (days > 0) setTrialCountdown(`${days}d ${hours}h ${minutes}m`);
+          else setTrialCountdown(`${hours}h ${minutes}m ${seconds}s`);
+      };
+      tick();
+      const timer = setInterval(tick, 1000);
+      return () => clearInterval(timer);
+  }, [isTrial, trialEndMs, refreshUser]);
 
   const texts = {
     es: {
@@ -298,7 +355,7 @@ export default function Premium({ lang }) {
       const method = user.method || '';
       const status = user.status || '';
       
-      if (status === 'trialing') {
+      if (isTrial || status === 'trialing') {
           return lang === 'es' 
             ? '¡Tu prueba gratuita de 3 días está activa! 🎁' 
             : 'Your 3-day free trial is active! 🎁';
@@ -327,10 +384,17 @@ export default function Premium({ lang }) {
       `}</style>
       {user.isPremium && (
           <div style={{marginBottom: '30px', padding: '15px', background: 'rgba(0, 210, 255, 0.1)', borderRadius: '10px', border: '1px solid #00d2ff', display: 'inline-block'}}>
-              <h1 style={{color: '#ffd700', fontSize: '2rem', margin: 0}}>Premium 💎 {lang === 'es' ? 'Activado' : 'Active'}</h1>
+              <h1 style={{color: '#ffd700', fontSize: '2rem', margin: 0}}>
+                {isTrial ? (lang === 'es' ? 'Trial 🎁 Activo' : 'Trial 🎁 Active') : (lang === 'es' ? 'Premium 💎 Activado' : 'Premium 💎 Active')}
+              </h1>
               <p style={{fontSize: '1rem', marginTop: '5px'}}>
                   {getThanksMessage()}
               </p>
+              {isTrial && (
+                <p style={{color: '#00ff85', marginTop: '8px', fontSize: '1rem', fontWeight: 'bold'}}>
+                  {lang === 'es' ? `Tiempo restante: ${trialCountdown || '...'}` : `Time left: ${trialCountdown || '...'}`}
+                </p>
+              )}
               <p style={{color: '#ccc', marginTop: '5px', fontSize: '0.9rem'}}>
                   {lang === 'es' 
                     ? `Licencia activa para: ${user.email}` 
@@ -404,8 +468,8 @@ export default function Premium({ lang }) {
             {t.premiumTitle}
           </h2>
 
-          {/* Plan Selector - ONLY FOR FREE USERS */}
-          {!user.isPremium && (
+          {/* Plan Selector */}
+          {showPurchaseUI && !isTrial && (
             <div style={{margin: '15px 0'}}>
                 <div style={{display: 'flex', gap: '10px', background: '#222', padding: '5px', borderRadius: '8px'}}>
                     <button 
@@ -462,7 +526,7 @@ export default function Premium({ lang }) {
             ))}
           </ul>
           
-          {!user.isPremium && (
+          {showPurchaseUI && (
             <div style={{textAlign: 'center', marginBottom: '15px'}}>
                 <span style={{
                     textDecoration: 'line-through', 
@@ -470,36 +534,41 @@ export default function Premium({ lang }) {
                     fontSize: '1.2rem',
                     marginRight: '10px'
                 }}>
-                    {planType === 'yearly' ? oldPrices.yearly : oldPrices.monthly}
+                    {checkoutPlanType === 'yearly' ? oldPrices.yearly : oldPrices.monthly}
                 </span>
                 <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
                     <h3 style={{fontSize: '2.2rem', color: '#fff', margin: 0}}>
-                        {planType === 'yearly' ? displayPrices.yearly : trialPrices.monthly}
+                        {checkoutPlanType === 'yearly' ? displayPrices.yearly : trialPrices.monthly}
                     </h3>
-                    {planType === 'monthly' && (
+                    {checkoutPlanType === 'monthly' && !isTrial && (
                         <p style={{color: '#00ff85', fontWeight: 'bold', margin: '5px 0'}}>
                             {lang === 'es' ? 'por 3 días' : 'for 3 days'}
                         </p>
                     )}
-                    {planType === 'monthly' && (
+                    {checkoutPlanType === 'monthly' && (
                         <p style={{color: '#888', fontSize: '0.9rem', margin: 0}}>
                             {lang === 'es' ? `luego ${displayPrices.monthly} / mes` : `then ${displayPrices.monthly} / mo`}
                         </p>
                     )}
-                    {planType === 'yearly' && (
+                    {checkoutPlanType === 'yearly' && (
                         <p style={{color: '#888', fontSize: '0.9rem', margin: 0}}>
                             {lang === 'es' ? '/ año' : '/ year'}
                         </p>
+                    )}
+                    {isTrial && (
+                      <p style={{color: '#00ff85', fontWeight: 'bold', margin: '8px 0 0 0'}}>
+                        {lang === 'es' ? `Te quedan: ${trialCountdown || '...'}` : `Time left: ${trialCountdown || '...'}`}
+                      </p>
                     )}
                 </div>
             </div>
           )}
 
-          {!user.isPremium && (
+          {showPurchaseUI && (
             <div style={{ marginBottom: '20px', marginTop: '10px' }}>
                 <button 
                     className="pulse-btn"
-                    onClick={() => openPaddleCheckout(planType === 'monthly' ? 'pri_01kk2mvgj2pmjfh0pkjatsv8bf' : 'pri_01kk2mxf0828y5x7p8bky7ch47')}
+                    onClick={() => openPaddleCheckout(checkoutPlanType === 'monthly' ? 'pri_01kk2mvgj2pmjfh0pkjatsv8bf' : 'pri_01kk2mxf0828y5x7p8bky7ch47')}
                     style={{
                         width: '100%',
                         padding: '18px',
@@ -524,13 +593,13 @@ export default function Premium({ lang }) {
                         e.target.style.boxShadow = '0 4px 15px rgba(0, 255, 133, 0.4)';
                     }}
                 >
-                    {lang === 'es' ? '🚀 ¡Obtener Premium Ahora!' : '🚀 Get Premium Now!'}
+                    {isTrial ? (lang === 'es' ? '✅ Continuar con mensualidad ($1.59/mes)' : '✅ Continue with monthly ($1.59/mo)') : (lang === 'es' ? '🚀 ¡Obtener Premium Ahora!' : '🚀 Get Premium Now!')}
                 </button>
             </div>
           )}
           
           {/* PAYMENT FORM OR ACTIVE STATUS */}
-          {!user.isPremium ? (
+          {showPurchaseUI ? (
             <>
 
 

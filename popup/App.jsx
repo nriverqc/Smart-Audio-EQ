@@ -732,7 +732,7 @@ export default function App() {
             </div>
         )}
 
-        {!isPremium && (status === 'expired_trial' || status === 'past_due' || status === 'canceled') && (
+        {!isPremium && !usedTrial && (status === 'expired_trial' || status === 'past_due' || status === 'canceled') && (
             <div style={{ textAlign: 'center', marginBottom: '10px', background: 'rgba(255, 68, 68, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid #ff4444' }}>
                 <p style={{ color: '#ff4444', fontWeight: 'bold', margin: 0 }}>
                     {status === 'expired_trial' ? t("trialEnded") : t("activateSubscription")}
@@ -746,7 +746,7 @@ export default function App() {
             </div>
         )}
 
-        {!isPremium && status === 'free' && usedTrial && (
+        {!isPremium && usedTrial && (status === 'free' || status === 'expired_trial' || status === 'past_due' || status === 'canceled') && (
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
                 <button 
                     onClick={handleGoPremium} 

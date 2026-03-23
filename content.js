@@ -30,6 +30,11 @@ if (window.__SMART_AUDIO_EQ_LOADED) {
           window.postMessage({ type: "PREMIUM_ACTIVADO_EXT" }, "*");
           return;
       }
+      if (msg.type === "SYNC_STATUS_FROM_EXT") {
+          // Extension reports a status change (e.g., free). Relay to the web page
+          window.postMessage({ type: "SYNC_STATUS_FROM_EXT", isPremium: msg.isPremium }, "*");
+          return;
+      }
     } catch (e) {
       sendResponse({ success: false, error: e.message });
     }

@@ -159,14 +159,20 @@ function AppContent() {
                 
                 // Update local state immediately
                 setUser(prev => {
+                    const premiumFromDb = typeof data.isPremium === 'boolean' ? data.isPremium : prev.isPremium;
+                    const statusFromDb = (typeof data.status === 'string' && data.status) ? data.status : (premiumFromDb ? 'active' : 'free');
+                    const trialEndDateFromDb = data.trialEndDate
+                      ? (data.trialEndDate.toDate ? data.trialEndDate.toDate().toISOString() : data.trialEndDate)
+                      : (prev.trialEndDate || null);
+                    const usedTrialFromDb = typeof data.usedTrial === 'boolean' ? data.usedTrial : prev.usedTrial;
                     const updated = {
                         ...prev,
-                        isPremium: data.isPremium || false,
-                        status: data.status || (data.isPremium ? 'active' : 'free'),
-                        trialEndDate: data.trialEndDate ? (data.trialEndDate.toDate ? data.trialEndDate.toDate().toISOString() : data.trialEndDate) : null,
+                        isPremium: premiumFromDb,
+                        status: statusFromDb,
+                        trialEndDate: trialEndDateFromDb,
                         method: data.method || prev.method,
                         subscriptionId: data.subscriptionId || prev.subscriptionId,
-                        usedTrial: data.usedTrial === true ? true : prev.usedTrial,
+                        usedTrial: usedTrialFromDb,
                         loading: false
                     };
                     // Also sync with extension on every DB change

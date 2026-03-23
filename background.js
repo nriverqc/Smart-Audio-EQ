@@ -804,33 +804,52 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
     console.log("Background: Mensaje externo recibido de", sender.url, message.type);
     
     if (message.type === "USER_SYNC" || message.type === "LOGIN_EXITOSO") {
-        const email = message.email || (message.user && message.user.email);
-        const uid = message.uid || (message.user && message.user.uid);
-        const webPremium = message.isPremium || (message.user && message.user.isPremium) || false;
-        const status = message.status || (message.user && message.user.status) || (webPremium ? 'active' : 'free');
-        const trial_end = message.trial_end || (message.user && message.user.trial_end) || null;
-        const usedTrial = message.usedTrial === true || (message.user && message.user.usedTrial) === true;
-        
-        chrome.storage.local.set({ 
-            email: email || '', 
-            uid: uid || '', 
-            isPremium: webPremium,
-            status: status,
-            trial_end: trial_end,
-            usedTrial: usedTrial
-        }, () => {
-            isPremium = webPremium;
-            // Notificar al popup si está abierto
-            chrome.runtime.sendMessage({
-                type: "LOGIN_EXITOSO",
+        const incomingEmail = message.email || (message.user && message.user.email);
+        const incomingUid = message.uid || (message.user && message.user.uid);
+        chrome.storage.local.get(['email', 'uid', 'isPremium', 'status', 'trial_end', 'usedTrial'], (current) => {
+            const email = incomingEmail || current.email || '';
+            const uid = incomingUid || current.uid || '';
+            const webPremium = (typeof message.isPremium === 'boolean')
+              ? message.isPremium
+              : (message.user && typeof message.user.isPremium === 'boolean')
+                ? message.user.isPremium
+                : (typeof current.isPremium === 'boolean' ? current.isPremium : false);
+            const status = (typeof message.status === 'string' && message.status)
+              ? message.status
+              : (message.user && typeof message.user.status === 'string' && message.user.status)
+                ? message.user.status
+                : (current.status || (webPremium ? 'active' : 'free'));
+            const trial_end = (message.trial_end != null)
+              ? message.trial_end
+              : (message.user && message.user.trial_end != null)
+                ? message.user.trial_end
+                : (current.trial_end != null ? current.trial_end : null);
+            const usedTrial = (typeof message.usedTrial === 'boolean')
+              ? message.usedTrial
+              : (message.user && typeof message.user.usedTrial === 'boolean')
+                ? message.user.usedTrial
+                : (current.usedTrial === true);
+            
+            chrome.storage.local.set({ 
                 email,
                 uid,
                 isPremium: webPremium,
-                status: status,
-                trial_end: trial_end,
-                usedTrial: usedTrial
+                status,
+                trial_end,
+                usedTrial
+            }, () => {
+                isPremium = webPremium;
+                chrome.runtime.sendMessage({
+                    type: "LOGIN_EXITOSO",
+                    email,
+                    uid,
+                    isPremium: webPremium,
+                    status,
+                    trial_end,
+                    usedTrial
+                });
+                sendResponse({ status: "OK", premium: isPremium });
             });
-            sendResponse({ status: "OK", premium: isPremium });
         });
         return true; 
     }

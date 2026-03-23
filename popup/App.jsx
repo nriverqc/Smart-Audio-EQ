@@ -283,7 +283,7 @@ export default function App() {
 
         // 1. Get global settings
         chrome.storage.local.get(['isPremium', 'email', 'uid', 'activeTabs', 'status', 'trial_end', 'usedTrial'], (result) => {
-            if (result.isPremium) setIsPremium(true);
+            if (typeof result.isPremium === 'boolean') setIsPremium(result.isPremium);
             if (result.email) setUserEmail(result.email);
             if (result.status) setStatus(result.status);
             if (result.trial_end) setTrialEndDate(result.trial_end);
@@ -327,7 +327,7 @@ export default function App() {
                 if (chrome.runtime.lastError) return;
                 if (response && response.email) {
                     console.log("Popup: Instant sync from current tab", response);
-                    setIsPremium(response.isPremium);
+                    if (typeof response.isPremium === 'boolean') setIsPremium(response.isPremium);
                     setUserEmail(response.email);
                     if (response.status) setStatus(response.status);
                     if (response.trial_end) setTrialEndDate(response.trial_end);

@@ -11,7 +11,7 @@ export default function PremiumModal({ isOpen, message, onClose, onUpgrade }) {
         <p className="modal-message">{message}</p>
         
         <div className="modal-actions">
-          <button className="modal-btn-premium" onClick={onUpgrade}>
+          <button className="modal-btn-premium vibrate-btn" onClick={onUpgrade}>
             Desbloquear mejor sonido 🚀
           </button>
           <button className="modal-btn-close" onClick={onClose}>

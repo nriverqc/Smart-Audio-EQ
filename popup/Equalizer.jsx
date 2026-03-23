@@ -79,12 +79,12 @@ export default function Equalizer({ enabled, isPremium, currentPreset, presetGai
   const changeVolume = (v) => {
     const newVol = parseInt(v);
     
-    // LIMIT FREE USERS TO 120%
-    if (isFree && newVol > 120) {
+    // LIMIT FREE USERS TO 150%
+    if (isFree && newVol > 150) {
         if (openPremiumModal) {
             openPremiumModal(volumeLimitWarning || "¡Pruébalo! Con Premium puedes subir hasta el 300%.");
         }
-        setVolume(120);
+        setVolume(150);
         return;
     }
 

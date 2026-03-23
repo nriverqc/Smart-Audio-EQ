@@ -7,17 +7,18 @@ Un potente ecualizador de audio para navegador web que permite mejorar la calida
 ### Versión Gratis
 - ✅ Ecualizador de 6 bandas
 - ✅ Presets básicos (Flat, Vocal, Guitar, Bass Light)
-- ✅ Control de volumen maestro
-- ✅ Analizador espectral en tiempo real
+- ✅ Boost de volumen (hasta 150%)
+- ✅ Analizador espectral en tiempo real (Limitado)
 - ✅ Interfaz intuitiva
 
 ### Versión Premium
 - ✅ Ecualizador de 15 bandas profesional
+- ✅ Boost de volumen Extremo (hasta 300%)
 - ✅ Presets personalizados (guarda tus configuraciones)
 - ✅ Presets Pro (Studio, Bass Pro, Gaming, Cinema, EDM, Podcast)
-- ✅ Mezclador de pestañas (control de volumen por pestaña)
+- ✅ Mezclador de pestañas (control independiente por pestaña)
+- ✅ Analizador espectral Full Color
 - ✅ Procesamiento de audio de baja latencia
-- ✅ Sincronización en la nube (próximamente)
 
 ## Estructura del Proyecto
 

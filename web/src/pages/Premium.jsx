@@ -139,7 +139,7 @@ export default function Premium({ lang }) {
       freeItems: [
         '✅ Ecualizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
-        '✅ Boost de volumen (hasta 300%)',
+        '✅ Boost de volumen (hasta 150%)',
         '✅ Visualizador de espectro',
         '✅ Funciona en todas las webs (YouTube, Spotify...)',
         '✅ Sin necesidad de registro'
@@ -147,12 +147,12 @@ export default function Premium({ lang }) {
       premiumItems: [
         '✨ Todo lo del plan Gratis',
         '✨ Ecualizador Profesional de 15 bandas',
+        '✨ Boost de volumen Extremo (hasta 300%)',
         '✨ Presets Personalizados Ilimitados',
         '✨ Presets Pro (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Control independiente por pestaña',
-        '✨ Sin anuncios molestos (Ad-Free) 🚫',
+        '✨ Visualizador de espectro Full Color',
         '✨ Soporte Técnico Prioritario',
-        '✨ Acceso anticipado a nuevas funciones',
         '✨ Badge Premium exclusivo en la extensión'
       ],
       processingLabel: 'Procesando...',
@@ -178,7 +178,7 @@ export default function Premium({ lang }) {
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basic presets (Flat, Rock, Pop, etc.)',
-        '✅ Volume Boost (up to 300%)',
+        '✅ Volume Boost (up to 150%)',
         '✅ Spectrum Visualizer',
         '✅ Works on all sites (YouTube, Spotify...)',
         '✅ No registration required'
@@ -186,12 +186,12 @@ export default function Premium({ lang }) {
       premiumItems: [
         '✨ Everything in Free plan',
         '✨ Professional 15-Band Equalizer',
+        '✨ Extreme Volume Boost (up to 300%)',
         '✨ Unlimited Custom Presets',
         '✨ Pro Presets (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Independent control per tab',
-        '✨ No annoying ads (Ad-Free) 🚫',
+        '✨ Full Color Spectrum Visualizer',
         '✨ Priority Support',
-        '✨ Early access to new features',
         '✨ Exclusive Premium Badge in extension'
       ],
       processingLabel: 'Processing...',
@@ -217,7 +217,7 @@ export default function Premium({ lang }) {
       freeItems: [
         '✅ Equalizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
-        '✅ Boost de volume (até 300%)',
+        '✅ Boost de volume (até 150%)',
         '✅ Visualizador de espectro',
         '✅ Funciona em todos os sites (YouTube, Spotify...)',
         '✅ Sem necessidade de registro'
@@ -225,12 +225,12 @@ export default function Premium({ lang }) {
       premiumItems: [
         '✨ Tudo no plano Grátis',
         '✨ Equalizador Profissional de 15 bandas',
+        '✨ Boost de volume Extremo (até 300%)',
         '✨ Presets Personalizados Ilimitados',
         '✨ Presets Pro (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Controle independente por aba',
-        '✨ Sem anúncios irritantes (Ad-Free) 🚫',
+        '✨ Visualizador de espectro Full Color',
         '✨ Suporte Técnico Prioritário',
-        '✨ Acesso antecipado a nuevas funções',
         '✨ Badge Premium exclusivo na extensão'
       ],
       processingLabel: 'Processando...',
@@ -256,7 +256,7 @@ export default function Premium({ lang }) {
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basis-Presets (Flat, Rock, Pop, etc.)',
-        '✅ Volume Boost (bis zu 300%)',
+        '✅ Volume Boost (bis zu 150%)',
         '✅ Spektrum-Visualisator',
         '✅ Funktioniert auf allen Websites (YouTube, Spotify...)',
         '✅ Keine Registrierung erforderlich'
@@ -264,12 +264,12 @@ export default function Premium({ lang }) {
       premiumItems: [
         '✨ Alles aus dem kostenlosen Plan',
         '✨ Professioneller 15-Band Equalizer',
+        '✨ Extremer Volume Boost (bis zu 300%)',
         '✨ Unbegrenzte benutzerdefinierte Presets',
         '✨ Pro-Presets (Bass Extreme, Cinema 3D, Gaming)',
         '✨ Unabhängige Steuerung pro Tab',
-        '✨ Keine nervige Werbung (Ad-Free) 🚫',
+        '✨ Vollfarbiger Spektrum-Visualisator',
         '✨ Prioritärer technischer Support',
-        '✨ Vorabzugang zu neuen Funktionen',
         '✨ Exklusives Premium-Badge in der Erweiterung'
       ],
       processingLabel: 'Wird verarbeitet...',

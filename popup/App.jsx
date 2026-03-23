@@ -47,7 +47,7 @@ export default function App() {
                 chrome.storage.local.set({ isPremium: false, status: 'expired_trial' });
                 setCountdown("");
             } else {
-                setStatus('trialing');
+                if (isPremium) setStatus('trialing');
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -65,7 +65,7 @@ export default function App() {
         timer = setInterval(updateCountdown, 1000);
     }
     return () => clearInterval(timer);
-  }, [status, trialEndDate]);
+  }, [isPremium, status, trialEndDate]);
   const [currentPreset, setCurrentPreset] = useState('flat');
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -584,7 +584,15 @@ export default function App() {
   };
 
   const trialEndMs = getTrialEndMs(trialEndDate);
-  const isTrialActive = !!trialEndMs && trialEndMs > Date.now();
+  const isTrialActive = !!trialEndMs && trialEndMs > Date.now() && isPremium && status !== 'canceled' && status !== 'past_due';
+
+  useEffect(() => {
+    if (!isPremium && status !== 'trialing' && trialEndDate) {
+      setTrialEndDate(null);
+      setCountdown("");
+      chrome.storage.local.set({ trial_end: null });
+    }
+  }, [isPremium, status, trialEndDate]);
 
   return (
     <div>

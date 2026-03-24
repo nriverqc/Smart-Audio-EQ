@@ -140,13 +140,22 @@ export default function Premium({ lang }) {
   const handleRefresh = async () => {
       try {
           const data = await refreshUser();
-          if (data && data.premium) {
-              setSuccessInfo({
-                  title: lang === 'es' ? 'Estado Actualizado' : 'Status Updated',
-                  message: lang === 'es' 
-                    ? '¡Tu cuenta está al día! Disfruta de todas las funciones Premium. 💎' 
-                    : 'Your account is up to date! Enjoy all Premium features. 💎'
-              });
+          if (data) {
+              if (data.premium) {
+                  setSuccessInfo({
+                      title: lang === 'es' ? 'Estado Actualizado 💎' : 'Status Updated 💎',
+                      message: lang === 'es' 
+                        ? '¡Tu cuenta está al día! Disfrutas de todas las funciones Premium.' 
+                        : 'Your account is up to date! You enjoy all Premium features.'
+                  });
+              } else {
+                  setSuccessInfo({
+                      title: lang === 'es' ? 'Estado: Gratis ℹ️' : 'Status: Free ℹ️',
+                      message: lang === 'es' 
+                        ? 'Tu cuenta es gratuita. Si acabas de comprar, espera un minuto y vuelve a sincronizar.' 
+                        : 'You are on the free plan. If you just paid, please wait a minute and sync again.'
+                  });
+              }
               setShowSuccessModal(true);
           }
       } catch (e) {

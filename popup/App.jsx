@@ -162,6 +162,14 @@ export default function App() {
       activateSubscription: 'Activa tu suscripción',
       getFreeTrial: 'Obtener 3 Días GRATIS 🎁',
       trialBadge: 'TRIAL',
+      statusPremiumTitle: 'Premium Activo 💎',
+      statusPremiumMsg: '¡Tienes acceso completo PRO! Gracias por tu apoyo. ✨',
+      statusTrialTitle: 'Prueba Activa 🎁',
+      statusTrialMsg: 'Disfrutas de todas las funciones PRO durante tu periodo de prueba.',
+      statusFreeTitle: 'Estado: Gratis ℹ️',
+      statusFreeMsg: 'Tu cuenta es gratuita. Si acabas de comprar, espera un minuto y vuelve a sincronizar.',
+      statusMethod: 'Método:',
+      statusTimeLeft: 'Tiempo restante:',
     },
     en: {
       visitWebsite: 'Visit Website',
@@ -191,6 +199,14 @@ export default function App() {
       activateSubscription: 'Activate subscription',
       getFreeTrial: 'Get 3 Days FREE 🎁',
       trialBadge: 'TRIAL',
+      statusPremiumTitle: 'Premium Active 💎',
+      statusPremiumMsg: 'You have full PRO access! Thank you for your support. ✨',
+      statusTrialTitle: 'Trial Active 🎁',
+      statusTrialMsg: 'You enjoy all PRO features during your trial period.',
+      statusFreeTitle: 'Status: Free ℹ️',
+      statusFreeMsg: 'You are on the free plan. If you just paid, please wait a minute and sync again.',
+      statusMethod: 'Method:',
+      statusTimeLeft: 'Time left:',
     },
     pt: {
       visitWebsite: 'Visite o site',
@@ -220,6 +236,14 @@ export default function App() {
       activateSubscription: 'Ative sua assinatura',
       getFreeTrial: 'Obter Teste Grátis 🎁',
       trialBadge: 'TESTE',
+      statusPremiumTitle: 'Premium Ativo 💎',
+      statusPremiumMsg: 'Você tem acesso total PRO! Obrigado pelo seu apoio. ✨',
+      statusTrialTitle: 'Teste Ativo 🎁',
+      statusTrialMsg: 'Você aproveita todos os recursos PRO durante o seu período de teste.',
+      statusFreeTitle: 'Status: Grátis ℹ️',
+      statusFreeMsg: 'Você está no plano gratuito. Se você acabou de pagar, aguarde um minuto e sincronize novamente.',
+      statusMethod: 'Método:',
+      statusTimeLeft: 'Tempo restante:',
     },
     de: {
       visitWebsite: 'Website besuchen',
@@ -249,6 +273,14 @@ export default function App() {
       activateSubscription: 'Abonnement aktivieren',
       getFreeTrial: 'Kostenlose Testversion 🎁',
       trialBadge: 'TEST',
+      statusPremiumTitle: 'Premium Aktiv 💎',
+      statusPremiumMsg: 'Sie haben vollen PRO-Zugriff! Vielen Dank für Ihre Unterstützung. ✨',
+      statusTrialTitle: 'Testversion Aktiv 🎁',
+      statusTrialMsg: 'Sie genießen alle PRO-Funktionen während Ihres Testzeitraums.',
+      statusFreeTitle: 'Status: Kostenlos ℹ️',
+      statusFreeMsg: 'Sie nutzen die kostenlose Version. Wenn Sie gerade bezahlt haben, warten Sie bitte eine Minute und synchronisieren Sie erneut.',
+      statusMethod: 'Methode:',
+      statusTimeLeft: 'Verbleibende Zeit:',
     }
   };
 
@@ -556,17 +588,33 @@ export default function App() {
                 if (res.usedTrial === true || !!res.trial_end || res.status === 'expired_trial') setUsedTrial(true);
 
                 const remaining = res.status === 'trialing' ? formatRemaining(res.trial_end) : '';
-                const title = res.status === 'trialing'
-                  ? (lang === 'es' ? 'Trial activo 🎁' : 'Trial active 🎁')
-                  : (res.isPremium ? (lang === 'es' ? 'Premium activo 💎' : 'Premium active 💎') : (lang === 'es' ? 'Estado: Gratis' : 'Status: Free'));
-                const lines = [];
-                if (res.status === 'trialing' && remaining) lines.push((lang === 'es' ? `Tiempo restante: ${remaining}` : `Time left: ${remaining}`));
-                if (res.method) lines.push((lang === 'es' ? `Método: ${res.method}` : `Method: ${res.method}`));
-                if (!res.isPremium) lines.push(lang === 'es' ? 'Si ya pagaste, espera un minuto y vuelve a sincronizar.' : 'If you already paid, wait a minute and sync again.');
+                
+                let title = t("statusFreeTitle");
+                let icon = 'ℹ️';
+                let message = t("statusFreeMsg");
+
+                if (res.status === 'trialing') {
+                    title = t("statusTrialTitle");
+                    icon = '🎁';
+                    message = t("statusTrialMsg");
+                } else if (res.isPremium) {
+                    title = t("statusPremiumTitle");
+                    icon = '💎';
+                    message = t("statusPremiumMsg");
+                }
+
+                const lines = [message];
+                if (res.status === 'trialing' && remaining) {
+                    lines.push(`${t("statusTimeLeft")} ${remaining}`);
+                }
+                if (res.method) {
+                    lines.push(`${t("statusMethod")} ${res.method}`);
+                }
+
                 openStatusModal({
                   title,
-                  icon: res.status === 'trialing' ? '🎁' : (res.isPremium ? '💎' : 'ℹ️'),
-                  message: lines.join('\n') || (response.detail ? `${response.message}\n${response.detail}` : response.message)
+                  icon,
+                  message: lines.join('\n')
                 });
             });
         } else {

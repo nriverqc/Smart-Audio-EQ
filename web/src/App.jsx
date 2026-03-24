@@ -9,7 +9,7 @@ import Contact from './pages/Contact';
 import SupportWidget from './components/SupportWidget';
 import { auth, googleProvider } from './firebase';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db as firestoreDB } from './firebase';
 import AdBlockNotice from './components/AdBlockNotice';
 
@@ -266,38 +266,65 @@ function AppContent() {
     signOut(auth);
   };
 
-  const refreshUser = () => {
-     if (user.email && user.uid) {
-        setLoading(true);
-        console.log("Web: Forcing license refresh from server...");
-        // Add timestamp to bypass any browser cache
-        fetch(`${API_BASE}/check-license?email=${encodeURIComponent(user.email)}&uid=${encodeURIComponent(user.uid)}&t=${Date.now()}`)
-        .then(res => res.json())
-        .then(data => {
-          const prev = user;
-          const prevTrialEndMs = prev.trialEndDate ? new Date(String(prev.trialEndDate).includes('T') ? prev.trialEndDate : String(prev.trialEndDate).replace(' ', 'T')).getTime() : null;
-          const prevTrialActive = prevTrialEndMs && !Number.isNaN(prevTrialEndMs) && Date.now() < prevTrialEndMs;
-          const wouldDowngrade = prev.isPremium === true && data.premium === false;
+  const refreshUser = async () => {
+     if (!user.email || !user.uid) return;
 
-          const updatedUser = { 
-            ...user, 
-            isPremium: (wouldDowngrade && prevTrialActive) ? true : data.premium, 
-            status: (wouldDowngrade && prevTrialActive) ? 'trialing' : data.status,
-            trialEndDate: (wouldDowngrade && prevTrialActive) ? prev.trialEndDate : data.trial_end,
-            method: (wouldDowngrade && prevTrialActive) ? prev.method : data.method,
-            subscriptionId: data.subscriptionId || prev.subscriptionId,
-            usedTrial: (data.usedTrial === true) ? true : prev.usedTrial,
-            loading: false 
+     setLoading(true);
+     console.log("Web: Forcing license refresh from server...");
+     try {
+        const userDocRef = doc(firestoreDB, 'usuarios', user.uid);
+        const [licenseRes, docSnap] = await Promise.all([
+          fetch(`${API_BASE}/check-license?email=${encodeURIComponent(user.email)}&uid=${encodeURIComponent(user.uid)}&t=${Date.now()}`),
+          getDoc(userDocRef)
+        ]);
+
+        const prev = user;
+        const firebasePremium = (docSnap.exists() && typeof docSnap.data().isPremium === 'boolean')
+          ? docSnap.data().isPremium
+          : null;
+
+        if (!licenseRes.ok) {
+          const keepPremium = typeof firebasePremium === 'boolean' ? firebasePremium : prev.isPremium;
+          const keepStatus = prev.status || (keepPremium ? 'active' : 'free');
+          const updatedUser = {
+            ...prev,
+            isPremium: keepPremium,
+            status: keepStatus,
+            loading: false
           };
           setUser(updatedUser);
           syncWithExtension(updatedUser);
           setLoading(false);
-          console.log("Web: Manual refresh complete. Premium:", data.premium);
-        })
-        .catch(e => {
-            console.error("Refresh error", e);
-            setLoading(false);
-        });
+          console.log("Web: Manual refresh complete (network fallback). Premium:", keepPremium);
+          return;
+        }
+
+        const data = await licenseRes.json();
+        const apiPremium = (typeof data.premium === 'boolean') ? data.premium : null;
+        const finalPremium = (typeof firebasePremium === 'boolean') ? firebasePremium : (apiPremium ?? prev.isPremium);
+
+        let finalStatus = data.status || prev.status || (finalPremium ? 'active' : 'free');
+        if (finalPremium && finalStatus === 'free') finalStatus = 'active';
+        if (!finalPremium && finalStatus !== 'free') finalStatus = 'free';
+
+        const updatedUser = { 
+          ...prev,
+          isPremium: finalPremium,
+          status: finalStatus,
+          trialEndDate: data.trial_end ?? prev.trialEndDate ?? null,
+          method: data.method ?? prev.method,
+          subscriptionId: data.subscriptionId || prev.subscriptionId,
+          usedTrial: (data.usedTrial === true) ? true : prev.usedTrial,
+          loading: false 
+        };
+
+        setUser(updatedUser);
+        syncWithExtension(updatedUser);
+        setLoading(false);
+        console.log("Web: Manual refresh complete. Premium:", finalPremium, "Firebase:", firebasePremium, "API:", apiPremium);
+     } catch (e) {
+        console.error("Refresh error", e);
+        setLoading(false);
      }
   };
 

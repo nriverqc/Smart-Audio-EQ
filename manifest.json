@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "default_locale": "en",
-  "name": "Equalizer Booster",
+  "name": "Equalizer Booster – Volume Booster & Audio Equalizer",
   "short_name": "Equalizer Booster",
   "version": "1.0.7",
   "description": "__MSG_extDescription__",

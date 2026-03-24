@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 
 const AdBlockNotice = ({ lang }) => {
   const [adBlocked, setAdBlocked] = useState(false);
-  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     const checkAdBlock = async () => {
@@ -37,7 +36,7 @@ const AdBlockNotice = ({ lang }) => {
         await fetch(new Request(adUrl), { mode: 'no-cors' });
         // If fetch succeeds (even with opaque response), no block
         setAdBlocked(false);
-      } catch (error) {
+      } catch {
         // Only if network ERROR (ERR_BLOCKED_BY_CLIENT) we consider it blocked
         setAdBlocked(true);
       }
@@ -48,13 +47,6 @@ const AdBlockNotice = ({ lang }) => {
     
     return () => clearTimeout(timer);
   }, []);
-
-  const handleManualCheck = () => {
-    setChecking(true);
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
-  };
 
   if (!adBlocked) return null;
 

@@ -9,7 +9,7 @@ import Contact from './pages/Contact';
 import SupportWidget from './components/SupportWidget';
 import { auth, googleProvider } from './firebase';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { doc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db as firestoreDB } from './firebase';
 import AdBlockNotice from './components/AdBlockNotice';
 
@@ -18,7 +18,11 @@ export const UserContext = createContext(null);
 const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
 function AppContent() {
-  const [lang, setLang] = useState('es');
+  const [lang, setLang] = useState(() => {
+    const browserLang = navigator.language.split('-')[0];
+    const supportedLangs = ['es', 'en', 'pt', 'de'];
+    return supportedLangs.includes(browserLang) ? browserLang : 'en';
+  });
   
   // Try to load cached user from localStorage for instant UI feedback
   const getInitialUser = () => {
@@ -46,17 +50,6 @@ function AppContent() {
 
   const [user, setUser] = useState(getInitialUser());
   const [loading, setLoading] = useState(false); // Global loading for actions
-
-  // Automatic Language Detection
-  useEffect(() => {
-    const browserLang = navigator.language.split('-')[0];
-    const supportedLangs = ['es', 'en', 'pt', 'de'];
-    if (supportedLangs.includes(browserLang)) {
-      setLang(browserLang);
-    } else {
-      setLang('en'); // Default to English if not supported
-    }
-  }, []);
 
   // REPLACE THIS WITH YOUR ACTUAL EXTENSION ID from chrome://extensions
   // e.g. "abcdefghijklmnop..."
@@ -126,8 +119,7 @@ function AppContent() {
   useEffect(() => {
     if (!auth) {
       console.error("Firebase Auth not initialized");
-      setUser(prev => ({ ...prev, loading: false }));
-      return;
+      return () => {};
     }
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -201,7 +193,7 @@ function AppContent() {
         // 2. BACKEND SYNC (Legacy/Backup for SQLite sync)
         fetch(`${API_BASE}/check-license?email=${firebaseUser.email}&uid=${firebaseUser.uid}`)
           .then(res => res.json())
-          .then(data => {
+          .then(() => {
             // ... already handled by snapshot mostly, but good to have for sync-user call
             // Sync user to Firestore to ensure document exists if it doesn't
             fetch(`${API_BASE}/sync-user`, {
@@ -228,6 +220,40 @@ function AppContent() {
 
     return () => unsubscribe();
   }, []);
+
+  const refreshUser = () => {
+     if (user.email && user.uid) {
+        setLoading(true);
+        console.log("Web: Forcing license refresh from server (API-first)...");
+        fetch(`${API_BASE}/check-license?email=${encodeURIComponent(user.email)}&uid=${encodeURIComponent(user.uid)}&t=${Date.now()}`)
+        .then(res => res.json())
+        .then(data => {
+          const prev = user;
+          const prevTrialEndMs = prev.trialEndDate ? new Date(String(prev.trialEndDate).includes('T') ? prev.trialEndDate : String(prev.trialEndDate).replace(' ', 'T')).getTime() : null;
+          const prevTrialActive = prevTrialEndMs && !Number.isNaN(prevTrialEndMs) && Date.now() < prevTrialEndMs;
+          const wouldDowngrade = prev.isPremium === true && data.premium === false;
+
+          const updatedUser = { 
+            ...user, 
+            isPremium: (wouldDowngrade && prevTrialActive) ? true : data.premium, 
+            status: (wouldDowngrade && prevTrialActive) ? 'trialing' : data.status,
+            trialEndDate: (wouldDowngrade && prevTrialActive) ? prev.trialEndDate : data.trial_end,
+            method: (wouldDowngrade && prevTrialActive) ? prev.method : data.method,
+            subscriptionId: data.subscriptionId || prev.subscriptionId,
+            usedTrial: (data.usedTrial === true) ? true : prev.usedTrial,
+            loading: false 
+          };
+          setUser(updatedUser);
+          syncWithExtension(updatedUser);
+          setLoading(false);
+          console.log("Web: Manual refresh complete. Premium:", data.premium);
+        })
+        .catch(e => {
+            console.error("Refresh error", e);
+            setLoading(false);
+        });
+     }
+  };
 
   // Listen for requests from the extension to resend session data
   useEffect(() => {
@@ -278,40 +304,6 @@ function AppContent() {
   const logout = () => {
     localStorage.removeItem('user_sync_data');
     signOut(auth);
-  };
-
-  const refreshUser = () => {
-     if (user.email && user.uid) {
-        setLoading(true);
-        console.log("Web: Forcing license refresh from server (API-first)...");
-        fetch(`${API_BASE}/check-license?email=${encodeURIComponent(user.email)}&uid=${encodeURIComponent(user.uid)}&t=${Date.now()}`)
-        .then(res => res.json())
-        .then(data => {
-          const prev = user;
-          const prevTrialEndMs = prev.trialEndDate ? new Date(String(prev.trialEndDate).includes('T') ? prev.trialEndDate : String(prev.trialEndDate).replace(' ', 'T')).getTime() : null;
-          const prevTrialActive = prevTrialEndMs && !Number.isNaN(prevTrialEndMs) && Date.now() < prevTrialEndMs;
-          const wouldDowngrade = prev.isPremium === true && data.premium === false;
-
-          const updatedUser = { 
-            ...user, 
-            isPremium: (wouldDowngrade && prevTrialActive) ? true : data.premium, 
-            status: (wouldDowngrade && prevTrialActive) ? 'trialing' : data.status,
-            trialEndDate: (wouldDowngrade && prevTrialActive) ? prev.trialEndDate : data.trial_end,
-            method: (wouldDowngrade && prevTrialActive) ? prev.method : data.method,
-            subscriptionId: data.subscriptionId || prev.subscriptionId,
-            usedTrial: (data.usedTrial === true) ? true : prev.usedTrial,
-            loading: false 
-          };
-          setUser(updatedUser);
-          syncWithExtension(updatedUser);
-          setLoading(false);
-          console.log("Web: Manual refresh complete. Premium:", data.premium);
-        })
-        .catch(e => {
-            console.error("Refresh error", e);
-            setLoading(false);
-        });
-     }
   };
 
   const langLabels = {

@@ -4,7 +4,7 @@ import { UserContext } from '../App';
 const API_BASE = 'https://smart-audio-eq-1.onrender.com';
 
 export default function Premium({ lang }) {
-  const { user, refreshUser, loginWithGoogle, loading: refreshing } = useContext(UserContext);
+  const { user, setUser, refreshUser, loginWithGoogle, loading: refreshing } = useContext(UserContext);
   const [loading, setLoading] = useState(false); // Paddle loading
   const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -82,8 +82,20 @@ export default function Premium({ lang }) {
           });
           const data = await res.json();
           if (res.ok && data.status === 'canceled') {
+              setErrorMsg('');
               setShowManageModal(false);
-              refreshUser();
+              setUser((prev) => {
+                  const hadTrial = !!prev.trialEndDate || prev.status === 'trialing';
+                  return {
+                      ...prev,
+                      isPremium: false,
+                      status: 'free',
+                      method: '',
+                      subscriptionId: '',
+                      trialEndDate: null,
+                      usedTrial: prev.usedTrial === true ? true : hadTrial
+                  };
+              });
           } else {
               const parts = [];
               if (data && data.error) parts.push(data.error);
@@ -94,10 +106,14 @@ export default function Premium({ lang }) {
                   const d = typeof data.details === 'string' ? data.details : JSON.stringify(data.details);
                   parts.push(d);
               }
+              setErrorMsg(parts.length ? parts.join(' • ') : 'Cancel failed');
               alert(parts.length ? parts.join('\n') : 'Cancel failed');
+              refreshUser();
           }
-      } catch (e) {
+      } catch {
+          setErrorMsg('Cancel failed');
           alert('Cancel failed');
+          refreshUser();
       } finally {
           setLoading(false);
       }

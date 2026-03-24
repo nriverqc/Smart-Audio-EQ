@@ -1,18 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 export default function Home({ lang }) {
-  const [searchParams] = useSearchParams();
-  const [showWelcome, setShowWelcome] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => new URLSearchParams(window.location.search).get('welcome') === 'true');
 
   useEffect(() => {
-    // Check for ?welcome=true in URL (sent by extension on install)
-    if (searchParams.get('welcome') === 'true') {
-      setShowWelcome(true);
-      // Clean URL without reload
+    if (showWelcome) {
       window.history.replaceState({}, document.title, "/");
     }
-  }, [searchParams]);
+  }, [showWelcome]);
 
   const texts = {
     es: {

@@ -43,7 +43,7 @@ export default function Contact({ lang }) {
         setStatus('error');
         setStatusMsg(data.error || (lang === 'es' ? 'Error al enviar.' : 'Error sending message.'));
       }
-    } catch (err) {
+    } catch {
       setStatus('error');
       setStatusMsg(lang === 'es' ? 'Error de conexión.' : 'Connection error.');
     } finally {

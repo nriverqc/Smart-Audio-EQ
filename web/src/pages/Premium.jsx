@@ -22,9 +22,9 @@ export default function Premium({ lang }) {
         setPlanType('monthly');
     }
   }, []);
-  const displayPrices = { monthly: '$0.99 USD', yearly: '$5.99 USD' };
+  const displayPrices = { monthly: '$1.29 USD', yearly: '$7.99 USD' };
   const trialPrices = { monthly: '$0.00 USD' };
-  const oldPrices = { monthly: '$4.99 USD', yearly: '$29.99 USD' };
+  const oldPrices = { monthly: '$1.89 USD', yearly: '$15.99 USD' };
   const monthlyTrialPriceId = 'pri_01kk2mvgj2pmjfh0pkjatsv8bf';
   const monthlyNoTrialPriceId = 'pri_01km6gx5sy7t9pb8n3b1zszb3h';
   const emailRef = React.useRef(email);
@@ -196,7 +196,7 @@ export default function Premium({ lang }) {
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
       premiumPriceINT_Monthly: displayPrices.monthly + ' / mes (Prueba 3 días GRATIS)',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / año (80% DCTO)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / año (50% DCTO)',
       freeItems: [
         '✅ Ecualizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -223,8 +223,8 @@ export default function Premium({ lang }) {
       successMessage: '¡Pago exitoso! Tu licencia Premium ha sido activada.',
       errorMessage: 'Hubo un error al procesar el pago.',
       planLabel: 'Selecciona tu plan:',
-      optionMonthly: 'Mensual (80% DCTO)',
-      optionYearly: 'Anual (Ahorra 80%)',
+      optionMonthly: 'Mensual (30% DCTO)',
+      optionYearly: 'Anual (Ahorra 51%)',
       comingSoon: 'Suscripción Premium',
       comingSoonMsg: 'Obtén acceso a todas las funciones Pro de forma inmediata.'
     },
@@ -235,7 +235,7 @@ export default function Premium({ lang }) {
       freePrice: '$0 / forever',
       premiumTitle: 'Premium 💎',
       premiumPriceINT_Monthly: displayPrices.monthly + ' / mo (3-day FREE Trial)',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / year (80% OFF)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / year (50% OFF)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basic presets (Flat, Rock, Pop, etc.)',
@@ -262,8 +262,8 @@ export default function Premium({ lang }) {
       successMessage: 'Payment successful! Your Premium license has been activated.',
       errorMessage: 'There was an error processing the payment.',
       planLabel: 'Select your plan:',
-      optionMonthly: 'Monthly (80% OFF)',
-      optionYearly: 'Yearly (Save 80%)',
+      optionMonthly: 'Monthly (30% OFF)',
+      optionYearly: 'Yearly (Save 51%)',
       comingSoon: 'Premium Subscription',
       comingSoonMsg: 'Get access to all Pro features immediately.'
     },
@@ -274,7 +274,7 @@ export default function Premium({ lang }) {
       freePrice: '$0 / para siempre',
       premiumTitle: 'Premium 💎',
       premiumPriceINT_Monthly: displayPrices.monthly + ' / mês (Teste 3 dias GRÁTIS)',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / ano (80% OFF)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / ano (50% OFF)',
       freeItems: [
         '✅ Equalizador de 6 bandas',
         '✅ Presets básicos (Flat, Rock, Pop, etc.)',
@@ -301,8 +301,8 @@ export default function Premium({ lang }) {
       successMessage: 'Pagamento bem-sucedido! Sua licença Premium foi ativada.',
       errorMessage: 'Houve um erro ao processar o pagamento.',
       planLabel: 'Selecione seu plano:',
-      optionMonthly: 'Mensal (80% OFF)',
-      optionYearly: 'Anual (Poupe 80%)',
+      optionMonthly: 'Mensal (30% OFF)',
+      optionYearly: 'Anual (Economize 51%)',
       comingSoon: 'Assinatura Premium',
       comingSoonMsg: 'Obtenha acesso a todos os recursos Pro imediatamente.'
     },
@@ -313,7 +313,7 @@ export default function Premium({ lang }) {
       freePrice: '$0 / für immer',
       premiumTitle: 'Premium 💎',
       premiumPriceINT_Monthly: displayPrices.monthly + ' / Monat (3 Tage KOSTENLOS)',
-      premiumPriceINT_Yearly: displayPrices.yearly + ' / Jahr (80% RABATT)',
+      premiumPriceINT_Yearly: displayPrices.yearly + ' / Jahr (50% RABATT)',
       freeItems: [
         '✅ 6-Band Equalizer',
         '✅ Basis-Presets (Flat, Rock, Pop, etc.)',
@@ -340,8 +340,8 @@ export default function Premium({ lang }) {
       successMessage: 'Zahlung erfolgreich! Ihre Premium-Lizenz wurde aktiviert.',
       errorMessage: 'Beim Verarbeiten der Zahlung ist ein Fehler aufgetreten.',
       planLabel: 'Wählen Sie Ihren Plan:',
-      optionMonthly: 'Monatlich (80% RABATT)',
-      optionYearly: 'Jährlich (Sparen 80%)',
+      optionMonthly: 'Monatlich (30% RABATT)',
+      optionYearly: 'Jährlich (Sparen Sie 51%)',
       comingSoon: 'Premium-Abonnement',
       comingSoonMsg: 'Erhalten Sie sofortigen Zugriff auf alle Pro-Funktionen.'
     },
@@ -772,7 +772,7 @@ export default function Premium({ lang }) {
                             padding: '2px 5px',
                             borderRadius: '10px',
                             zIndex: 10
-                        }}>80% OFF</span>
+                        }}>50% OFF</span>
                     </button>
                 </div>
             </div>

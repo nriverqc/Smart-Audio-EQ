@@ -163,8 +163,8 @@ function AppContent() {
                     const statusFromDb = (typeof data.status === 'string' && data.status) ? data.status : (premiumFromDb ? 'active' : 'free');
                     const trialEndDateFromDb = data.trialEndDate
                       ? (data.trialEndDate.toDate ? data.trialEndDate.toDate().toISOString() : data.trialEndDate)
-                      : (prev.trialEndDate || null);
-                    const usedTrialFromDb = typeof data.usedTrial === 'boolean' ? data.usedTrial : prev.usedTrial;
+                      : null;
+                    const usedTrialFromDb = typeof data.usedTrial === 'boolean' ? data.usedTrial : false;
                     const updated = {
                         ...prev,
                         isPremium: premiumFromDb,
@@ -176,6 +176,20 @@ function AppContent() {
                         loading: false
                     };
                     // Also sync with extension on every DB change
+                    syncWithExtension(updated);
+                    return updated;
+                });
+            } else {
+                // Document does not exist: treat as brand-new user (no trial used)
+                setUser(prev => {
+                    const updated = {
+                        ...prev,
+                        isPremium: false,
+                        status: 'free',
+                        trialEndDate: null,
+                        usedTrial: false,
+                        loading: false
+                    };
                     syncWithExtension(updated);
                     return updated;
                 });

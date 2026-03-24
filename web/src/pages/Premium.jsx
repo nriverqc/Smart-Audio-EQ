@@ -68,8 +68,8 @@ export default function Premium({ lang }) {
   const monthlyPriceId = usedTrial ? monthlyNoTrialPriceId : monthlyTrialPriceId;
 
   useEffect(() => {
-      if (!user.isPremium && usedTrial) setPlanType('monthly');
-  }, [user.isPremium, usedTrial]);
+      if (!user.isPremium) setPlanType('monthly');
+  }, [user.isPremium]);
 
   const cancelSubscription = async () => {
       if (!user.uid && !user.email) return;

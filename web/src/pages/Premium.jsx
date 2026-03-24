@@ -12,6 +12,8 @@ export default function Premium({ lang }) {
   const [trialCountdown, setTrialCountdown] = useState('');
   const [trialEndMs, setTrialEndMs] = useState(null);
   const [showManageModal, setShowManageModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successInfo, setSuccessInfo] = useState({ title: '', message: '' });
 
   useEffect(() => {
     // Handle redirect from extension trial button
@@ -84,6 +86,16 @@ export default function Premium({ lang }) {
           if (res.ok && data.status === 'canceled') {
               setErrorMsg('');
               setShowManageModal(false);
+              
+              // Set success info
+              setSuccessInfo({
+                  title: lang === 'es' ? 'Suscripción Cancelada 🚫' : 'Subscription Canceled 🚫',
+                  message: lang === 'es' 
+                    ? 'Tu suscripción ha sido cancelada correctamente. Tu acceso Premium se ha desactivado.' 
+                    : 'Your subscription has been successfully canceled. Your Premium access has been disabled.'
+              });
+              setShowSuccessModal(true);
+
               setUser((prev) => {
                   const hadTrial = !!prev.trialEndDate || prev.status === 'trialing';
                   return {
@@ -99,16 +111,24 @@ export default function Premium({ lang }) {
           } else {
               const parts = [];
               if (data && data.error) parts.push(data.error);
-              if (data && data.subscriptionId) parts.push(`Subscription: ${data.subscriptionId}`);
               if (data && data.status_code) parts.push(`HTTP: ${data.status_code}`);
-              if (data && data.request_id) parts.push(`Request ID: ${data.request_id}`);
-              if (data && data.details) {
-                  const d = typeof data.details === 'string' ? data.details : JSON.stringify(data.details);
-                  parts.push(d);
+              
+              const errorText = parts.length ? parts.join(' • ') : 'Cancel failed';
+              setErrorMsg(errorText);
+              
+              // If it failed because it's already canceled, we still show success or info
+              if (data && data.code === "subscription_update_when_canceled") {
+                  setShowManageModal(false);
+                  setSuccessInfo({
+                      title: lang === 'es' ? 'Ya cancelada' : 'Already canceled',
+                      message: lang === 'es' ? 'La suscripción ya figuraba como cancelada en Paddle. Se ha sincronizado tu cuenta.' : 'Subscription was already canceled in Paddle. Your account has been synced.'
+                  });
+                  setShowSuccessModal(true);
+                  refreshUser();
+              } else {
+                  alert(parts.length ? parts.join('\n') : 'Cancel failed');
+                  refreshUser();
               }
-              setErrorMsg(parts.length ? parts.join(' • ') : 'Cancel failed');
-              alert(parts.length ? parts.join('\n') : 'Cancel failed');
-              refreshUser();
           }
       } catch {
           setErrorMsg('Cancel failed');
@@ -554,6 +574,85 @@ export default function Premium({ lang }) {
                         {lang === 'es' ? 'Cerrar' : 'Close'}
                     </button>
                 </div>
+            </div>
+        </div>
+      )}
+
+      {showSuccessModal && (
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10001,
+            padding: '20px',
+            backdropFilter: 'blur(8px)'
+        }}>
+            <div style={{
+                background: 'linear-gradient(145deg, #1a1a1a 0%, #0a0a0a 100%)',
+                border: '1px solid #00ff85',
+                padding: '40px 30px',
+                borderRadius: '24px',
+                maxWidth: '420px',
+                width: '100%',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.8), 0 0 30px rgba(0,255,133,0.15)',
+                textAlign: 'center',
+                position: 'relative',
+                animation: 'slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+            }}>
+                <div style={{
+                    fontSize: '5rem', 
+                    marginBottom: '20px',
+                    filter: 'drop-shadow(0 0 15px rgba(0,255,133,0.4))'
+                }}>✅</div>
+                <h2 style={{
+                    color: '#fff', 
+                    fontSize: '1.8rem',
+                    fontWeight: 'bold',
+                    marginBottom: '15px',
+                    background: 'linear-gradient(90deg, #00ff85, #00d2ff)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                }}>{successInfo.title}</h2>
+                <p style={{
+                    fontSize: '1.05rem', 
+                    color: '#aaa', 
+                    marginBottom: '30px', 
+                    lineHeight: '1.6',
+                    fontWeight: '500'
+                }}>
+                  {successInfo.message}
+                </p>
+                <button 
+                    onClick={() => setShowSuccessModal(false)}
+                    style={{
+                        width: '100%',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: 'linear-gradient(90deg, #00ff85, #00c86a)',
+                        color: '#000',
+                        fontWeight: '900',
+                        fontSize: '1.1rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 8px 20px rgba(0, 255, 133, 0.3)',
+                        transition: 'all 0.3s',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px'
+                    }}
+                    onMouseOver={(e) => {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = '0 12px 25px rgba(0, 255, 133, 0.4)';
+                    }}
+                    onMouseOut={(e) => {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = '0 8px 20px rgba(0, 255, 133, 0.3)';
+                    }}
+                >
+                    {lang === 'es' ? 'ENTENDIDO' : 'GOT IT'}
+                </button>
             </div>
         </div>
       )}

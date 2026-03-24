@@ -758,32 +758,46 @@ def cancel_subscription():
         if resp.status_code not in [200, 201]:
             details = None
             request_id = None
+            code = None
             try:
                 body = resp.json() or {}
                 details = body
                 meta = body.get("meta") or {}
                 request_id = meta.get("request_id") or meta.get("requestId")
+                err = body.get("error") or {}
+                code = err.get("code")
             except Exception:
                 details = resp.text
 
-            return jsonify({
-                "error": "Paddle cancel failed",
-                "subscriptionId": subscription_id,
-                "status_code": resp.status_code,
-                "request_id": request_id,
-                "details": details
-            }), 400
+            # Treat "subscription_update_when_canceled" as success for local DB sync:
+            if code == "subscription_update_when_canceled":
+                print(f"Paddle: Subscription {subscription_id} already canceled. Proceeding to sync local DBs.")
+            else:
+                print(f"Paddle Error: {code} - {details}")
+                return jsonify({
+                    "error": "Paddle cancel failed",
+                    "code": code,
+                    "subscriptionId": subscription_id,
+                    "status_code": resp.status_code,
+                    "request_id": request_id,
+                    "details": details
+                }), 400
 
         now = datetime.now()
+        print(f"Syncing cancellation for {email_norm} (UID: {uid}) to Firestore and SQLite...")
 
         if email_norm:
-            with sqlite3.connect(DB_NAME) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE licenses SET is_premium=0, status='canceled', method='Paddle', subscription_id=?, trial_end_date=NULL WHERE email=?",
-                    (subscription_id, email_norm),
-                )
-                conn.commit()
+            try:
+                with sqlite3.connect(DB_NAME) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE licenses SET is_premium=0, status='canceled', method='Paddle', subscription_id=?, trial_end_date=NULL WHERE email=?",
+                        (subscription_id, email_norm),
+                    )
+                    conn.commit()
+                print(f"SQLite updated for {email_norm}")
+            except Exception as e:
+                print(f"SQLite cancel error: {e}")
 
         if db:
             update_data = {
@@ -797,26 +811,32 @@ def cancel_subscription():
             if email_norm:
                 update_data["email"] = email_norm
 
+            # 1. Update by UID (Primary)
             if uid:
                 try:
                     db.collection("usuarios").document(uid).set(update_data, merge=True)
+                    print(f"Firestore updated by UID: {uid}")
                 except Exception as e:
                     print(f"Cancel Firestore (uid) error: {e}")
 
+            # 2. Update all docs with this email
             if email_norm:
                 try:
                     docs = db.collection("usuarios").where("email", "==", email_norm).limit(10).get()
                     for d in docs:
                         db.collection("usuarios").document(d.id).set(update_data, merge=True)
+                    print(f"Firestore updated {len(docs)} docs by email: {email_norm}")
                 except Exception as e:
                     print(f"Cancel Firestore (email) error: {e}")
 
+                # 3. Update licenses_by_email collection
                 try:
                     db.collection("licenses_by_email").document(email_norm).set(update_data, merge=True)
+                    print(f"Firestore updated licenses_by_email: {email_norm}")
                 except Exception as e:
                     print(f"Cancel Firestore (licenses_by_email) error: {e}")
 
-        return jsonify({"status": "canceled"}), 200
+        return jsonify({"status": "canceled", "message": "Subscription synced as canceled."}), 200
     except Exception as e:
         print(f"Cancel Subscription Error: {e}")
         return jsonify({"error": str(e)}), 500

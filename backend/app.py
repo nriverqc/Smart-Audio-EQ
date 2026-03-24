@@ -8,7 +8,7 @@ import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 import resend
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 
 load_dotenv()
@@ -364,7 +364,7 @@ def register_paypal():
         if not email or not uid:
             return jsonify({"error": "Missing email or uid"}), 400
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         expiration_date = now + (timedelta(days=366) if plan_type == "yearly" else timedelta(days=31))
         status = "active"
         method = "PayPal"
@@ -423,7 +423,7 @@ def register_paypal():
                     email.strip().lower(),
                     status,
                     payment_id,
-                    expiration_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    expiration_date.isoformat().replace('+00:00', 'Z'),
                     method,
                 ),
             )
@@ -447,7 +447,7 @@ def register_paypal():
             except Exception as e:
                 print(f"Firebase Update Error (PayPal): {e}")
 
-        return jsonify({"status": "approved", "expiration": expiration_date.strftime("%Y-%m-%d %H:%M:%S")})
+        return jsonify({"status": "approved", "expiration": expiration_date.isoformat().replace('+00:00', 'Z')})
     except Exception as e:
         print(f"Register PayPal Error: {e}")
         return jsonify({"error": str(e)}), 500
@@ -511,7 +511,7 @@ def paddle_webhook():
         elif price_id == "pri_01kk2mvgj2pmjfh0pkjatsv8bf":
             plan_type = "monthly"
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         is_premium = False
         status = "free"
@@ -590,8 +590,8 @@ def paddle_webhook():
                     status,
                     f"PADDLE_{payment_id}" if payment_id else None,
                     subscription_id,
-                    expiration_date.strftime("%Y-%m-%d %H:%M:%S") if expiration_date else None,
-                    trial_end_date.strftime("%Y-%m-%d %H:%M:%S") if trial_end_date else None,
+                    expiration_date.isoformat().replace('+00:00', 'Z') if expiration_date else None,
+                    trial_end_date.isoformat().replace('+00:00', 'Z') if trial_end_date else None,
                     "Paddle",
                 ),
             )
@@ -783,7 +783,7 @@ def cancel_subscription():
                     "details": details
                 }), 400
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         print(f"Syncing cancellation for {email_norm} (UID: {uid}) to Firestore and SQLite...")
 
         if email_norm:
@@ -867,19 +867,19 @@ def check_license():
                 # Re-validate dates BEFORE early return
                 exp_date = data.get('expirationDate')
                 if exp_date and hasattr(exp_date, 'to_datetime'):
-                    exp_date = exp_date.to_datetime().replace(tzinfo=None)
-                elif exp_date and exp_date.tzinfo:
-                    exp_date = exp_date.replace(tzinfo=None)
+                    exp_date = exp_date.to_datetime() # Firestore returns aware UTC
+                elif exp_date and not exp_date.tzinfo:
+                    exp_date = exp_date.replace(tzinfo=timezone.utc)
 
                 trial_end = data.get('trialEndDate')
                 if trial_end and hasattr(trial_end, 'to_datetime'):
-                    trial_end = trial_end.to_datetime().replace(tzinfo=None)
-                elif trial_end and trial_end.tzinfo:
-                    trial_end = trial_end.replace(tzinfo=None)
+                    trial_end = trial_end.to_datetime() # Firestore returns aware UTC
+                elif trial_end and not trial_end.tzinfo:
+                    trial_end = trial_end.replace(tzinfo=timezone.utc)
 
                 subscription_id = data.get('subscriptionId')
                 used_trial = data.get('usedTrial', False) or bool(trial_end)
-                now = datetime.now()
+                now = datetime.now(timezone.utc)
 
                 if trial_end:
                     if now > trial_end:
@@ -957,8 +957,8 @@ def check_license():
                     return jsonify({"premium": False, "status": status, "source": "firestore_override"})
 
                 # Sync back to SQLite only if changed
-                exp_str = exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None
-                trial_str = trial_end.strftime("%Y-%m-%d %H:%M:%S") if trial_end else None
+                exp_str = exp_date.isoformat().replace('+00:00', 'Z') if exp_date else None
+                trial_str = trial_end.isoformat().replace('+00:00', 'Z') if trial_end else None
                 
                 with sqlite3.connect(DB_NAME) as conn:
                     cursor = conn.cursor()
@@ -1009,25 +1009,30 @@ def check_license():
                 method = row[4]
                 subscription_id = row[5]
                 
-                now = datetime.now()
+                now = datetime.now(timezone.utc)
                 
                 # Re-verify local status for trials
                 if status == 'trialing' and trial_end_str:
                     try:
-                        trial_end = datetime.strptime(trial_end_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
+                        # Robust ISO parsing
+                        s = trial_end_str.replace('T', ' ').replace('Z', '').split(".")[0]
+                        trial_end = datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
                         if now > trial_end:
                             is_premium = False
                             status = 'expired_trial'
-                    except: pass
+                    except Exception as e: 
+                        print(f"SQLite trial parse error: {e}")
                 
                 # Re-verify local status for active sub
                 elif status == 'active' and expiration_str:
                     try:
-                        exp_date = datetime.strptime(expiration_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
+                        s = expiration_str.replace('T', ' ').replace('Z', '').split(".")[0]
+                        exp_date = datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
                         if now > exp_date:
                             is_premium = False
                             status = 'past_due'
-                    except: pass
+                    except Exception as e: 
+                        print(f"SQLite exp parse error: {e}")
 
                 return jsonify({
                     "premium": is_premium,
@@ -1067,8 +1072,8 @@ def start_trial():
                 return jsonify({"error": "Trial already used or started", "status": row[0]}), 403
 
             # Start 3-day trial
-            trial_end = datetime.now() + timedelta(days=3)
-            trial_str = trial_end.strftime("%Y-%m-%d %H:%M:%S")
+            trial_end = datetime.now(timezone.utc) + timedelta(days=3)
+            trial_str = trial_end.isoformat().replace('+00:00', 'Z')
             
             cursor.execute("""
                 INSERT INTO licenses (email, is_premium, status, trial_end_date, method)
@@ -1166,7 +1171,7 @@ def restore_purchase():
                         if trial_end:
                             # Handle both datetime and Timestamp objects
                             trial_dt = trial_end if isinstance(trial_end, datetime) else trial_end.to_datetime()
-                            if datetime.now() < trial_dt:
+                            if datetime.now(timezone.utc) < trial_dt:
                                 p_status = 'trialing'
 
                         user_ref = db.collection('usuarios').document(uid)

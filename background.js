@@ -601,6 +601,73 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             const prevMethod = storage.method;
             const prevUsedTrial = !!storage.usedTrial;
 
+            // 0. Try to get Firebase snapshot from an open web tab FIRST (instant truth)
+            let webSnapshot = null;
+            try {
+                const tabs = await chrome.tabs.query({});
+                const webTab = tabs.find(t => t.url && t.url.includes("smart-audio-eq.pages.dev"));
+                if (webTab) {
+                    const response = await sendMessageToTab(webTab.id, { type: "PREGUNTAR_DATOS" }, true);
+                    if (response) {
+                        webSnapshot = response;
+                        if (response.email) {
+                            email = response.email;
+                            uid = response.uid || uid;
+                            await chrome.storage.local.set({ email, uid });
+                        }
+                        if (typeof response.isPremium === 'boolean') {
+                            const finalIsPremium = response.isPremium;
+                            const finalStatus = response.status || (finalIsPremium ? 'active' : 'free');
+                            const finalTrialEnd = response.trial_end || null;
+                            const finalUsedTrial = response.usedTrial === true ? true : prevUsedTrial;
+                            const finalMethod = response.method || prevMethod || null;
+
+                            isPremium = finalIsPremium;
+                            await chrome.storage.local.set({ 
+                                isPremium: finalIsPremium, 
+                                status: finalStatus,
+                                method: finalMethod,
+                                trial_end: finalTrialEnd,
+                                usedTrial: finalUsedTrial
+                            });
+
+                            if (finalIsPremium) {
+                                notifyWebTabsOfPremium();
+                                const statusMsg = finalStatus === 'trialing' ? "Trial activo 🎁" : "Premium activo 💎";
+                                sendResponse({ success: true, message: `Sincronización completa: ${statusMsg}`, detail: finalMethod ? `Metodo: ${finalMethod}` : "" });
+                            } else {
+                                try {
+                                    const webTabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
+                                    webTabs.forEach(t => chrome.tabs.sendMessage(t.id, { type: "SYNC_STATUS_FROM_EXT", isPremium: false }));
+                                } catch (e) {}
+                                sendResponse({ success: true, message: "Estado: Gratis." });
+                            }
+                            // Enrich with backend asynchronously
+                            (async () => {
+                                try {
+                                    const apiUrl = `https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(email || '')}&uid=${encodeURIComponent(uid || '')}`;
+                                    const res = await fetch(apiUrl);
+                                    if (res.ok) {
+                                        const data = await res.json();
+                                        const apiMethod = data.method || null;
+                                        const apiTrialEnd = data.trial_end || null;
+                                        const apiUsedTrial = data.usedTrial === true ? true : finalUsedTrial;
+                                        await chrome.storage.local.set({
+                                            method: apiMethod || finalMethod,
+                                            trial_end: apiTrialEnd || finalTrialEnd,
+                                            usedTrial: apiUsedTrial
+                                        });
+                                    }
+                                } catch (e) {}
+                            })();
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                // Ignore snapshot errors; continue with identity/API
+            }
+
             // 2. If no email, try identity
             if (!email) {
                 const userInfo = await new Promise(resolve => 
@@ -612,9 +679,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 }
             }
 
-            // 3. If still no email, look for web tab
-            // Also, if we find a web tab, prefer its Firebase snapshot for INSTANT verification.
-            let webSnapshot = null;
+            // 3. If still no email, look for web tab (secondary attempt)
             if (!email) {
                 const tabs = await chrome.tabs.query({});
                 const webTab = tabs.find(t => t.url && t.url.includes("smart-audio-eq.pages.dev"));
@@ -622,17 +687,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 if (webTab) {
                     try {
                         const response = await sendMessageToTab(webTab.id, { type: "PREGUNTAR_DATOS" }, true);
-                        if (response) {
-                            webSnapshot = response;
-                            if (response.email) {
-                                email = response.email;
-                                uid = response.uid || uid;
-                                await chrome.storage.local.set({ 
-                                    email: response.email, 
-                                    uid: uid
-                                });
-                            }
-                        } 
+                        if (response && response.email) {
+                            email = response.email;
+                            uid = response.uid || uid;
+                            await chrome.storage.local.set({ email, uid });
+                        }
                     } catch (e) { console.warn("Web tab sync failed", e); }
                 }
                 
@@ -642,59 +701,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 }
             }
 
-            // 4. If we have Firebase snapshot from the web, TRUST IT for instant status
-            if (webSnapshot && typeof webSnapshot.isPremium === 'boolean') {
-                const finalIsPremium = webSnapshot.isPremium;
-                const finalStatus = webSnapshot.status || (finalIsPremium ? 'active' : 'free');
-                const finalTrialEnd = webSnapshot.trial_end || null;
-                const finalUsedTrial = webSnapshot.usedTrial === true ? true : prevUsedTrial;
-                const finalMethod = webSnapshot.method || prevMethod || null;
-
-                isPremium = finalIsPremium;
-                await chrome.storage.local.set({ 
-                    isPremium: finalIsPremium, 
-                    status: finalStatus,
-                    method: finalMethod,
-                    trial_end: finalTrialEnd,
-                    usedTrial: finalUsedTrial
-                });
-
-                if (finalIsPremium) {
-                    notifyWebTabsOfPremium();
-                    const statusMsg = finalStatus === 'trialing' ? "Trial activo 🎁" : "Premium activo 💎";
-                    sendResponse({ success: true, message: `Sincronización completa: ${statusMsg}`, detail: finalMethod ? `Metodo: ${finalMethod}` : "" });
-                } else {
-                    try {
-                        const tabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
-                        tabs.forEach(t => {
-                            chrome.tabs.sendMessage(t.id, { type: "SYNC_STATUS_FROM_EXT", isPremium: false });
-                        });
-                    } catch (e) {}
-                    sendResponse({ success: true, message: "Estado: Gratis." });
-                }
-                // Optionally, enrich with backend data asynchronously (method, trial_end accuracy)
-                // but do not change the immediate status already set from Firebase snapshot.
-                (async () => {
-                    try {
-                        const apiUrl = `https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(email)}&uid=${encodeURIComponent(uid || '')}`;
-                        const res = await fetch(apiUrl);
-                        if (res.ok) {
-                            const data = await res.json();
-                            const apiMethod = data.method || null;
-                            const apiTrialEnd = data.trial_end || null;
-                            const apiUsedTrial = data.usedTrial === true ? true : prevUsedTrial;
-                            await chrome.storage.local.set({
-                                method: apiMethod || finalMethod,
-                                trial_end: apiTrialEnd || finalTrialEnd,
-                                usedTrial: apiUsedTrial
-                            });
-                        }
-                    } catch (e) {}
-                })();
-                return;
-            }
-
-            // 5. If we have email, check API (fallback)
+            // 4. If we have email, check API (fallback)
             const apiUrl = `https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(email)}&uid=${encodeURIComponent(uid || '')}`;
             const res = await fetch(apiUrl);
             if (!res.ok) {

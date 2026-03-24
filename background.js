@@ -63,10 +63,15 @@ chrome.storage.local.get(['activeTabs'], (res) => {
 });
 
 // Helper para enviar mensajes a una pestaña con retry si no existe listener
-async function sendMessageToTab(tabId, message, tryInject = true) {
+async function sendMessageToTab(tabId, message, tryInject = true, timeoutMs = 3000) {
   try {
     return await new Promise(async (resolve) => {
+      const timeout = setTimeout(() => {
+          resolve({ success: false, error: "Timeout" });
+      }, timeoutMs);
+
       chrome.tabs.sendMessage(tabId, message, async (res) => {
+        clearTimeout(timeout);
         if (chrome.runtime.lastError) {
           console.warn('sendMessageToTab lastError:', chrome.runtime.lastError.message, 'msg:', message.type);
           if (!tryInject) return resolve({ success: false, error: chrome.runtime.lastError.message });
@@ -601,12 +606,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             const prevMethod = storage.method;
             const prevUsedTrial = !!storage.usedTrial;
 
-            // 0. Optionally get email from an open web tab (but state will be decided by Paddle API)
+            // 0. Optionally get email from an open web tab
             try {
-                const tabs = await chrome.tabs.query({});
-                const webTab = tabs.find(t => t.url && t.url.includes("smart-audio-eq.pages.dev"));
+                const tabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
+                const webTab = tabs[0];
                 if (webTab) {
-                    const response = await sendMessageToTab(webTab.id, { type: "PREGUNTAR_DATOS" }, true);
+                    const response = await sendMessageToTab(webTab.id, { type: "PREGUNTAR_DATOS" }, true, 2000);
                     if (response && response.email) {
                         email = response.email;
                         uid = response.uid || uid;
@@ -628,12 +633,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
             // 3. If still no email, look for web tab (secondary attempt)
             if (!email) {
-                const tabs = await chrome.tabs.query({});
-                const webTab = tabs.find(t => t.url && t.url.includes("smart-audio-eq.pages.dev"));
+                const tabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
+                const webTab = tabs[0];
                 
                 if (webTab) {
                     try {
-                        const response = await sendMessageToTab(webTab.id, { type: "PREGUNTAR_DATOS" }, true);
+                        const response = await sendMessageToTab(webTab.id, { type: "PREGUNTAR_DATOS" }, true, 2000);
                         if (response && response.email) {
                             email = response.email;
                             uid = response.uid || uid;

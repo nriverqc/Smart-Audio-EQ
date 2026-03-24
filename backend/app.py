@@ -897,6 +897,7 @@ def check_license():
                         is_premium_db = True
                 
                 # Check for other premium accounts with same email if not premium yet
+                needs_firestore_sync = False
                 if not is_premium_db:
                     try:
                         lic_doc = db.collection('licenses_by_email').document(email_norm).get()
@@ -947,26 +948,41 @@ def check_license():
                 if is_premium_db is False and status not in ['trialing', 'active']:
                     with sqlite3.connect(DB_NAME) as conn:
                         cursor = conn.cursor()
-                        cursor.execute("UPDATE licenses SET is_premium=0, status='free', method=NULL, trial_end_date=NULL, expiration_date=NULL WHERE email=?", (email,))
-                        conn.commit()
+                        # Only update if current state in SQLite is actually 'premium' to avoid redundant writes
+                        cursor.execute("SELECT is_premium FROM licenses WHERE email = ?", (email,))
+                        row = cursor.fetchone()
+                        if row and row[0]:
+                            cursor.execute("UPDATE licenses SET is_premium=0, status='free', method=NULL, trial_end_date=NULL, expiration_date=NULL WHERE email=?", (email,))
+                            conn.commit()
                     return jsonify({"premium": False, "status": status, "source": "firestore_override"})
 
-                # Sync back to SQLite
+                # Sync back to SQLite only if changed
+                exp_str = exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None
+                trial_str = trial_end.strftime("%Y-%m-%d %H:%M:%S") if trial_end else None
+                
                 with sqlite3.connect(DB_NAME) as conn:
                     cursor = conn.cursor()
-                    exp_str = exp_date.strftime("%Y-%m-%d %H:%M:%S") if exp_date else None
-                    trial_str = trial_end.strftime("%Y-%m-%d %H:%M:%S") if trial_end else None
-                    cursor.execute("""
-                        INSERT INTO licenses (email, is_premium, status, expiration_date, trial_end_date, method)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(email) DO UPDATE SET 
-                            is_premium=excluded.is_premium, 
-                            status=excluded.status, 
-                            expiration_date=excluded.expiration_date,
-                            trial_end_date=excluded.trial_end_date,
-                            method=excluded.method
-                    """, (email, 1 if is_premium_db else 0, status, exp_str, trial_str, method))
-                    conn.commit()
+                    cursor.execute("SELECT is_premium, status, expiration_date, trial_end_date FROM licenses WHERE email = ?", (email,))
+                    row = cursor.fetchone()
+                    
+                    current_prem = bool(row[0]) if row else None
+                    current_status = row[1] if row else None
+                    current_exp = row[2] if row else None
+                    current_trial = row[3] if row else None
+                    
+                    if not row or current_prem != is_premium_db or current_status != status or current_exp != exp_str or current_trial != trial_str:
+                        print(f"Updating SQLite cache for {email} (Changes detected)")
+                        cursor.execute("""
+                            INSERT INTO licenses (email, is_premium, status, expiration_date, trial_end_date, method)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                            ON CONFLICT(email) DO UPDATE SET 
+                                is_premium=excluded.is_premium, 
+                                status=excluded.status, 
+                                expiration_date=excluded.expiration_date,
+                                trial_end_date=excluded.trial_end_date,
+                                method=excluded.method
+                        """, (email, 1 if is_premium_db else 0, status, exp_str, trial_str, method))
+                        conn.commit()
                 
                 return jsonify({
                     "premium": is_premium_db,

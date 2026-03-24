@@ -225,34 +225,32 @@ function AppContent() {
      if (user.email && user.uid) {
         setLoading(true);
         console.log("Web: Forcing license refresh from server (API-first)...");
-        fetch(`${API_BASE}/check-license?email=${encodeURIComponent(user.email)}&uid=${encodeURIComponent(user.uid)}&t=${Date.now()}`)
+        return fetch(`${API_BASE}/check-license?email=${encodeURIComponent(user.email)}&uid=${encodeURIComponent(user.uid)}&t=${Date.now()}`)
         .then(res => res.json())
         .then(data => {
-          const prev = user;
-          const prevTrialEndMs = prev.trialEndDate ? new Date(String(prev.trialEndDate).includes('T') ? prev.trialEndDate : String(prev.trialEndDate).replace(' ', 'T')).getTime() : null;
-          const prevTrialActive = prevTrialEndMs && !Number.isNaN(prevTrialEndMs) && Date.now() < prevTrialEndMs;
-          const wouldDowngrade = prev.isPremium === true && data.premium === false;
-
           const updatedUser = { 
             ...user, 
-            isPremium: (wouldDowngrade && prevTrialActive) ? true : data.premium, 
-            status: (wouldDowngrade && prevTrialActive) ? 'trialing' : data.status,
-            trialEndDate: (wouldDowngrade && prevTrialActive) ? prev.trialEndDate : data.trial_end,
-            method: (wouldDowngrade && prevTrialActive) ? prev.method : data.method,
-            subscriptionId: data.subscriptionId || prev.subscriptionId,
-            usedTrial: (data.usedTrial === true) ? true : prev.usedTrial,
+            isPremium: data.premium, 
+            status: data.status,
+            trialEndDate: data.trial_end,
+            method: data.method,
+            subscriptionId: data.subscriptionId || user.subscriptionId,
+            usedTrial: data.usedTrial === true || !!data.trial_end,
             loading: false 
           };
           setUser(updatedUser);
           syncWithExtension(updatedUser);
           setLoading(false);
           console.log("Web: Manual refresh complete. Premium:", data.premium);
+          return data;
         })
         .catch(e => {
             console.error("Refresh error", e);
             setLoading(false);
+            throw e;
         });
      }
+     return Promise.resolve(null);
   };
 
   // Listen for requests from the extension to resend session data

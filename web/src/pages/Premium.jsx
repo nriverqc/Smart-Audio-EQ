@@ -91,13 +91,12 @@ export default function Premium({ lang }) {
               setSuccessInfo({
                   title: lang === 'es' ? 'Suscripción Cancelada 🚫' : 'Subscription Canceled 🚫',
                   message: lang === 'es' 
-                    ? 'Tu suscripción ha sido cancelada correctamente. Tu acceso Premium se ha desactivado.' 
-                    : 'Your subscription has been successfully canceled. Your Premium access has been disabled.'
+                    ? 'Tu suscripción ha sido cancelada correctamente. Tu acceso Premium y Trial han sido desactivados.' 
+                    : 'Your subscription has been successfully canceled. Your Premium and Trial access have been disabled.'
               });
               setShowSuccessModal(true);
 
               setUser((prev) => {
-                  const hadTrial = !!prev.trialEndDate || prev.status === 'trialing';
                   return {
                       ...prev,
                       isPremium: false,
@@ -105,7 +104,7 @@ export default function Premium({ lang }) {
                       method: '',
                       subscriptionId: '',
                       trialEndDate: null,
-                      usedTrial: prev.usedTrial === true ? true : hadTrial
+                      usedTrial: true // Mark as used trial if they canceled
                   };
               });
           } else {
@@ -116,7 +115,6 @@ export default function Premium({ lang }) {
               const errorText = parts.length ? parts.join(' • ') : 'Cancel failed';
               setErrorMsg(errorText);
               
-              // If it failed because it's already canceled, we still show success or info
               if (data && data.code === "subscription_update_when_canceled") {
                   setShowManageModal(false);
                   setSuccessInfo({
@@ -136,6 +134,23 @@ export default function Premium({ lang }) {
           refreshUser();
       } finally {
           setLoading(false);
+      }
+  };
+
+  const handleRefresh = async () => {
+      try {
+          const data = await refreshUser();
+          if (data && data.premium) {
+              setSuccessInfo({
+                  title: lang === 'es' ? 'Estado Actualizado' : 'Status Updated',
+                  message: lang === 'es' 
+                    ? '¡Tu cuenta está al día! Disfruta de todas las funciones Premium. 💎' 
+                    : 'Your account is up to date! Enjoy all Premium features. 💎'
+              });
+              setShowSuccessModal(true);
+          }
+      } catch (e) {
+          console.error("Manual refresh failed:", e);
       }
   };
 
@@ -966,7 +981,7 @@ export default function Premium({ lang }) {
           {/* Refresh Status Button */}
           <div style={{marginTop: '20px', borderTop: '1px solid #333', paddingTop: '10px', textAlign: 'center'}}>
               <button 
-                  onClick={refreshUser}
+                  onClick={handleRefresh}
                   disabled={refreshing}
                   style={{
                       background: 'transparent', 

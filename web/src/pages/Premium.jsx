@@ -141,12 +141,13 @@ export default function Premium({ lang }) {
       try {
           const data = await refreshUser();
           if (data) {
+              const isTrial = data.status === 'trialing';
               if (data.premium) {
                   setSuccessInfo({
-                      title: lang === 'es' ? 'Estado Actualizado 💎' : 'Status Updated 💎',
+                      title: lang === 'es' ? (isTrial ? 'Prueba Activa 🎁' : 'Estado Actualizado 💎') : (isTrial ? 'Trial Active 🎁' : 'Status Updated 💎'),
                       message: lang === 'es' 
-                        ? '¡Tu cuenta está al día! Disfrutas de todas las funciones Premium.' 
-                        : 'Your account is up to date! You enjoy all Premium features.'
+                        ? (isTrial ? '¡Tu periodo de prueba está activo! Disfrutas de todas las funciones PRO.' : '¡Tu cuenta está al día! Disfrutas de todas las funciones Premium.')
+                        : (isTrial ? 'Your trial period is active! Enjoy all PRO features.' : 'Your account is up to date! You enjoy all Premium features.')
                   });
               } else {
                   setSuccessInfo({

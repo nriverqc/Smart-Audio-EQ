@@ -864,6 +864,39 @@ def check_license():
                 
                 email_norm = email.strip().lower()
 
+                # Re-validate dates BEFORE early return
+                exp_date = data.get('expirationDate')
+                if exp_date and hasattr(exp_date, 'to_datetime'):
+                    exp_date = exp_date.to_datetime().replace(tzinfo=None)
+                elif exp_date and exp_date.tzinfo:
+                    exp_date = exp_date.replace(tzinfo=None)
+
+                trial_end = data.get('trialEndDate')
+                if trial_end and hasattr(trial_end, 'to_datetime'):
+                    trial_end = trial_end.to_datetime().replace(tzinfo=None)
+                elif trial_end and trial_end.tzinfo:
+                    trial_end = trial_end.replace(tzinfo=None)
+
+                subscription_id = data.get('subscriptionId')
+                used_trial = data.get('usedTrial', False) or bool(trial_end)
+                now = datetime.now()
+
+                if trial_end:
+                    if now > trial_end:
+                        status = 'expired_trial'
+                        is_premium_db = False
+                    else:
+                        status = 'trialing'
+                        is_premium_db = True
+                elif exp_date:
+                    if now > exp_date:
+                        status = 'past_due'
+                        is_premium_db = False
+                    else:
+                        status = 'active'
+                        is_premium_db = True
+                
+                # Check for other premium accounts with same email if not premium yet
                 if not is_premium_db:
                     try:
                         lic_doc = db.collection('licenses_by_email').document(email_norm).get()
@@ -883,9 +916,14 @@ def check_license():
                                     'email': email_norm
                                 }, merge=True)
                                 data = user_ref.get().to_dict()
-                                status = data.get('status')
+                                # Refresh our local variables
                                 is_premium_db = True
-                                method = data.get('method', method)
+                                status = data.get('status', status)
+                                trial_end = data.get('trialEndDate')
+                                if trial_end and hasattr(trial_end, 'to_datetime'):
+                                    trial_end = trial_end.to_datetime().replace(tzinfo=None)
+                                elif trial_end and trial_end.tzinfo:
+                                    trial_end = trial_end.replace(tzinfo=None)
                     except Exception as e:
                         print(f"Email license lookup error: {e}")
 
@@ -893,54 +931,25 @@ def check_license():
                     users_by_email = db.collection('usuarios').where('email', '==', email_norm).where('isPremium', '==', True).limit(1).get()
                     if len(users_by_email) > 0:
                         premium_doc = users_by_email[0].to_dict()
-                        p_method = premium_doc.get('method', 'Restored')
                         user_ref.set({
                             'isPremium': True,
                             'status': premium_doc.get('status', 'active'),
                             'expirationDate': premium_doc.get('expirationDate'),
                             'trialEndDate': premium_doc.get('trialEndDate'),
-                            'method': p_method,
+                            'method': premium_doc.get('method', 'Restored'),
                             'paymentId': premium_doc.get('paymentId'),
-                            'planType': premium_doc.get('planType'),
                             'email': email_norm
                         }, merge=True)
-                        data = user_ref.get().to_dict()
-                        status = data.get('status')
                         is_premium_db = True
-                        method = p_method
+                        status = premium_doc.get('status', 'active')
 
-                # Manual deactivation in DB
+                # Manual deactivation in SQLite if definitely not premium
                 if is_premium_db is False and status not in ['trialing', 'active']:
                     with sqlite3.connect(DB_NAME) as conn:
                         cursor = conn.cursor()
                         cursor.execute("UPDATE licenses SET is_premium=0, status='free', method=NULL, trial_end_date=NULL, expiration_date=NULL WHERE email=?", (email,))
                         conn.commit()
-                    return jsonify({"premium": False, "status": "free", "source": "firestore_override"})
-                
-                # Logic for expiration...
-                exp_date = data.get('expirationDate')
-                trial_end = data.get('trialEndDate')
-                subscription_id = data.get('subscriptionId')
-                used_trial = data.get('usedTrial', False) or bool(trial_end)
-                
-                now = datetime.now()
-                
-                # RE-VALIDATE STATUS based on dates
-                if trial_end:
-                    if now > trial_end:
-                        status = 'expired_trial'
-                        is_premium_db = False
-                    else:
-                        status = 'trialing'
-                        is_premium_db = True
-                
-                elif exp_date:
-                    if now > exp_date:
-                        status = 'past_due'
-                        is_premium_db = False
-                    else:
-                        status = 'active'
-                        is_premium_db = True
+                    return jsonify({"premium": False, "status": status, "source": "firestore_override"})
 
                 # Sync back to SQLite
                 with sqlite3.connect(DB_NAME) as conn:

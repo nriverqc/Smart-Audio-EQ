@@ -601,72 +601,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             const prevMethod = storage.method;
             const prevUsedTrial = !!storage.usedTrial;
 
-            // 0. Try to get Firebase snapshot from an open web tab FIRST (instant truth)
-            let webSnapshot = null;
+            // 0. Optionally get email from an open web tab (but state will be decided by Paddle API)
             try {
                 const tabs = await chrome.tabs.query({});
                 const webTab = tabs.find(t => t.url && t.url.includes("smart-audio-eq.pages.dev"));
                 if (webTab) {
                     const response = await sendMessageToTab(webTab.id, { type: "PREGUNTAR_DATOS" }, true);
-                    if (response) {
-                        webSnapshot = response;
-                        if (response.email) {
-                            email = response.email;
-                            uid = response.uid || uid;
-                            await chrome.storage.local.set({ email, uid });
-                        }
-                        if (typeof response.isPremium === 'boolean') {
-                            const finalIsPremium = response.isPremium;
-                            const finalStatus = response.status || (finalIsPremium ? 'active' : 'free');
-                            const finalTrialEnd = response.trial_end || null;
-                            const finalUsedTrial = response.usedTrial === true ? true : prevUsedTrial;
-                            const finalMethod = response.method || prevMethod || null;
-
-                            isPremium = finalIsPremium;
-                            await chrome.storage.local.set({ 
-                                isPremium: finalIsPremium, 
-                                status: finalStatus,
-                                method: finalMethod,
-                                trial_end: finalTrialEnd,
-                                usedTrial: finalUsedTrial
-                            });
-
-                            if (finalIsPremium) {
-                                notifyWebTabsOfPremium();
-                                const statusMsg = finalStatus === 'trialing' ? "Trial activo 🎁" : "Premium activo 💎";
-                                sendResponse({ success: true, message: `Sincronización completa: ${statusMsg}`, detail: finalMethod ? `Metodo: ${finalMethod}` : "" });
-                            } else {
-                                try {
-                                    const webTabs = await chrome.tabs.query({ url: "*://smart-audio-eq.pages.dev/*" });
-                                    webTabs.forEach(t => chrome.tabs.sendMessage(t.id, { type: "SYNC_STATUS_FROM_EXT", isPremium: false }));
-                                } catch (e) {}
-                                sendResponse({ success: true, message: "Estado: Gratis." });
-                            }
-                            // Enrich with backend asynchronously
-                            (async () => {
-                                try {
-                                    const apiUrl = `https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(email || '')}&uid=${encodeURIComponent(uid || '')}`;
-                                    const res = await fetch(apiUrl);
-                                    if (res.ok) {
-                                        const data = await res.json();
-                                        const apiMethod = data.method || null;
-                                        const apiTrialEnd = data.trial_end || null;
-                                        const apiUsedTrial = data.usedTrial === true ? true : finalUsedTrial;
-                                        await chrome.storage.local.set({
-                                            method: apiMethod || finalMethod,
-                                            trial_end: apiTrialEnd || finalTrialEnd,
-                                            usedTrial: apiUsedTrial
-                                        });
-                                    }
-                                } catch (e) {}
-                            })();
-                            return;
-                        }
+                    if (response && response.email) {
+                        email = response.email;
+                        uid = response.uid || uid;
+                        await chrome.storage.local.set({ email, uid });
                     }
                 }
-            } catch (e) {
-                // Ignore snapshot errors; continue with identity/API
-            }
+            } catch (e) { /* ignore */ }
 
             // 2. If no email, try identity
             if (!email) {
@@ -701,7 +648,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 }
             }
 
-            // 4. If we have email, check API (fallback)
+            // 4. Paddle API is the source of truth for status
             const apiUrl = `https://smart-audio-eq-1.onrender.com/check-license?email=${encodeURIComponent(email)}&uid=${encodeURIComponent(uid || '')}`;
             const res = await fetch(apiUrl);
             if (!res.ok) {
@@ -723,24 +670,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             const apiSource = data.source || null;
             const apiUsedTrial = data.usedTrial === true ? true : null;
 
-            const uncertain =
-                hasUid === false &&
-                apiPremium === false &&
-                (apiSource === null || apiSource === 'none');
+            const uncertain = false; // We trust Paddle first as requested
 
             let finalIsPremium = apiPremium === true ? true : (apiPremium === false ? false : prevPremium);
             let finalStatus = apiStatus || (finalIsPremium ? 'active' : 'free');
             let finalMethod = apiMethod;
             let finalTrialEnd = apiTrialEnd;
             let finalUsedTrial = apiUsedTrial === true ? true : prevUsedTrial;
-
-            if (uncertain) {
-                finalIsPremium = prevPremium;
-                finalStatus = prevStatus || (finalIsPremium ? 'active' : 'free');
-                finalMethod = prevMethod || null;
-                finalTrialEnd = prevTrialEnd || null;
-                finalUsedTrial = prevUsedTrial;
-            }
 
             isPremium = finalIsPremium;
 
@@ -776,7 +712,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 sendResponse({ 
                     success: true, 
                     message: "Estado: Gratis.",
-                    detail: uncertain ? "No se pudo verificar (faltan datos de sesión). Abre la web y vuelve a sincronizar." : "Si compraste Premium, espera un minuto o verifica tu pago."
+                    detail: "Si compraste Premium, espera un minuto o verifica tu pago."
                 });
             }
 

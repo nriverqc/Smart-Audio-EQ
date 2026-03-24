@@ -535,6 +535,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             // Per-tab independent for premium
             activeTabs[targetTabId].gains = gains;
             activeTabs[targetTabId].preset = msg.preset || 'custom';
+            // Save offsets if provided
+            if (msg.offsets) {
+                activeTabs[targetTabId].offsets = msg.offsets;
+            }
             if (offscreenPort) {
               gains.forEach((g, i) => {
                 offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g, tabId: targetTabId });
@@ -546,6 +550,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             allTabIds.forEach(tId => {
                 activeTabs[tId].gains = gains;
                 activeTabs[tId].preset = msg.preset || 'custom';
+                // Save offsets if provided
+                if (msg.offsets) {
+                    activeTabs[tId].offsets = msg.offsets;
+                }
                 if (offscreenPort) {
                     gains.forEach((g, i) => {
                         offscreenPort.postMessage({ type: 'SET_GAIN', index: i, value: g, tabId: parseInt(tId) });
@@ -772,6 +780,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             enabled: true, 
             preset: activeTabs[tabId].preset || 'flat',
             gains: activeTabs[tabId].gains,
+            offsets: activeTabs[tabId].offsets,
             masterVolume: activeTabs[tabId].masterVolume
           });
         } else {

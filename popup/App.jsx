@@ -170,6 +170,11 @@ export default function App() {
       statusFreeMsg: 'Tu cuenta es gratuita. Si acabas de comprar, espera un minuto y vuelve a sincronizar.',
       statusMethod: 'Método:',
       statusTimeLeft: 'Tiempo restante:',
+      quickEqBass: 'Graves',
+      quickEqMid: 'Voz',
+      quickEqTreble: 'Agudos',
+      captureConflictTitle: 'Conflicto de Audio ⚠️',
+      captureConflictMsg: 'Otra extensión (como otro ecualizador o grabador) está usando el audio de esta pestaña. Por favor, desactiva la otra extensión y vuelve a encender el ecualizador.',
     },
     en: {
       visitWebsite: 'Visit Website',
@@ -207,6 +212,11 @@ export default function App() {
       statusFreeMsg: 'You are on the free plan. If you just paid, please wait a minute and sync again.',
       statusMethod: 'Method:',
       statusTimeLeft: 'Time left:',
+      quickEqBass: 'Bass',
+      quickEqMid: 'Midrange',
+      quickEqTreble: 'Treble',
+      captureConflictTitle: 'Audio Conflict ⚠️',
+      captureConflictMsg: 'Another extension (like another equalizer or recorder) is using this tab\'s audio. Please disable the other extension and turn the equalizer ON again.',
     },
     pt: {
       visitWebsite: 'Visite o site',
@@ -244,6 +254,11 @@ export default function App() {
       statusFreeMsg: 'Você está no plano gratuito. Se você acabou de pagar, aguarde um minuto e sincronize novamente.',
       statusMethod: 'Método:',
       statusTimeLeft: 'Tempo restante:',
+      quickEqBass: 'Graves',
+      quickEqMid: 'Voz/Médios',
+      quickEqTreble: 'Agudos',
+      captureConflictTitle: 'Conflito de Áudio ⚠️',
+      captureConflictMsg: 'Outra extensão (como outro equalizador ou gravador) está usando o áudio desta guia. Por favor, desative a outra extensão e ligue o equalizador novamente.',
     },
     de: {
       visitWebsite: 'Website besuchen',
@@ -279,8 +294,13 @@ export default function App() {
       statusTrialMsg: 'Sie genießen alle PRO-Funktionen während Ihres Testzeitraums.',
       statusFreeTitle: 'Status: Kostenlos ℹ️',
       statusFreeMsg: 'Sie nutzen die kostenlose Version. Wenn Sie gerade bezahlt haben, warten Sie bitte eine Minute und synchronisieren Sie erneut.',
+      captureConflictTitle: 'Audio-Konflikt ⚠️',
+      captureConflictMsg: 'Eine andere Erweiterung (wie ein anderer Equalizer oder Recorder) verwendet das Audio dieses Tabs. Bitte deaktivieren Sie die andere Erweiterung und schalten Sie den Equalizer erneut ein.',
       statusMethod: 'Methode:',
       statusTimeLeft: 'Verbleibende Zeit:',
+      quickEqBass: 'Bass',
+      quickEqMid: 'Mitten',
+      quickEqTreble: 'Höhen',
     }
   };
 
@@ -450,9 +470,19 @@ export default function App() {
     if (newState) {
       chrome.runtime.sendMessage({ type: 'ENABLE_EQ', tabId: targetTabId }, (response) => {
           if (response && !response.success) {
-              console.error(response.error);
+              console.error("ENABLE_EQ Error:", response.error);
               setEnabled(false); // Revert if failed
-              alert("Failed to enable EQ: " + response.error);
+              
+              const errMsg = response.error || "";
+              if (errMsg.includes("locked") || errMsg.includes("already capturing") || errMsg.includes("active stream") || errMsg.includes("Cannot capture")) {
+                openStatusModal({
+                  title: t("captureConflictTitle"),
+                  message: t("captureConflictMsg"),
+                  icon: '⚠️'
+                });
+              } else {
+                alert("Failed to enable EQ: " + response.error);
+              }
           }
       });
     } else {
@@ -515,11 +545,9 @@ export default function App() {
     }
   };
 
-  const onUserAdjust = (newGains) => {
+  const onUserAdjust = (newGains, newOffsets = null) => {
     if (!isPremium) {
-      // We let them move it but maybe alert once or just keep the preset logic
-      // Actually, let's allow them to move but not "Save" or persistent?
-      // The user said "Guardar presets -> SOLO premium".
+      // Free users don't save custom presets easily
     }
     if (currentPreset !== 'custom') {
       if (!isPremium) {
@@ -537,11 +565,15 @@ export default function App() {
             gains: newGains,
             preset: 'custom'
         };
+        // Add offsets if provided (only for premium)
+        if (isPremium && newOffsets) {
+            updatedTabs[targetTabId].offsets = newOffsets;
+        }
         setAllActiveTabs(updatedTabs);
         chrome.storage.local.set({ activeTabs: updatedTabs });
     }
     
-    // Fallback for global customGains if needed (free users)
+    // Fallback for global customGains
     chrome.storage.local.set({ customGains: newGains });
   };
 
@@ -1089,9 +1121,11 @@ export default function App() {
         presetGains={PRESETS[currentPreset]}
         onUserAdjust={onUserAdjust}
         targetTabId={targetTabId}
+        initialOffsets={targetTabId && allActiveTabs[targetTabId] ? allActiveTabs[targetTabId].offsets : null}
         volumeLimitWarning={t("volumeLimitWarning")}
         openPremiumModal={openPremiumModal}
         openGuideModal={openGuideModal}
+        t={t}
       />
 
       {enabled && (

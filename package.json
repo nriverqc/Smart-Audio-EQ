@@ -1,7 +1,7 @@
 {
-  "name": "equalizer-web-audio",
+  "name": "equalizer-booster",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "description": "Browser Audio Equalizer",
   "scripts": {

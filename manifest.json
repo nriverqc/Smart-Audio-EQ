@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "default_locale": "en",
-  "name": "Equalizer - Web Audio EQ for YouTube, Spotify & Browser",
-  "short_name": "Web Audio EQ",
-  "version": "1.0.6",
+  "name": "Equalizer Booster",
+  "short_name": "Equalizer Booster",
+  "version": "1.0.7",
   "description": "__MSG_extDescription__",
   "icons": {
     "128": "IconoEcualizador.png"
